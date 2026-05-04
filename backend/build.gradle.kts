@@ -25,6 +25,8 @@ dependencies {
     implementation(ktorLibs.server.callLogging)
     implementation(ktorLibs.server.cors)
     implementation(ktorLibs.server.compression)
+    implementation(ktorLibs.server.auth)
+    implementation(ktorLibs.server.auth.jwt)
     implementation(ktorLibs.serialization.kotlinx.json)
 
     implementation(libs.exposed.core)
@@ -36,6 +38,9 @@ dependencies {
     implementation(libs.hikaricp)
 
     implementation(libs.khealth)
+    implementation(libs.bcrypt)
+
+    implementation(kotlin("reflect"))
 
     implementation(libs.logback.classic)
 

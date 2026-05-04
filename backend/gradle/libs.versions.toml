@@ -5,6 +5,7 @@ exposed = "0.61.0"
 postgresql = "42.7.4"
 khealth = "3.0.2"
 hikaricp = "6.2.1"
+bcrypt = "0.10.2"
 
 [libraries]
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
@@ -19,6 +20,8 @@ postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" 
 hikaricp = { module = "com.zaxxer:HikariCP", version.ref = "hikaricp" }
 
 khealth = { module = "dev.hayden:khealth", version.ref = "khealth" }
+
+bcrypt = { module = "at.favre.lib:bcrypt", version.ref = "bcrypt" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

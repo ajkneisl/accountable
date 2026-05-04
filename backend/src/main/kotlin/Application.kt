@@ -1,10 +1,17 @@
 package com.accountable
 
+import com.accountable.auth.AuthException
+import com.accountable.auth.JwtConfig
+import com.accountable.auth.authRoutes
+import com.accountable.db.initDb
 import dev.hayden.KHealth
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
+import io.ktor.server.auth.Authentication
+import io.ktor.server.auth.jwt.JWTPrincipal
+import io.ktor.server.auth.jwt.jwt
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.server.plugins.calllogging.CallLogging
@@ -36,6 +43,8 @@ fun main() {
 }
 
 fun Application.rootModule() {
+    initDb()
+
     install(DefaultHeaders)
     install(CallLogging)
     install(Compression)
@@ -55,7 +64,23 @@ fun Application.rootModule() {
             },
         )
     }
+    install(Authentication) {
+        jwt("auth-jwt") {
+            realm = JwtConfig.REALM
+            verifier(JwtConfig.verifier)
+            validate { credential ->
+                if (credential.payload.subject.isNullOrBlank()) null
+                else JWTPrincipal(credential.payload)
+            }
+        }
+    }
     install(StatusPages) {
+        exception<AuthException> { call, cause ->
+            call.respondText(
+                text = cause.message ?: "Unauthorized",
+                status = HttpStatusCode.Unauthorized,
+            )
+        }
         exception<Throwable> { call, cause ->
             call.respondText(
                 text = cause.message ?: "Internal Server Error",
@@ -72,5 +97,6 @@ fun Application.rootModule() {
         get("/version") {
             call.respond(VersionResponse(version = APP_VERSION, name = "accountable"))
         }
+        authRoutes()
     }
 }
