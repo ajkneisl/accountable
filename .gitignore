@@ -1,0 +1,11 @@
+*.iml
+.idea
+
+backend/.gradle
+backend/build
+
+# frontend
+frontend/**/node_modules
+frontend/**/dist
+frontend/**/.expo
+frontend/web/node_modules/.tmp
