@@ -1,31 +1,3 @@
-export interface VersionResponse {
-  version: string
-  name: string
-}
-
-export interface TokenResponse {
-  accessToken: string
-  refreshToken: string
-  accessTokenExpiresAt: number
-  refreshTokenExpiresAt: number
-}
-
-export interface MeResponse {
-  userId: string
-  username: string
-}
-
-export interface LoginRequest {
-  username: string
-  password: string
-}
-
-export interface RegisterRequest {
-  username: string
-  email: string
-  password: string
-}
-
 export class ApiError extends Error {
   readonly status: number
   constructor(status: number, message: string) {
@@ -41,8 +13,13 @@ export interface ApiClientOptions {
   getAccessToken?: () => string | null
 }
 
-export class ApiClient {
-  private readonly baseUrl: string
+export interface RequestOptions {
+  auth?: boolean
+  expectJson?: boolean
+}
+
+export class HttpClient {
+  readonly baseUrl: string
   private readonly fetchImpl: typeof fetch
   private readonly getAccessToken: () => string | null
 
@@ -52,35 +29,11 @@ export class ApiClient {
     this.getAccessToken = getAccessToken ?? (() => null)
   }
 
-  async getVersion(): Promise<VersionResponse> {
-    return this.request<VersionResponse>('GET', '/version')
-  }
-
-  async login(body: LoginRequest): Promise<TokenResponse> {
-    return this.request<TokenResponse>('POST', '/auth/login', body)
-  }
-
-  async register(body: RegisterRequest): Promise<TokenResponse> {
-    return this.request<TokenResponse>('POST', '/auth/register', body)
-  }
-
-  async refresh(refreshToken: string): Promise<TokenResponse> {
-    return this.request<TokenResponse>('POST', '/auth/refresh', { refreshToken })
-  }
-
-  async logout(refreshToken: string): Promise<void> {
-    await this.request<void>('POST', '/auth/logout', { refreshToken }, { expectJson: false })
-  }
-
-  async me(): Promise<MeResponse> {
-    return this.request<MeResponse>('GET', '/auth/me', undefined, { auth: true })
-  }
-
-  private async request<T>(
+  async request<T>(
     method: string,
     path: string,
     body?: unknown,
-    opts: { auth?: boolean; expectJson?: boolean } = {},
+    opts: RequestOptions = {},
   ): Promise<T> {
     const headers: Record<string, string> = {}
     if (body !== undefined) headers['Content-Type'] = 'application/json'

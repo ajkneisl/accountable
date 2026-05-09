@@ -1,72 +1,96 @@
-package com.accountable.auth
+package auth
 
 import io.ktor.http.HttpStatusCode
-import io.ktor.server.auth.authenticate
-import io.ktor.server.auth.jwt.JWTPrincipal
-import io.ktor.server.auth.principal
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
-import io.ktor.server.routing.get
+import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import kotlinx.serialization.Serializable
 
+/**
+ * A user payload for registering.
+ *
+ * @param username The requested username.
+ * @param email The requested email.
+ * @param password The requested password
+ */
 @Serializable
 data class RegisterRequest(val username: String, val email: String, val password: String)
 
-@Serializable
-data class LoginRequest(val username: String, val password: String)
+/**
+ * POST /api/auth/register
+ *
+ * Register an account
+ */
+private val USER_REGISTER_ROUTE: suspend RoutingContext.() -> Unit = {
+    val req = call.receive<RegisterRequest>()
 
-@Serializable
-data class RefreshRequest(val refreshToken: String)
+    val tokens = Auth.register(req.username, req.email, req.password)
 
-@Serializable
-data class TokenResponse(
-    val accessToken: String,
-    val refreshToken: String,
-    val accessTokenExpiresAt: Long,
-    val refreshTokenExpiresAt: Long,
-)
+    call.respond(tokens)
+}
 
-@Serializable
-data class MeResponse(val userId: String, val username: String)
+/**
+ * A user payload for logging in.
+ *
+ * @param username The provided username.
+ * @param password The provided password.
+ */
+@Serializable data class LoginRequest(val username: String, val password: String)
+
+/**
+ * POST /api/auth/login
+ *
+ * Login to an account
+ */
+private val USER_LOGIN_ROUTE: suspend RoutingContext.() -> Unit = {
+    val req = call.receive<LoginRequest>()
+
+    val tokens = Auth.login(req.username, req.password)
+
+    call.respond(tokens)
+}
+
+/**
+ * A user payload for requesting a refresh token.
+ *
+ * @param refreshToken The token used to create an access token.
+ */
+@Serializable data class RefreshRequest(val refreshToken: String)
+
+/**
+ * POST /api/auth/refresh
+ *
+ * Refresh a token.
+ */
+private val USER_REFRESH_ROUTE: suspend RoutingContext.() -> Unit = {
+    val req = call.receive<RefreshRequest>()
+
+    val tokens = Auth.refresh(req.refreshToken)
+
+    call.respond(tokens)
+}
+
+/**
+ * POST /api/auth/logout
+ *
+ * Logout.
+ */
+private val USER_LOGOUT_ROUTE: suspend RoutingContext.() -> Unit = {
+    val req = call.receive<RefreshRequest>()
+
+    Auth.logout(req.refreshToken)
+
+    call.respond(HttpStatusCode.NoContent)
+}
 
 fun Route.authRoutes() {
     route("/auth") {
-        post("/register") {
-            val req = call.receive<RegisterRequest>()
-            val tokens = AuthService.register(req.username, req.email, req.password)
-            call.respond(tokens.toResponse())
-        }
-        post("/login") {
-            val req = call.receive<LoginRequest>()
-            val tokens = AuthService.login(req.username, req.password)
-            call.respond(tokens.toResponse())
-        }
-        post("/refresh") {
-            val req = call.receive<RefreshRequest>()
-            val tokens = AuthService.refresh(req.refreshToken)
-            call.respond(tokens.toResponse())
-        }
-        post("/logout") {
-            val req = call.receive<RefreshRequest>()
-            AuthService.logout(req.refreshToken)
-            call.respond(HttpStatusCode.NoContent)
-        }
-        authenticate("auth-jwt") {
-            get("/me") {
-                val principal = call.principal<JWTPrincipal>()!!
-                call.respond(
-                    MeResponse(
-                        userId = principal.subject ?: "",
-                        username = principal.payload.getClaim("username").asString() ?: "",
-                    ),
-                )
-            }
-        }
+        post("/register", USER_REGISTER_ROUTE)
+        post("/login", USER_LOGIN_ROUTE)
+        post("/refresh", USER_REFRESH_ROUTE)
+        post("/logout", USER_LOGOUT_ROUTE)
     }
 }
-
-private fun TokenPair.toResponse() =
-    TokenResponse(accessToken, refreshToken, accessTokenExpiresAt, refreshTokenExpiresAt)

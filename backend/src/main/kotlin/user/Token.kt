@@ -1,5 +1,7 @@
-package com.accountable.db
+package user
 
+import api.MappedTable
+import api.toEntity
 import java.util.UUID
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.and

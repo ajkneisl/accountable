@@ -1,5 +1,10 @@
-package com.accountable.db
+package user
 
+import api.MappedTable
+import api.toEntity
+import api.verify.VerificationScope
+import api.verify.Verifiable
+import api.verify.Verifier
 import java.util.UUID
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.insert
@@ -36,6 +41,7 @@ object Users : Table("users") {
  * @param createdAt The ms epoch when the account was created.
  */
 @MappedTable(Users::class)
+@Verifiable(UserVerifier::class)
 data class User(
     val id: UUID,
     val username: String,
@@ -43,6 +49,27 @@ data class User(
     val email: String,
     val createdAt: Long,
 )
+
+private val USERNAME_PATTERN = Regex("^[A-Za-z0-9_-]+$")
+
+/** Verifies fields of [User] used during registration. */
+class UserVerifier : Verifier<User>() {
+    override suspend fun VerificationScope<User>.rules() {
+        User::username {
+            notBlank("username must not be blank")
+            lengthIn(3..32, "username must be 3 to 32 characters")
+            matches(
+                USERNAME_PATTERN,
+                "username may only contain letters, numbers, underscores, and hyphens",
+            )
+            errorIf("username is already taken") { findUserByUsername(it) != null }
+        }
+        User::email {
+            notBlank("email must not be blank")
+            errorIf("email is already taken") { findUserByEmail(it) != null }
+        }
+    }
+}
 
 /** Find a user by their [id]. */
 fun findUserByID(id: UUID): User? = transaction {
@@ -52,6 +79,11 @@ fun findUserByID(id: UUID): User? = transaction {
 /** Find a user by [username]. */
 fun findUserByUsername(username: String): User? = transaction {
     Users.selectAll().where { Users.username eq username }.limit(1).firstOrNull()?.toEntity<User>()
+}
+
+/** Find a user by [email]. */
+fun findUserByEmail(email: String): User? = transaction {
+    Users.selectAll().where { Users.email eq email }.limit(1).firstOrNull()?.toEntity<User>()
 }
 
 /**
