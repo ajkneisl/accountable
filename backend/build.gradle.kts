@@ -27,6 +27,7 @@ dependencies {
     implementation(ktorLibs.server.compression)
     implementation(ktorLibs.server.auth)
     implementation(ktorLibs.server.auth.jwt)
+    implementation(ktorLibs.server.requestValidation)
     implementation(ktorLibs.serialization.kotlinx.json)
 
     implementation(libs.exposed.core)
@@ -43,6 +44,10 @@ dependencies {
     implementation(kotlin("reflect"))
 
     implementation(libs.logback.classic)
+
+    implementation(ktorLibs.client.core)
+    implementation(ktorLibs.client.cio)
+    implementation(ktorLibs.client.contentNegotiation)
 
     testImplementation(kotlin("test"))
     testImplementation(ktorLibs.server.testHost)

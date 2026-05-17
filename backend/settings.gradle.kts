@@ -13,7 +13,7 @@ dependencyResolutionManagement {
         maven { url = uri("https://jitpack.io") }
     }
     versionCatalogs {
-        create("ktorLibs").from("io.ktor:ktor-version-catalog:3.4.0")
+        create("ktorLibs").from("io.ktor:ktor-version-catalog:3.3.0")
     }
 }
 

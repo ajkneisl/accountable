@@ -1,5 +1,7 @@
 package api
 
+import integrations.IntegrationTables
+import integrations.UserIntegrations
 import user.RefreshTokens
 import user.Users
 import com.zaxxer.hikari.HikariConfig
@@ -46,7 +48,14 @@ fun initDb() {
         }
 
     Database.connect(HikariDataSource(config))
-    transaction { SchemaUtils.create(Users, RefreshTokens) }
+    transaction {
+        SchemaUtils.create(
+            Users,
+            RefreshTokens,
+            UserIntegrations,
+            *IntegrationTables.all.toTypedArray(),
+        )
+    }
 }
 
 /** Run an Exposed [transaction] from a coroutine without blocking the calling dispatcher. */
