@@ -48,8 +48,9 @@ fun Application.configureModule() {
     install(DoubleReceive)
     install(CORS) {
         anyHost()
+        anyMethod()
         allowHeaders { true }
-        allowCredentials = true
+        allowNonSimpleContentTypes = true
     }
 
     install(ContentNegotiation) {
