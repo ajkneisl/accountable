@@ -58,7 +58,7 @@ fun Route.userRoutes() {
 
             get("/{name}") {
                 val name = call.parameters["name"] ?: Error.text("missing username")
-                val user = findUserByUsername(name) ?: Error.notFound("user")
+                val user = findUserByUsername(name) ?: Error.unauthorized("user not found")
                 call.respond(
                     UserResponse(
                         userID = user.id.toString(),

@@ -1,19 +1,30 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import { useAtom } from "jotai"
-import { getSelf, logout, useApi, version } from "@shared/index"
+import { Navigate, Route, Routes } from "react-router-dom"
+import { getSelf, useApi } from "@shared/index"
 import { tokenStore, userAtom } from "./auth"
 import Login from "./Login"
+import Landing from "./screens/Landing"
+import Dashboard from "./screens/Dashboard"
+import Competition from "./screens/Competition"
+import Onboarding from "./screens/Onboarding"
+
+/** Gates a route behind an authenticated session. */
+function RequireAuth({ children }: { children: ReactNode }) {
+    const [user] = useAtom(userAtom)
+    if (!user) return <Navigate to="/login" replace />
+    return <>{children}</>
+}
 
 function App() {
     const api = useApi()
-    const [user, setUser] = useAtom(userAtom)
-    const [hydrating, setHydrating] = useState(true)
+    const [, setUser] = useAtom(userAtom)
+    // Only hydrate when there's a stored token to validate.
+    const [hydrating, setHydrating] = useState(() => tokenStore.getAccess() != null)
 
+    // Restore the session from the stored access token on first load.
     useEffect(() => {
-        if (!tokenStore.getAccess()) {
-            setHydrating(false)
-            return
-        }
+        if (!hydrating) return
         let cancelled = false
         getSelf(api)
             .catch(() => {
@@ -29,37 +40,47 @@ function App() {
         return () => {
             cancelled = true
         }
-    }, [api, setUser])
+    }, [api, hydrating, setUser])
 
     if (hydrating) {
         return (
-            <main className="min-h-screen flex items-center justify-center bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-                <p className="text-zinc-500">Loading…</p>
+            <main
+                className="acc"
+                style={{
+                    minHeight: "100vh",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center"
+                }}
+            >
+                <p style={{ color: "var(--ink-3)" }}>Loading…</p>
             </main>
         )
     }
 
-    if (!user) return <Login />
-
     return (
-        <main className="min-h-screen flex flex-col items-center justify-center gap-6 bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-            <h1 className="text-4xl font-semibold tracking-tight">
-                Welcome back {user.username}.
-            </h1>
-            <p className="text-zinc-500">shared lib v{version}</p>
-            <button
-                type="button"
-                onClick={async () => {
-                    const refresh = tokenStore.getRefresh()
-                    if (refresh) await logout(api, refresh).catch(() => {})
-                    tokenStore.clear()
-                    setUser(null)
-                }}
-                className="rounded-md bg-indigo-600 px-4 py-2 text-white shadow hover:bg-indigo-500 active:scale-95 transition"
-            >
-                Sign out
-            </button>
-        </main>
+        <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/onboarding" element={<Onboarding />} />
+            <Route
+                path="/dashboard"
+                element={
+                    <RequireAuth>
+                        <Dashboard />
+                    </RequireAuth>
+                }
+            />
+            <Route
+                path="/competition"
+                element={
+                    <RequireAuth>
+                        <Competition />
+                    </RequireAuth>
+                }
+            />
+            <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
     )
 }
 

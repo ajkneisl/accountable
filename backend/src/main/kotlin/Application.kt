@@ -4,6 +4,7 @@ import api.initDb
 import auth.JwtConfig
 import auth.authRoutes
 import dev.hayden.KHealth
+import integrations.api.integrationRoutes
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
@@ -21,11 +22,14 @@ import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.cors.routing.CORS
 import io.ktor.server.plugins.defaultheaders.DefaultHeaders
 import io.ktor.server.plugins.doublereceive.DoubleReceive
+import io.ktor.server.plugins.requestvalidation.RequestValidation
+import io.ktor.server.plugins.requestvalidation.RequestValidationException
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.response.respond
 import io.ktor.server.routing.get
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import user.userRoutes
 
@@ -64,6 +68,8 @@ fun Application.configureModule() {
         )
     }
 
+    install(RequestValidation)
+
     install(Authentication) {
         jwt("jwt") {
             realm = JwtConfig.REALM
@@ -78,6 +84,24 @@ fun Application.configureModule() {
     install(StatusPages) {
         exception<Error> { call, cause ->
             call.respond(HttpStatusCode.fromValue(cause.statusCode), Error.ErrorBody(cause.message))
+        }
+
+        exception<Throwable> { call, _ ->
+            call.respond(
+                HttpStatusCode.BadRequest,
+                Error.ErrorBody("There was an issue with your request body."),
+            )
+        }
+
+        exception<SerializationException> { call, _ ->
+            call.respond(
+                HttpStatusCode.BadRequest,
+                Error.ErrorBody("There was an issue with your request body."),
+            )
+        }
+
+        exception<RequestValidationException> { call, cause ->
+            call.respond(HttpStatusCode.BadRequest, MultiError.MultiErrorBody(cause.reasons))
         }
 
         exception<MultiError> { call, cause ->
@@ -105,6 +129,7 @@ fun Application.configureModule() {
 
             authRoutes()
             userRoutes()
+            integrationRoutes()
         }
     }
 }

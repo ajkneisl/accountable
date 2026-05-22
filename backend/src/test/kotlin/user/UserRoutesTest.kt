@@ -65,7 +65,7 @@ class UserRoutesTest {
     private suspend fun HttpClient.register(
         username: String,
         email: String = "$username@example.com",
-        password: String = "hunter2",
+        password: String = "hunter2pass",
     ): TokenResponse =
         post("/api/auth/register") {
             contentType(ContentType.Application.Json)

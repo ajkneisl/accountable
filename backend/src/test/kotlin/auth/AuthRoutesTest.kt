@@ -64,7 +64,7 @@ class AuthRoutesTest {
     private suspend fun HttpClient.register(
         username: String = "alice",
         email: String = "alice@example.com",
-        password: String = "hunter2",
+        password: String = "hunter2pass",
     ): TokenResponse =
         post("/api/auth/register") {
             contentType(ContentType.Application.Json)
@@ -76,7 +76,7 @@ class AuthRoutesTest {
         val res: HttpResponse =
             client.post("/api/auth/register") {
                 contentType(ContentType.Application.Json)
-                setBody(RegisterRequest("alice", "alice@example.com", "hunter2"))
+                setBody(RegisterRequest("alice", "alice@example.com", "hunter2pass"))
             }
         assertEquals(HttpStatusCode.OK, res.status)
         val body: TokenResponse = res.body()
@@ -92,7 +92,7 @@ class AuthRoutesTest {
         val res =
             client.post("/api/auth/register") {
                 contentType(ContentType.Application.Json)
-                setBody(RegisterRequest("bob", "bob2@example.com", "another-password"))
+                setBody(RegisterRequest("bob", "bob2@example.com", "another-password1"))
             }
         assertEquals(HttpStatusCode.Unauthorized, res.status)
         assertTrue(res.bodyAsText().contains("username already taken"))
@@ -100,11 +100,11 @@ class AuthRoutesTest {
 
     @Test
     fun `login succeeds with valid credentials`() = authTest { client ->
-        client.register(username = "carol", password = "correct-horse")
+        client.register(username = "carol", password = "correct-horse1")
         val res =
             client.post("/api/auth/login") {
                 contentType(ContentType.Application.Json)
-                setBody(LoginRequest("carol", "correct-horse"))
+                setBody(LoginRequest("carol", "correct-horse1"))
             }
         assertEquals(HttpStatusCode.OK, res.status)
         val tokens: TokenResponse = res.body()
@@ -125,7 +125,7 @@ class AuthRoutesTest {
 
     @Test
     fun `login fails for wrong password`() = authTest { client ->
-        client.register(username = "dave", password = "right-password")
+        client.register(username = "dave", password = "right-password1")
         val res =
             client.post("/api/auth/login") {
                 contentType(ContentType.Application.Json)
