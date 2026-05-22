@@ -4,10 +4,10 @@ import { Navigate, Route, Routes } from "react-router-dom"
 import { getSelf, useApi } from "@shared/index"
 import { tokenStore, userAtom } from "./auth"
 import Login from "./Login"
-import Landing from "./screens/Landing"
-import Dashboard from "./screens/Dashboard"
-import Competition from "./screens/Competition"
-import Onboarding from "./screens/Onboarding"
+import Landing from "./features/landing"
+import Dashboard from "./features/dashboard"
+import Competition from "./features/competition"
+import Onboarding from "./features/onboarding"
 
 /** Gates a route behind an authenticated session. */
 function RequireAuth({ children }: { children: ReactNode }) {

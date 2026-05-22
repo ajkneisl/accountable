@@ -3,7 +3,7 @@ import { useSetAtom } from "jotai"
 import { Link, useNavigate } from "react-router-dom"
 import { ApiError, getSelf, login, register, useApi } from "@shared/api"
 import { tokenStore, userAtom } from "./auth"
-import { AccLogo } from "./design/primitives"
+import { AccLogo } from "./features/common/primitives"
 
 type Mode = "login" | "register"
 
