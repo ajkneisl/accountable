@@ -19,6 +19,10 @@ data class Error(override val message: String, val statusCode: Int) : Throwable(
         fun notFound(item: String): Nothing {
             throw Error("That $item does not exist.", 400)
         }
+
+        fun unauthorized(message: String): Nothing {
+            throw Error(message, 401)
+        }
     }
 }
 

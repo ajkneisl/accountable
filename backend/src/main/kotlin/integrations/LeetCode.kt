@@ -1,6 +1,11 @@
 package integrations
 
 import api.suspendTransaction
+import integrations.api.Integration
+import integrations.api.IntegrationRecord
+import integrations.api.IntegrationTable
+import integrations.api.externalIDFor
+import integrations.api.startOfUtcDay
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
@@ -39,7 +44,8 @@ object LeetCode : Integration<LeetCode.LeetCodeData> {
     private const val RECENT_LIMIT = 20
     private const val MS_PER_DAY = 24L * 60 * 60 * 1000
 
-    private val client =
+    /** Mutable so tests can swap in a `MockEngine`-backed client. */
+    internal var client: HttpClient =
         HttpClient(CIO) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
 
     override suspend fun pullData(userID: UUID, date: Long): LeetCodeData {

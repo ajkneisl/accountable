@@ -1,7 +1,9 @@
-package integrations
+package integrations.api
 
 import api.Error
+import integrations.IntegrationData
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.ApplicationCall
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.principal
@@ -95,10 +97,10 @@ private val INTEGRATION_GET_ROUTE: suspend RoutingContext.() -> Unit = {
     call.respond(IntegrationDayResponse(data = data, lastFetched = lastFetched))
 }
 
-private fun io.ktor.server.application.ApplicationCall.userID(): UUID =
+private fun ApplicationCall.userID(): UUID =
     principal<JWTPrincipal>()!!.subject?.let(UUID::fromString) ?: Error.text("invalid token")
 
-private fun io.ktor.server.application.ApplicationCall.integrationName(): String {
+private fun ApplicationCall.integrationName(): String {
     val name = parameters["name"] ?: Error.text("missing integration name")
     if (name !in Integrations.byName) Error.notFound("integration")
     return name

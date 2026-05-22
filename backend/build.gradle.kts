@@ -52,5 +52,6 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation(ktorLibs.server.testHost)
     testImplementation(ktorLibs.client.contentNegotiation)
+    testImplementation(ktorLibs.client.mock)
     testImplementation(libs.h2)
 }

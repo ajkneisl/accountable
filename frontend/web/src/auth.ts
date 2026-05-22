@@ -1,8 +1,11 @@
-import { atom } from "jotai"
+import { atom, useSetAtom } from "jotai"
+import { useNavigate } from "react-router-dom"
 import {
     type ApiConfig,
     type SelfResponse,
-    type TokenResponse
+    type TokenResponse,
+    logout,
+    useApi
 } from "@shared/index"
 
 const ACCESS_COOKIE = "accountable_access"
@@ -59,3 +62,17 @@ export const apiConfig: ApiConfig = {
 export const userAtom = atom<SelfResponse | null>(null)
 
 export const isAuthenticatedAtom = atom((get) => get(userAtom) !== null)
+
+/** Returns a handler that revokes the session, clears tokens, and returns home. */
+export function useSignOut() {
+    const api = useApi()
+    const setUser = useSetAtom(userAtom)
+    const navigate = useNavigate()
+    return async () => {
+        const refresh = tokenStore.getRefresh()
+        if (refresh) await logout(api, refresh).catch(() => {})
+        tokenStore.clear()
+        setUser(null)
+        navigate("/")
+    }
+}

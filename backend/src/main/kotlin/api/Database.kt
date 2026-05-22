@@ -1,7 +1,7 @@
 package api
 
-import integrations.IntegrationTables
-import integrations.UserIntegrations
+import integrations.api.IntegrationTables
+import integrations.api.UserIntegrations
 import user.RefreshTokens
 import user.Users
 import com.zaxxer.hikari.HikariConfig

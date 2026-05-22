@@ -1,4 +1,4 @@
-package integrations
+package integrations.api
 
 import api.suspendTransaction
 import java.util.UUID

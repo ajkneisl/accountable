@@ -1,6 +1,11 @@
 package integrations
 
 import api.suspendTransaction
+import integrations.api.Integration
+import integrations.api.IntegrationRecord
+import integrations.api.IntegrationTable
+import integrations.api.externalIDFor
+import integrations.api.startOfUtcDay
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
@@ -32,7 +37,8 @@ object GitHub : Integration<GitHub.GitHubData> {
 
     private val token: String? = System.getenv("GITHUB_TOKEN")
 
-    private val client =
+    /** Mutable so tests can swap in a `MockEngine`-backed client. */
+    internal var client: HttpClient =
         HttpClient(CIO) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
 
     /**

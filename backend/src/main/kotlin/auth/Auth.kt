@@ -45,6 +45,8 @@ object Auth {
      * @param plainPassword The user provided password.
      */
     suspend fun register(username: String, email: String, plainPassword: String): TokenResponse {
+        if (findUserByUsername(username) != null) Error.unauthorized("username already taken")
+
         val errors = User(UUID.randomUUID(), username, "", email, 0).verify().toMutableList()
         if (plainPassword.length < 8) errors += "password must be at least 8 characters"
         if (plainPassword.length > 128) errors += "password must be at most 128 characters"
@@ -65,16 +67,16 @@ object Auth {
      * @param plainPassword The use rprovided password.
      */
     fun login(username: String, plainPassword: String): TokenResponse {
-        val user = findUserByUsername(username) ?: Error.text("invalid credentials")
+        val user = findUserByUsername(username) ?: Error.unauthorized("invalid credentials")
         val ok = BCrypt.verifyer().verify(plainPassword.toCharArray(), user.password).verified
-        if (!ok) Error.text("invalid credentials")
+        if (!ok) Error.unauthorized("invalid credentials")
         return issueTokens(user)
     }
 
     /** Create an access token from a [refreshToken]. */
     fun refresh(refreshToken: String): TokenResponse = transaction {
-        val active = findActiveTokens(refreshToken) ?: Error.text("Invalid refresh token")
-        val user = findUserByID(active.userID) ?: Error.text("Invalid refresh token")
+        val active = findActiveTokens(refreshToken) ?: Error.unauthorized("invalid refresh token")
+        val user = findUserByID(active.userID) ?: Error.unauthorized("invalid refresh token")
 
         deleteToken(refreshToken)
         issueTokens(user)

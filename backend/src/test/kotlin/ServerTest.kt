@@ -13,8 +13,8 @@ class ServerTest {
         application {
             rootModule()
         }
-        // verify server root returns 200
-        assertEquals(HttpStatusCode.OK, client.get("/").status)
+        // verify the server is up; the SPA root needs a frontend build, so hit the API instead
+        assertEquals(HttpStatusCode.OK, client.get("/api/version").status)
     }
 
 }

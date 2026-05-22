@@ -1,5 +1,6 @@
-package integrations
+package integrations.api
 
+import integrations.IntegrationData
 import java.util.UUID
 
 /**

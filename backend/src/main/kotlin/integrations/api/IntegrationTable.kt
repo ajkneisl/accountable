@@ -1,5 +1,9 @@
-package integrations
+package integrations.api
 
+import integrations.GitHub
+import integrations.GitHubTable
+import integrations.LeetCode
+import integrations.LeetCodeTable
 import java.time.Instant
 import java.time.ZoneOffset
 import org.jetbrains.exposed.sql.ReferenceOption
