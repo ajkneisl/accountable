@@ -4,56 +4,21 @@ import { RingChart } from "./RingChart"
 
 export function TodayCard() {
     return (
-        <div
-            className="card"
-            style={{
-                padding: 24,
-                display: "flex",
-                gap: 24,
-                alignItems: "center"
-            }}
-        >
+        <div className="card flex items-center gap-6 p-6">
             <RingChart pct={68} label="of today" tone="lime" />
-            <div style={{ flex: 1 }}>
-                <div className="eyebrow" style={{ marginBottom: 6 }}>
-                    TODAY · MAY 14
-                </div>
-                <div
-                    style={{
-                        fontSize: 22,
-                        fontWeight: 600,
-                        letterSpacing: "-0.02em",
-                        marginBottom: 4
-                    }}
-                >
+            <div className="flex-1">
+                <div className="eyebrow mb-1.5">TODAY · MAY 14</div>
+                <div className="mb-1 text-[22px] font-semibold tracking-[-0.02em]">
                     3 of 4 on track
                 </div>
-                <div
-                    style={{
-                        fontSize: 13,
-                        color: "var(--ink-3)",
-                        marginBottom: 14
-                    }}
-                >
+                <div className="mb-3.5 text-[13px] text-ink-3">
                     LeetCode is behind. 2 problems left to bank.
                 </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                    <span
-                        className="chip"
-                        style={{
-                            background: "var(--lime-soft)",
-                            color: "var(--lime-ink)"
-                        }}
-                    >
+                <div className="flex gap-2">
+                    <span className="chip bg-lime-soft text-lime-ink">
                         <span className="dot-lime" /> 3 good
                     </span>
-                    <span
-                        className="chip"
-                        style={{
-                            background: "var(--coral-soft)",
-                            color: "var(--coral-ink)"
-                        }}
-                    >
+                    <span className="chip bg-coral-soft text-coral-ink">
                         <span className="dot-coral" /> 1 behind
                     </span>
                 </div>

@@ -10,107 +10,49 @@ export function GoalsShowcase() {
         { src: "⏱", tile: "", title: "Under 2h on Instagram / day", who: "6 of us trying not to scroll.", pct: 70 }
     ] as const
     return (
-        <section id="goals" style={{ padding: "0 64px 96px" }}>
-            <div
-                style={{
-                    display: "flex",
-                    alignItems: "flex-end",
-                    justifyContent: "space-between",
-                    marginBottom: 32
-                }}
-            >
+        <section id="goals" className="px-16 pb-24">
+            <div className="mb-8 flex items-end justify-between">
                 <div>
-                    <div className="eyebrow" style={{ marginBottom: 8 }}>
+                    <div className="eyebrow mb-2">
                         03 · GOALS PEOPLE ACTUALLY KEEP
                     </div>
-                    <h2
-                        className="display"
-                        style={{ fontSize: 48, margin: 0, maxWidth: 760 }}
-                    >
+                    <h2 className="display m-0 max-w-[760px] text-5xl">
                         Boring, attainable, repeatable. The kind that compound.
                     </h2>
                 </div>
-                <div
-                    style={{
-                        maxWidth: 320,
-                        color: "var(--ink-2)",
-                        fontSize: 14
-                    }}
-                >
+                <div className="max-w-[320px] text-sm text-ink-2">
                     We&#39;ll talk you out of <i>“get jacked”</i> and into{" "}
-                    <i>
-                        “four workouts a week, measured by Apple Health”
-                    </i>
-                    . The first goal is half the work.
+                    <i>“four workouts a week, measured by Apple Health”</i>. The
+                    first goal is half the work.
                 </div>
             </div>
 
-            <div
-                style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(4, 1fr)",
-                    gap: 16
-                }}
-            >
+            <div className="grid grid-cols-4 gap-4">
                 {goals.map((g, i) => (
                     <div
                         key={i}
-                        className="card"
-                        style={{
-                            padding: 22,
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 16,
-                            minHeight: 200
-                        }}
+                        className="card flex min-h-[200px] flex-col gap-4 p-[22px]"
                     >
                         <SourceTile
                             label={g.src}
                             variant={g.tile as TileVariant}
                         />
-                        <div style={{ flex: 1 }}>
-                            <div
-                                style={{
-                                    fontSize: 18,
-                                    fontWeight: 600,
-                                    letterSpacing: "-0.01em",
-                                    marginBottom: 8
-                                }}
-                            >
+                        <div className="flex-1">
+                            <div className="mb-2 text-lg font-semibold tracking-[-0.01em]">
                                 {g.title}
                             </div>
-                            <div
-                                style={{
-                                    fontSize: 13,
-                                    color: "var(--ink-3)"
-                                }}
-                            >
+                            <div className="text-[13px] text-ink-3">
                                 {g.who}
                             </div>
                         </div>
                         <div>
-                            <div
-                                style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    marginBottom: 6,
-                                    fontSize: 12
-                                }}
-                            >
-                                <span style={{ color: "var(--ink-3)" }}>
-                                    this week
-                                </span>
-                                <span
-                                    className="mono"
-                                    style={{
-                                        color: "var(--ink-2)",
-                                        fontWeight: 600
-                                    }}
-                                >
+                            <div className="mb-1.5 flex justify-between text-xs">
+                                <span className="text-ink-3">this week</span>
+                                <span className="mono font-semibold text-ink-2">
                                     {g.pct}%
                                 </span>
                             </div>
-                            <div className="bar" style={{ height: 6 }}>
+                            <div className="bar h-1.5">
                                 <i
                                     style={{
                                         width: g.pct + "%",

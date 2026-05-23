@@ -4,45 +4,18 @@ import { Link } from "react-router-dom"
 
 export function CompetitionTease() {
     return (
-        <section style={{ padding: "0 64px 96px" }} id="competitions">
-            <div
-                className="card"
-                style={{
-                    background: "var(--ink)",
-                    color: "var(--bg)",
-                    borderRadius: 32,
-                    padding: "56px 64px",
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: 60,
-                    alignItems: "center",
-                    border: "none"
-                }}
-            >
+        <section className="px-16 pb-24" id="competitions">
+            <div className="card grid grid-cols-2 items-center gap-[60px] rounded-[32px] border-none bg-ink px-16 py-14 text-bg">
                 <div>
-                    <div
-                        className="eyebrow"
-                        style={{ color: "var(--lime)", marginBottom: 12 }}
-                    >
+                    <div className="eyebrow mb-3 text-lime">
                         04 · HEAD-TO-HEAD
                     </div>
-                    <h2
-                        className="display"
-                        style={{ fontSize: 56, margin: "0 0 20px" }}
-                    >
+                    <h2 className="display mb-5 mt-0 text-[56px]">
                         Bet your friend.
                         <br />
                         Settle it on Sunday.
                     </h2>
-                    <p
-                        style={{
-                            fontSize: 17,
-                            opacity: 0.7,
-                            maxWidth: 480,
-                            marginBottom: 28,
-                            lineHeight: 1.5
-                        }}
-                    >
+                    <p className="mb-7 max-w-[480px] text-[17px] leading-[1.5] opacity-70">
                         Drop a weekly score against one friend, or set a bounty:
                         loser buys coffee, loser writes a postcard, loser owns
                         it in the group chat. Stakes optional. Pride mandatory.
@@ -52,145 +25,50 @@ export function CompetitionTease() {
                     </Link>
                 </div>
 
-                <div
-                    style={{
-                        background: "rgba(255,255,255,0.04)",
-                        borderRadius: 20,
-                        padding: 28,
-                        border: "1px solid rgba(255,255,255,0.08)"
-                    }}
-                >
-                    <div
-                        style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            marginBottom: 24,
-                            fontSize: 12
-                        }}
-                    >
-                        <span className="mono" style={{ opacity: 0.6 }}>
+                <div className="rounded-[20px] border border-white/10 bg-white/[0.04] p-7">
+                    <div className="mb-6 flex justify-between text-xs">
+                        <span className="mono opacity-60">
                             WEEK 19 · WED EVENING
                         </span>
-                        <span
-                            className="chip"
-                            style={{
-                                background: "rgba(255,255,255,0.08)",
-                                color: "var(--bg)"
-                            }}
-                        >
+                        <span className="chip bg-white/10 text-bg">
                             <span className="dot-lime" /> live
                         </span>
                     </div>
-                    <div
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            marginBottom: 28
-                        }}
-                    >
-                        <div style={{ textAlign: "center" }}>
-                            <div
-                                style={{
-                                    width: 64,
-                                    height: 64,
-                                    borderRadius: "50%",
-                                    background: "var(--lime)",
-                                    color: "var(--ink)",
-                                    display: "grid",
-                                    placeItems: "center",
-                                    fontWeight: 700,
-                                    fontSize: 24,
-                                    margin: "0 auto 10px"
-                                }}
-                            >
+                    <div className="mb-7 flex items-center justify-between">
+                        <div className="text-center">
+                            <div className="mx-auto mb-2.5 grid h-16 w-16 place-items-center rounded-full bg-lime text-2xl font-bold text-ink">
                                 L
                             </div>
-                            <div style={{ fontSize: 13, opacity: 0.7 }}>
-                                you
-                            </div>
-                            <div
-                                className="mono"
-                                style={{
-                                    fontSize: 56,
-                                    fontWeight: 700,
-                                    letterSpacing: "-0.04em",
-                                    lineHeight: 1
-                                }}
-                            >
+                            <div className="text-[13px] opacity-70">you</div>
+                            <div className="mono text-[56px] font-bold leading-none tracking-[-0.04em]">
                                 14
                             </div>
                         </div>
-                        <div style={{ fontSize: 20, opacity: 0.4 }}>vs</div>
-                        <div style={{ textAlign: "center" }}>
-                            <div
-                                style={{
-                                    width: 64,
-                                    height: 64,
-                                    borderRadius: "50%",
-                                    background: "var(--coral)",
-                                    color: "#fff",
-                                    display: "grid",
-                                    placeItems: "center",
-                                    fontWeight: 700,
-                                    fontSize: 24,
-                                    margin: "0 auto 10px"
-                                }}
-                            >
+                        <div className="text-xl opacity-40">vs</div>
+                        <div className="text-center">
+                            <div className="mx-auto mb-2.5 grid h-16 w-16 place-items-center rounded-full bg-coral text-2xl font-bold text-white">
                                 M
                             </div>
-                            <div style={{ fontSize: 13, opacity: 0.7 }}>
-                                marcus
-                            </div>
-                            <div
-                                className="mono"
-                                style={{
-                                    fontSize: 56,
-                                    fontWeight: 700,
-                                    letterSpacing: "-0.04em",
-                                    lineHeight: 1,
-                                    opacity: 0.6
-                                }}
-                            >
+                            <div className="text-[13px] opacity-70">marcus</div>
+                            <div className="mono text-[56px] font-bold leading-none tracking-[-0.04em] opacity-60">
                                 11
                             </div>
                         </div>
                     </div>
-                    <div
-                        style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 8
-                        }}
-                    >
+                    <div className="flex flex-col gap-2">
                         {["Commits", "LeetCode", "Workouts", "Screen time"].map(
                             (row, i) => (
                                 <div
                                     key={row}
-                                    style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 12,
-                                        fontSize: 12
-                                    }}
+                                    className="flex items-center gap-3 text-xs"
                                 >
-                                    <span
-                                        style={{ width: 84, opacity: 0.7 }}
-                                    >
+                                    <span className="w-[84px] opacity-70">
                                         {row}
                                     </span>
-                                    <div
-                                        style={{
-                                            flex: 1,
-                                            display: "grid",
-                                            gridTemplateColumns: "1fr 1fr",
-                                            gap: 6
-                                        }}
-                                    >
+                                    <div className="grid flex-1 grid-cols-2 gap-1.5">
                                         <div
-                                            className="bar"
+                                            className="bar h-1.5"
                                             style={{
-                                                height: 6,
                                                 background:
                                                     "rgba(255,255,255,0.08)"
                                             }}
@@ -205,9 +83,8 @@ export function CompetitionTease() {
                                             />
                                         </div>
                                         <div
-                                            className="bar"
+                                            className="bar h-1.5"
                                             style={{
-                                                height: 6,
                                                 background:
                                                     "rgba(255,255,255,0.08)"
                                             }}
@@ -217,8 +94,7 @@ export function CompetitionTease() {
                                                     width:
                                                         [60, 90, 30, 80][i] +
                                                         "%",
-                                                    background:
-                                                        "var(--coral)"
+                                                    background: "var(--coral)"
                                                 }}
                                             />
                                         </div>
@@ -227,17 +103,7 @@ export function CompetitionTease() {
                             )
                         )}
                     </div>
-                    <div
-                        style={{
-                            marginTop: 22,
-                            paddingTop: 18,
-                            borderTop: "1px solid rgba(255,255,255,0.08)",
-                            fontSize: 12,
-                            opacity: 0.7,
-                            display: "flex",
-                            justifyContent: "space-between"
-                        }}
-                    >
+                    <div className="mt-[22px] flex justify-between border-t border-white/10 pt-[18px] text-xs opacity-70">
                         <span>Stakes · loser buys coffee × 1 week</span>
                         <span className="mono">4 days left</span>
                     </div>

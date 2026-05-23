@@ -7,105 +7,42 @@ export function ScoreDelta({ won, lost, label, source, glyph, tile, leader }: Ca
     const total = won + lost
     const wpct = total ? (won / total) * 100 : 50
     return (
-        <div
-            style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 16,
-                padding: "14px 0",
-                borderTop: "1px solid var(--line-2)"
-            }}
-        >
+        <div className="flex items-center gap-4 border-t border-line-2 py-3.5">
             <SourceTile label={glyph} variant={tile} />
-            <div style={{ width: 160 }}>
-                <div style={{ fontSize: 14, fontWeight: 600 }}>{label}</div>
-                <div style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                    {source}
-                </div>
+            <div className="w-40">
+                <div className="text-sm font-semibold">{label}</div>
+                <div className="text-[11px] text-ink-3">{source}</div>
             </div>
-            <div
-                style={{
-                    flex: 1,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12
-                }}
-            >
+            <div className="flex flex-1 items-center gap-3">
                 <div
-                    className="mono tab"
-                    style={{
-                        width: 32,
-                        textAlign: "right",
-                        fontWeight: leader === "you" ? 700 : 500,
-                        color:
-                            leader === "you"
-                                ? "var(--lime-ink)"
-                                : "var(--ink-3)"
-                    }}
+                    className={`mono tab w-8 text-right ${leader === "you" ? "font-bold text-lime-ink" : "font-medium text-ink-3"}`}
                 >
                     {won}
                 </div>
-                <div
-                    style={{
-                        flex: 1,
-                        display: "flex",
-                        alignItems: "center",
-                        height: 10,
-                        borderRadius: 5,
-                        overflow: "hidden",
-                        background: "var(--line-2)"
-                    }}
-                >
+                <div className="flex h-2.5 flex-1 items-center overflow-hidden rounded-[5px] bg-line-2">
                     <div
-                        style={{
-                            width: wpct + "%",
-                            height: "100%",
-                            background: "var(--lime)"
-                        }}
+                        className="h-full bg-lime"
+                        style={{ width: wpct + "%" }}
                     />
                     <div
-                        style={{
-                            width: 100 - wpct + "%",
-                            height: "100%",
-                            background: "var(--coral)"
-                        }}
+                        className="h-full bg-coral"
+                        style={{ width: 100 - wpct + "%" }}
                     />
                 </div>
                 <div
-                    className="mono tab"
-                    style={{
-                        width: 32,
-                        textAlign: "left",
-                        fontWeight: leader === "marcus" ? 700 : 500,
-                        color:
-                            leader === "marcus"
-                                ? "var(--coral-ink)"
-                                : "var(--ink-3)"
-                    }}
+                    className={`mono tab w-8 text-left ${leader === "marcus" ? "font-bold text-coral-ink" : "font-medium text-ink-3"}`}
                 >
                     {lost}
                 </div>
             </div>
-            <div style={{ width: 80, textAlign: "right" }}>
+            <div className="w-20 text-right">
                 {leader === "you" && (
-                    <span
-                        className="chip"
-                        style={{
-                            background: "var(--lime-soft)",
-                            color: "var(--lime-ink)"
-                        }}
-                    >
+                    <span className="chip bg-lime-soft text-lime-ink">
                         <span className="dot-lime" /> +{won - lost}
                     </span>
                 )}
                 {leader === "marcus" && (
-                    <span
-                        className="chip"
-                        style={{
-                            background: "var(--coral-soft)",
-                            color: "var(--coral-ink)"
-                        }}
-                    >
+                    <span className="chip bg-coral-soft text-coral-ink">
                         <span className="dot-coral" /> +{lost - won}
                     </span>
                 )}

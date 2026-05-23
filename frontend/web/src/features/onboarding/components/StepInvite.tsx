@@ -17,59 +17,25 @@ export function StepInvite({
     ]
 
     const side = (
-        <div style={{ width: 440 }}>
-            <div className="eyebrow" style={{ marginBottom: 12 }}>
+        <div className="w-[440px]">
+            <div className="eyebrow mb-3">
                 PREVIEW · WHAT THEY&apos;LL SEE
             </div>
-            <div
-                className="card"
-                style={{
-                    padding: 24,
-                    background: "var(--ink)",
-                    color: "var(--bg)",
-                    border: "none",
-                    borderRadius: 18
-                }}
-            >
-                <div
-                    style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        marginBottom: 18
-                    }}
-                >
+            <div className="card rounded-[18px] border-none bg-ink p-6 text-bg">
+                <div className="mb-[18px] flex items-center justify-between">
                     <div>
-                        <div
-                            style={{
-                                fontSize: 18,
-                                fontWeight: 700,
-                                letterSpacing: "-0.01em"
-                            }}
-                        >
+                        <div className="text-lg font-bold tracking-[-0.01em]">
                             Ship code · 5/wk
                         </div>
-                        <div style={{ fontSize: 12, opacity: 0.6 }}>
+                        <div className="text-xs opacity-60">
                             Lukas&apos;s goal · Mon → Sun
                         </div>
                     </div>
-                    <span
-                        className="chip"
-                        style={{
-                            background: "rgba(255,255,255,0.08)",
-                            color: "var(--bg)"
-                        }}
-                    >
+                    <span className="chip bg-white/10 text-bg">
                         3 watching
                     </span>
                 </div>
-                <div
-                    style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 8
-                    }}
-                >
+                <div className="flex flex-col gap-2">
                     {[
                         { n: "You (Lukas)", s: "3 / 5", mine: true },
                         { n: "Marcus Frost", s: "— invited", pending: true },
@@ -77,70 +43,33 @@ export function StepInvite({
                     ].map((r, i) => (
                         <div
                             key={i}
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 12,
-                                padding: "10px 12px",
-                                background: r.mine
-                                    ? "rgba(166, 217, 71, 0.14)"
-                                    : "rgba(255,255,255,0.04)",
-                                borderRadius: 10
-                            }}
+                            className={`flex items-center gap-3 rounded-[10px] px-3 py-2.5 ${r.mine ? "bg-[rgba(166,217,71,0.14)]" : "bg-white/[0.04]"}`}
                         >
                             <div
+                                className="grid h-7 w-7 place-items-center rounded-full text-[11px] font-bold"
                                 style={{
-                                    width: 28,
-                                    height: 28,
-                                    borderRadius: "50%",
                                     background: [
                                         "var(--lime)",
                                         "var(--coral)",
                                         "var(--lime)"
                                     ][i],
-                                    color: i === 1 ? "#fff" : "var(--ink)",
-                                    display: "grid",
-                                    placeItems: "center",
-                                    fontSize: 11,
-                                    fontWeight: 700
+                                    color: i === 1 ? "#fff" : "var(--ink)"
                                 }}
                             >
                                 {r.n[0] === "Y" ? "L" : r.n[0]}
                             </div>
-                            <div
-                                style={{
-                                    flex: 1,
-                                    fontSize: 13,
-                                    fontWeight: 500
-                                }}
-                            >
+                            <div className="flex-1 text-[13px] font-medium">
                                 {r.n}
                             </div>
                             <div
-                                className="mono"
-                                style={{
-                                    fontSize: 12,
-                                    opacity: r.pending ? 0.5 : 1,
-                                    color: r.mine
-                                        ? "var(--lime)"
-                                        : "inherit"
-                                }}
+                                className={`mono text-xs ${r.pending ? "opacity-50" : ""} ${r.mine ? "text-lime" : ""}`}
                             >
                                 {r.s}
                             </div>
                         </div>
                     ))}
                 </div>
-                <div
-                    style={{
-                        marginTop: 18,
-                        paddingTop: 14,
-                        borderTop: "1px solid rgba(255,255,255,0.08)",
-                        fontSize: 12,
-                        opacity: 0.6,
-                        lineHeight: 1.5
-                    }}
-                >
+                <div className="mt-[18px] border-t border-white/10 pt-3.5 text-xs leading-[1.5] opacity-60">
                     They get a once-daily digest. No pings. They cheer or jeer.
                     Sunday we tally.
                 </div>
@@ -162,13 +91,7 @@ export function StepInvite({
             side={side}
             onBack={back}
             footer={
-                <div
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 14
-                    }}
-                >
+                <div className="flex items-center gap-3.5">
                     <button
                         type="button"
                         className="btn btn-ghost btn-sm"
@@ -186,121 +109,48 @@ export function StepInvite({
                 </div>
             }
         >
-            <p
-                style={{
-                    fontSize: 16,
-                    color: "var(--ink-2)",
-                    maxWidth: 480,
-                    marginBottom: 20
-                }}
-            >
+            <p className="mb-5 max-w-[480px] text-base text-ink-2">
                 One person makes a difference. Two makes a habit. Pick at least
                 one from below — or paste a phone, email, or @username.
             </p>
 
-            <div
-                style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    marginBottom: 18,
-                    maxWidth: 480
-                }}
-            >
-                <div
-                    style={{
-                        flex: 1,
-                        display: "flex",
-                        alignItems: "center",
-                        border: "1px solid var(--line)",
-                        borderRadius: 10,
-                        padding: "10px 14px",
-                        gap: 8,
-                        background: "var(--bg-card)"
-                    }}
-                >
-                    <span style={{ color: "var(--ink-3)" }}>＠</span>
+            <div className="mb-[18px] flex max-w-[480px] items-center gap-2">
+                <div className="flex flex-1 items-center gap-2 rounded-[10px] border border-line bg-bg-card px-3.5 py-2.5">
+                    <span className="text-ink-3">＠</span>
                     <input
                         defaultValue="marcus@"
-                        style={{
-                            flex: 1,
-                            border: 0,
-                            outline: 0,
-                            font: "inherit",
-                            fontSize: 14,
-                            background: "transparent"
-                        }}
+                        className="flex-1 border-0 bg-transparent text-sm font-[inherit] outline-0"
                     />
                 </div>
                 <button className="btn btn-line btn-sm">+ Add</button>
             </div>
 
-            <div className="eyebrow" style={{ marginBottom: 10 }}>
+            <div className="eyebrow mb-2.5">
                 SUGGESTED · BASED ON YOUR ACCOUNT
             </div>
-            <div
-                style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 6,
-                    maxWidth: 480
-                }}
-            >
+            <div className="flex max-w-[480px] flex-col gap-1.5">
                 {suggested.map((p, i) => (
                     <div
                         key={i}
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 12,
-                            padding: "10px 12px",
-                            borderRadius: 10,
-                            background: p.added
-                                ? "var(--bg-sunken)"
-                                : "transparent"
-                        }}
+                        className={`flex items-center gap-3 rounded-[10px] px-3 py-2.5 ${p.added ? "bg-bg-sunken" : "bg-transparent"}`}
                     >
                         <div
+                            className="grid h-8 w-8 place-items-center rounded-full text-[13px] font-bold"
                             style={{
-                                width: 32,
-                                height: 32,
-                                borderRadius: "50%",
                                 background: p.c,
-                                color: p.dark ? "#fff" : "var(--ink)",
-                                display: "grid",
-                                placeItems: "center",
-                                fontSize: 13,
-                                fontWeight: 700
+                                color: p.dark ? "#fff" : "var(--ink)"
                             }}
                         >
                             {p.l}
                         </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                            <div
-                                style={{
-                                    fontSize: 14,
-                                    fontWeight: 600
-                                }}
-                            >
-                                {p.n}
-                            </div>
-                            <div
-                                style={{
-                                    fontSize: 11,
-                                    color: "var(--ink-3)"
-                                }}
-                            >
+                        <div className="min-w-0 flex-1">
+                            <div className="text-sm font-semibold">{p.n}</div>
+                            <div className="text-[11px] text-ink-3">
                                 {p.u} · {p.why}
                             </div>
                         </div>
                         {p.added ? (
-                            <span
-                                className="chip"
-                                style={{
-                                    background: "var(--lime)",
-                                    color: "var(--ink)"
-                                }}
-                            >
+                            <span className="chip bg-lime text-ink">
                                 ✓ added
                             </span>
                         ) : (

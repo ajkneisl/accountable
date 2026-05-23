@@ -23,131 +23,45 @@ export function OnbShell({
     onBack?: () => void
 }) {
     return (
-        <div
-            className="acc"
-            style={{
-                width: 1440,
-                margin: "0 auto",
-                minHeight: 900,
-                display: "flex",
-                flexDirection: "column",
-                background: "var(--bg)"
-            }}
-        >
-            <header
-                style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    padding: "24px 36px"
-                }}
-            >
+        <div className="acc mx-auto flex min-h-[900px] w-[1440px] flex-col bg-bg">
+            <header className="flex items-center justify-between px-9 py-6">
                 <AccLogo />
-                <div
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 14
-                    }}
-                >
-                    <span
-                        className="mono"
-                        style={{
-                            fontSize: 11,
-                            color: "var(--ink-3)",
-                            letterSpacing: "0.1em"
-                        }}
-                    >
+                <div className="flex items-center gap-3.5">
+                    <span className="mono text-[11px] tracking-[0.1em] text-ink-3">
                         STEP {String(step).padStart(2, "0")} /{" "}
                         {String(TOTAL).padStart(2, "0")}
                     </span>
-                    <div style={{ display: "flex", gap: 4 }}>
+                    <div className="flex gap-1">
                         {Array.from({ length: TOTAL }).map((_, i) => (
                             <div
                                 key={i}
-                                style={{
-                                    width: 24,
-                                    height: 4,
-                                    borderRadius: 2,
-                                    background:
-                                        i < step
-                                            ? "var(--ink)"
-                                            : "var(--line)"
-                                }}
+                                className={`h-1 w-6 rounded-[2px] ${i < step ? "bg-ink" : "bg-line"}`}
                             />
                         ))}
                     </div>
                     <Link
                         to="/"
-                        style={{
-                            fontSize: 13,
-                            color: "var(--ink-3)",
-                            textDecoration: "none",
-                            marginLeft: 8
-                        }}
+                        className="ml-2 text-[13px] text-ink-3 no-underline"
                     >
                         Save &amp; quit
                     </Link>
                 </div>
             </header>
 
-            <div
-                style={{
-                    flex: 1,
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    padding: "20px 0 0",
-                    alignItems: "stretch"
-                }}
-            >
-                <div
-                    style={{
-                        padding: "40px 36px 40px 88px",
-                        display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "center"
-                    }}
-                >
-                    {kicker && (
-                        <div
-                            className="eyebrow"
-                            style={{ marginBottom: 14 }}
-                        >
-                            {kicker}
-                        </div>
-                    )}
-                    <h1
-                        className="display"
-                        style={{
-                            fontSize: 56,
-                            margin: "0 0 20px",
-                            maxWidth: 560
-                        }}
-                    >
+            <div className="grid flex-1 grid-cols-2 items-stretch pt-5">
+                <div className="flex flex-col justify-center py-10 pl-[88px] pr-9">
+                    {kicker && <div className="eyebrow mb-3.5">{kicker}</div>}
+                    <h1 className="display mb-5 mt-0 max-w-[560px] text-[56px]">
                         {title}
                     </h1>
                     {children}
                 </div>
-                <div
-                    style={{
-                        padding: "40px 88px 40px 36px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center"
-                    }}
-                >
+                <div className="flex items-center justify-center py-10 pl-9 pr-[88px]">
                     {side}
                 </div>
             </div>
 
-            <footer
-                style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    padding: "20px 36px 36px"
-                }}
-            >
+            <footer className="flex items-center justify-between px-9 pb-9 pt-5">
                 {onBack ? (
                     <button
                         type="button"

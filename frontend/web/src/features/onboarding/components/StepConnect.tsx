@@ -18,118 +18,41 @@ export function StepConnect({
     ]
 
     const side = (
-        <div style={{ width: 460, position: "relative" }}>
+        <div className="relative w-[460px]">
             <div
-                style={{
-                    position: "absolute",
-                    top: -18,
-                    left: -18,
-                    right: 18,
-                    bottom: 18,
-                    background: "var(--bg-sunken)",
-                    borderRadius: 22,
-                    transform: "rotate(-2deg)"
-                }}
+                className="absolute -left-[18px] -top-[18px] bottom-[18px] right-[18px] rounded-[22px] bg-bg-sunken"
+                style={{ transform: "rotate(-2deg)" }}
             />
-            <div
-                className="card"
-                style={{
-                    position: "relative",
-                    padding: 28,
-                    borderRadius: 22,
-                    boxShadow: "var(--shadow-lg)"
-                }}
-            >
-                <div
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 14,
-                        marginBottom: 22
-                    }}
-                >
+            <div className="card relative rounded-[22px] p-7 shadow-lg">
+                <div className="mb-[22px] flex items-center gap-3.5">
                     <SourceTile label="GH" variant="ink" />
-                    <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 15, fontWeight: 600 }}>
+                    <div className="flex-1">
+                        <div className="text-[15px] font-semibold">
                             github.com
                         </div>
-                        <div
-                            style={{
-                                fontSize: 12,
-                                color: "var(--ink-3)"
-                            }}
-                        >
+                        <div className="text-xs text-ink-3">
                             OAuth · accountable-app
                         </div>
                     </div>
-                    <span
-                        className="chip"
-                        style={{
-                            background: "var(--lime-soft)",
-                            color: "var(--lime-ink)"
-                        }}
-                    >
+                    <span className="chip bg-lime-soft text-lime-ink">
                         <span className="dot-lime" /> secure
                     </span>
                 </div>
 
-                <div className="eyebrow" style={{ marginBottom: 12 }}>
-                    WE&apos;LL ASK FOR
-                </div>
-                <div
-                    style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 12,
-                        marginBottom: 22
-                    }}
-                >
+                <div className="eyebrow mb-3">WE&apos;LL ASK FOR</div>
+                <div className="mb-[22px] flex flex-col gap-3">
                     {permissions.map((p, i) => (
-                        <div
-                            key={i}
-                            style={{
-                                display: "flex",
-                                alignItems: "flex-start",
-                                gap: 12
-                            }}
-                        >
+                        <div key={i} className="flex items-start gap-3">
                             <div
-                                style={{
-                                    width: 20,
-                                    height: 20,
-                                    borderRadius: 6,
-                                    marginTop: 1,
-                                    background: p.off
-                                        ? "transparent"
-                                        : "var(--lime)",
-                                    border: p.off
-                                        ? "1px dashed var(--ink-3)"
-                                        : "none",
-                                    color: "var(--ink)",
-                                    display: "grid",
-                                    placeItems: "center",
-                                    fontSize: 13,
-                                    fontWeight: 700,
-                                    flexShrink: 0
-                                }}
+                                className={`mt-px grid h-5 w-5 flex-shrink-0 place-items-center rounded-md text-[13px] font-bold text-ink ${p.off ? "border border-dashed border-ink-3 bg-transparent" : "bg-lime"}`}
                             >
                                 {p.off ? "×" : "✓"}
                             </div>
                             <div>
-                                <div
-                                    style={{
-                                        fontSize: 13,
-                                        fontWeight: 600
-                                    }}
-                                >
+                                <div className="text-[13px] font-semibold">
                                     {p.l}
                                 </div>
-                                <div
-                                    style={{
-                                        fontSize: 11,
-                                        color: "var(--ink-3)"
-                                    }}
-                                >
+                                <div className="text-[11px] text-ink-3">
                                     {p.sub}
                                 </div>
                             </div>
@@ -137,21 +60,10 @@ export function StepConnect({
                     ))}
                 </div>
 
-                <button
-                    className="btn btn-primary"
-                    style={{ width: "100%" }}
-                >
+                <button className="btn btn-primary w-full">
                     Authorize on github.com →
                 </button>
-                <div
-                    className="mono"
-                    style={{
-                        fontSize: 11,
-                        color: "var(--ink-3)",
-                        textAlign: "center",
-                        marginTop: 12
-                    }}
-                >
+                <div className="mono mt-3 text-center text-[11px] text-ink-3">
                     opens github · revoke any time
                 </div>
             </div>
@@ -172,13 +84,7 @@ export function StepConnect({
             side={side}
             onBack={back}
             footer={
-                <div
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 14
-                    }}
-                >
+                <div className="flex items-center gap-3.5">
                     <button
                         type="button"
                         className="btn btn-ghost btn-sm"
@@ -196,26 +102,12 @@ export function StepConnect({
                 </div>
             }
         >
-            <p
-                style={{
-                    fontSize: 16,
-                    color: "var(--ink-2)",
-                    maxWidth: 480,
-                    marginBottom: 24
-                }}
-            >
+            <p className="mb-6 max-w-[480px] text-base text-ink-2">
                 Accountable reads from the apps that already track this. No
                 self-reporting, no fudging the numbers, no Sunday-night regret
                 edits.
             </p>
-            <div
-                style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 10,
-                    maxWidth: 480
-                }}
-            >
+            <div className="flex max-w-[480px] flex-col gap-2.5">
                 {[
                     {
                         l: "Read-only",
@@ -230,40 +122,13 @@ export function StepConnect({
                         s: "One click in Settings disconnects and deletes history."
                     }
                 ].map((r, i) => (
-                    <div key={i} style={{ display: "flex", gap: 12 }}>
-                        <div
-                            style={{
-                                width: 22,
-                                height: 22,
-                                borderRadius: "50%",
-                                background: "var(--bg-sunken)",
-                                color: "var(--ink)",
-                                display: "grid",
-                                placeItems: "center",
-                                fontSize: 11,
-                                fontWeight: 700,
-                                flexShrink: 0
-                            }}
-                        >
+                    <div key={i} className="flex gap-3">
+                        <div className="grid h-[22px] w-[22px] flex-shrink-0 place-items-center rounded-full bg-bg-sunken text-[11px] font-bold text-ink">
                             {i + 1}
                         </div>
                         <div>
-                            <div
-                                style={{
-                                    fontSize: 14,
-                                    fontWeight: 600
-                                }}
-                            >
-                                {r.l}
-                            </div>
-                            <div
-                                style={{
-                                    fontSize: 13,
-                                    color: "var(--ink-3)"
-                                }}
-                            >
-                                {r.s}
-                            </div>
+                            <div className="text-sm font-semibold">{r.l}</div>
+                            <div className="text-[13px] text-ink-3">{r.s}</div>
                         </div>
                     </div>
                 ))}

@@ -4,42 +4,22 @@ import type { Activity } from "../types"
 
 export function ActivityRow({ a }: { a: Activity }) {
     return (
-        <div
-            style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                padding: "10px 0",
-                borderTop: "1px solid var(--line-2)"
-            }}
-        >
+        <div className="flex items-center gap-3 border-t border-line-2 py-2.5">
             <div
+                className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-full text-[11px] font-semibold"
                 style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: "50%",
                     background: a.userColor,
-                    color: a.userDark ? "#fff" : "var(--ink)",
-                    display: "grid",
-                    placeItems: "center",
-                    fontSize: 11,
-                    fontWeight: 600,
-                    flexShrink: 0
+                    color: a.userDark ? "#fff" : "var(--ink)"
                 }}
             >
                 {a.user[0]}
             </div>
-            <div style={{ flex: 1, fontSize: 13 }}>
+            <div className="flex-1 text-[13px]">
                 <b>{a.user}</b>{" "}
-                <span style={{ color: "var(--ink-2)" }}>{a.action}</span>{" "}
-                <span style={{ color: "var(--ink-3)" }}>{a.detail}</span>
+                <span className="text-ink-2">{a.action}</span>{" "}
+                <span className="text-ink-3">{a.detail}</span>
             </div>
-            <div
-                className="mono"
-                style={{ fontSize: 11, color: "var(--ink-3)" }}
-            >
-                {a.time}
-            </div>
+            <div className="mono text-[11px] text-ink-3">{a.time}</div>
         </div>
     )
 }

@@ -11,46 +11,15 @@ export function HowItWorks() {
                 title: "Set a goal",
                 body: "Pick something specific and measurable. We help you scale it down until it’s attainable — not aspirational.",
                 preview: (
-                    <div
-                        className="card"
-                        style={{ padding: 18, fontSize: 13 }}
-                    >
-                        <div
-                            className="eyebrow"
-                            style={{ marginBottom: 8 }}
-                        >
-                            NEW GOAL
-                        </div>
+                    <div className="card p-[18px] text-[13px]">
+                        <div className="eyebrow mb-2">NEW GOAL</div>
                         <input
                             value="Ship 5 commits to side projects"
                             readOnly
-                            style={{
-                                width: "100%",
-                                border: 0,
-                                outline: 0,
-                                font: "inherit",
-                                fontSize: 16,
-                                fontWeight: 600,
-                                background: "transparent",
-                                padding: 0,
-                                color: "var(--ink)"
-                            }}
+                            className="w-full border-0 bg-transparent p-0 text-base font-semibold font-[inherit] text-ink outline-0"
                         />
-                        <div
-                            style={{
-                                display: "flex",
-                                gap: 6,
-                                marginTop: 12,
-                                flexWrap: "wrap"
-                            }}
-                        >
-                            <span
-                                className="chip"
-                                style={{
-                                    background: "var(--lime-soft)",
-                                    color: "var(--lime-ink)"
-                                }}
-                            >
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                            <span className="chip bg-lime-soft text-lime-ink">
                                 <span className="dot-lime" /> per week
                             </span>
                             <span className="chip">Mon → Sun</span>
@@ -64,17 +33,8 @@ export function HowItWorks() {
                 title: "Connect a source",
                 body: "Authenticate with the apps that already track this. No self-reporting, no fudging the numbers.",
                 preview: (
-                    <div
-                        className="card"
-                        style={{ padding: 14, fontSize: 13 }}
-                    >
-                        <div
-                            style={{
-                                display: "flex",
-                                flexDirection: "column",
-                                gap: 8
-                            }}
-                        >
+                    <div className="card p-3.5 text-[13px]">
+                        <div className="flex flex-col gap-2">
                             {[
                                 {
                                     l: "GitHub",
@@ -100,54 +60,27 @@ export function HowItWorks() {
                             ].map((r, i) => (
                                 <div
                                     key={i}
-                                    style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 10
-                                    }}
+                                    className="flex items-center gap-2.5"
                                 >
                                     <SourceTile
                                         label={r.l}
                                         glyph={r.g}
                                         variant={r.v as TileVariant}
                                     />
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontWeight: 600 }}>
+                                    <div className="flex-1">
+                                        <div className="font-semibold">
                                             {r.l}
                                         </div>
-                                        <div
-                                            style={{
-                                                fontSize: 11,
-                                                color: "var(--ink-3)"
-                                            }}
-                                        >
+                                        <div className="text-[11px] text-ink-3">
                                             {r.s}
                                         </div>
                                     </div>
                                     <div
-                                        style={{
-                                            width: 30,
-                                            height: 18,
-                                            borderRadius: 999,
-                                            background: r.on
-                                                ? "var(--lime)"
-                                                : "var(--line)",
-                                            position: "relative",
-                                            flexShrink: 0
-                                        }}
+                                        className={`relative h-[18px] w-[30px] flex-shrink-0 rounded-full ${r.on ? "bg-lime" : "bg-line"}`}
                                     >
                                         <div
-                                            style={{
-                                                position: "absolute",
-                                                top: 2,
-                                                left: r.on ? 14 : 2,
-                                                width: 14,
-                                                height: 14,
-                                                borderRadius: "50%",
-                                                background: "#fff",
-                                                boxShadow:
-                                                    "var(--shadow-sm)"
-                                            }}
+                                            className="absolute top-0.5 h-3.5 w-3.5 rounded-full bg-white shadow-sm"
+                                            style={{ left: r.on ? 14 : 2 }}
                                         />
                                     </div>
                                 </div>
@@ -161,13 +94,8 @@ export function HowItWorks() {
                 title: "Bring friends",
                 body: "Add 1 friend or a whole group. Stakes are optional. Public shame is included by default.",
                 preview: (
-                    <div className="card" style={{ padding: 14 }}>
-                        <div
-                            className="eyebrow"
-                            style={{ marginBottom: 10 }}
-                        >
-                            SQUAD · DEEP WORK
-                        </div>
+                    <div className="card p-3.5">
+                        <div className="eyebrow mb-2.5">SQUAD · DEEP WORK</div>
                         {[
                             "You · 14pts",
                             "Marcus · 12pts",
@@ -176,21 +104,11 @@ export function HowItWorks() {
                         ].map((p, i) => (
                             <div
                                 key={i}
-                                style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 10,
-                                    padding: "7px 0",
-                                    borderTop: i
-                                        ? "1px solid var(--line-2)"
-                                        : "none"
-                                }}
+                                className={`flex items-center gap-2.5 py-[7px] ${i ? "border-t border-line-2" : ""}`}
                             >
                                 <div
+                                    className="grid h-[26px] w-[26px] place-items-center rounded-full text-[11px] font-semibold"
                                     style={{
-                                        width: 26,
-                                        height: 26,
-                                        borderRadius: "50%",
                                         background: [
                                             "var(--lime)",
                                             "var(--coral)",
@@ -202,32 +120,16 @@ export function HowItWorks() {
                                                 ? "#fff"
                                                 : i === 2
                                                   ? "var(--bg)"
-                                                  : "var(--ink)",
-                                        display: "grid",
-                                        placeItems: "center",
-                                        fontSize: 11,
-                                        fontWeight: 600
+                                                  : "var(--ink)"
                                     }}
                                 >
                                     {p[0]}
                                 </div>
-                                <div
-                                    style={{
-                                        flex: 1,
-                                        fontSize: 13,
-                                        fontWeight: 500
-                                    }}
-                                >
+                                <div className="flex-1 text-[13px] font-medium">
                                     {p}
                                 </div>
                                 {i === 0 && (
-                                    <span
-                                        className="chip"
-                                        style={{
-                                            background: "var(--lime)",
-                                            color: "var(--ink)"
-                                        }}
-                                    >
+                                    <span className="chip bg-lime text-ink">
                                         leader
                                     </span>
                                 )}
@@ -239,54 +141,23 @@ export function HowItWorks() {
         ]
 
     return (
-        <section id="how-it-works" style={{ padding: "0 64px 96px" }}>
-            <div style={{ marginBottom: 40 }}>
-                <div className="eyebrow" style={{ marginBottom: 8 }}>
-                    02 · HOW IT WORKS
-                </div>
-                <h2
-                    className="display"
-                    style={{ fontSize: 48, margin: 0, maxWidth: 760 }}
-                >
+        <section id="how-it-works" className="px-16 pb-24">
+            <div className="mb-10">
+                <div className="eyebrow mb-2">02 · HOW IT WORKS</div>
+                <h2 className="display m-0 max-w-[760px] text-5xl">
                     Three steps. Then you’re just keeping a promise — out loud.
                 </h2>
             </div>
-            <div
-                style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(3, 1fr)",
-                    gap: 28
-                }}
-            >
+            <div className="grid grid-cols-3 gap-7">
                 {steps.map((s, i) => (
                     <div key={i}>
-                        <div
-                            className="mono"
-                            style={{
-                                fontSize: 13,
-                                color: "var(--ink-3)",
-                                marginBottom: 14
-                            }}
-                        >
+                        <div className="mono mb-3.5 text-[13px] text-ink-3">
                             {s.n}
                         </div>
-                        <h3
-                            style={{
-                                fontSize: 24,
-                                margin: "0 0 8px",
-                                letterSpacing: "-0.02em"
-                            }}
-                        >
+                        <h3 className="m-0 mb-2 text-2xl tracking-[-0.02em]">
                             {s.title}
                         </h3>
-                        <p
-                            style={{
-                                margin: "0 0 18px",
-                                color: "var(--ink-2)",
-                                fontSize: 15,
-                                lineHeight: 1.5
-                            }}
-                        >
+                        <p className="m-0 mb-[18px] text-[15px] leading-[1.5] text-ink-2">
                             {s.body}
                         </p>
                         {s.preview}

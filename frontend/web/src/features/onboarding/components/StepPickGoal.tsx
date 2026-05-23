@@ -1,8 +1,9 @@
 // Onboarding step 02 — pick a goal template.
 
 import { SourceTile, type TileVariant } from "../../common/primitives"
-import { labelStyle } from "../styles"
 import { OnbShell } from "./OnbShell"
+
+const labelClass = "block text-xs font-medium text-ink-2 mb-1.5"
 
 export function StepPickGoal({
     next,
@@ -33,137 +34,54 @@ export function StepPickGoal({
     ]
 
     const side = (
-        <div
-            style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 14,
-                width: 420
-            }}
-        >
+        <div className="flex w-[420px] flex-col gap-3.5">
             <div className="eyebrow">PICKED</div>
             <div
-                className="card"
+                className="card border-ink p-6"
                 style={{
-                    padding: 24,
-                    borderColor: "var(--ink)",
                     boxShadow: "0 0 0 2px var(--ink), var(--shadow-md)"
                 }}
             >
-                <div
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 14,
-                        marginBottom: 16
-                    }}
-                >
+                <div className="mb-4 flex items-center gap-3.5">
                     <SourceTile label="GH" variant="ink" />
                     <div>
-                        <div
-                            style={{
-                                fontSize: 18,
-                                fontWeight: 700,
-                                letterSpacing: "-0.01em"
-                            }}
-                        >
+                        <div className="text-lg font-bold tracking-[-0.01em]">
                             Ship code
                         </div>
-                        <div
-                            style={{
-                                fontSize: 12,
-                                color: "var(--ink-3)"
-                            }}
-                        >
+                        <div className="text-xs text-ink-3">
                             commits via GitHub · accountable counts pushes, not
                             noise
                         </div>
                     </div>
                 </div>
 
-                <label style={{ ...labelStyle, marginBottom: 6 }}>
-                    How many?
-                </label>
-                <div
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        marginBottom: 16
-                    }}
-                >
-                    <button
-                        className="btn btn-line btn-sm"
-                        style={{ width: 32, height: 32, padding: 0 }}
-                    >
+                <label className={labelClass}>How many?</label>
+                <div className="mb-4 flex items-center gap-2">
+                    <button className="btn btn-line btn-sm h-8 w-8 p-0">
                         −
                     </button>
-                    <div
-                        className="mono"
-                        style={{
-                            fontSize: 30,
-                            fontWeight: 700,
-                            letterSpacing: "-0.03em",
-                            minWidth: 40,
-                            textAlign: "center"
-                        }}
-                    >
+                    <div className="mono min-w-[40px] text-center text-3xl font-bold tracking-[-0.03em]">
                         5
                     </div>
-                    <button
-                        className="btn btn-line btn-sm"
-                        style={{ width: 32, height: 32, padding: 0 }}
-                    >
+                    <button className="btn btn-line btn-sm h-8 w-8 p-0">
                         +
                     </button>
-                    <span
-                        style={{
-                            marginLeft: 8,
-                            fontSize: 14,
-                            color: "var(--ink-3)"
-                        }}
-                    >
-                        commits
-                    </span>
+                    <span className="ml-2 text-sm text-ink-3">commits</span>
                 </div>
 
-                <label style={{ ...labelStyle, marginBottom: 6 }}>
-                    How often?
-                </label>
-                <div
-                    style={{
-                        display: "flex",
-                        gap: 6,
-                        marginBottom: 16
-                    }}
-                >
+                <label className={labelClass}>How often?</label>
+                <div className="mb-4 flex gap-1.5">
                     {["Daily", "Weekly", "Mon–Fri"].map((p) => (
                         <div
                             key={p}
-                            className="chip"
-                            style={
-                                p === "Weekly"
-                                    ? {
-                                          background: "var(--ink)",
-                                          color: "var(--bg)"
-                                      }
-                                    : undefined
-                            }
+                            className={`chip ${p === "Weekly" ? "bg-ink text-bg" : ""}`}
                         >
                             {p}
                         </div>
                     ))}
                 </div>
 
-                <div
-                    style={{
-                        padding: 12,
-                        background: "var(--lime-soft)",
-                        borderRadius: 10,
-                        fontSize: 12,
-                        color: "var(--lime-ink)"
-                    }}
-                >
+                <div className="rounded-[10px] bg-lime-soft p-3 text-xs text-lime-ink">
                     <b>Heads up:</b> last 90 days you averaged 4.2 commits/wk on
                     side projects. Picking 5 keeps it attainable.
                 </div>
@@ -194,87 +112,33 @@ export function StepPickGoal({
                 </button>
             }
         >
-            <p
-                style={{
-                    fontSize: 16,
-                    color: "var(--ink-2)",
-                    maxWidth: 480,
-                    marginBottom: 22
-                }}
-            >
+            <p className="mb-[22px] max-w-[480px] text-base text-ink-2">
                 Templates pre-fill the source &amp; cadence we&apos;ve seen
                 people actually stick to. You can tune the numbers next.
             </p>
-            <div
-                style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(3, 1fr)",
-                    gap: 10,
-                    maxWidth: 540
-                }}
-            >
+            <div className="grid max-w-[540px] grid-cols-3 gap-2.5">
                 {templates.map((t, i) => (
                     <div
                         key={i}
-                        className="card"
-                        style={{
-                            padding: 14,
-                            cursor: "pointer",
-                            position: "relative",
-                            borderColor: t.selected
-                                ? "var(--ink)"
-                                : "var(--line-2)",
-                            boxShadow: t.selected
-                                ? "0 0 0 2px var(--ink)"
-                                : "var(--shadow-sm)",
-                            background: t.custom
-                                ? "var(--bg-sunken)"
-                                : "var(--bg-card)"
-                        }}
+                        className={`card relative cursor-pointer p-3.5 ${t.selected ? "border-ink" : ""} ${t.custom ? "bg-bg-sunken" : ""}`}
+                        style={
+                            t.selected
+                                ? { boxShadow: "0 0 0 2px var(--ink)" }
+                                : undefined
+                        }
                     >
                         {t.pop && (
-                            <span
-                                className="chip"
-                                style={{
-                                    position: "absolute",
-                                    top: 8,
-                                    right: 8,
-                                    background: "var(--lime)",
-                                    color: "var(--ink)",
-                                    fontSize: 10,
-                                    padding: "2px 6px"
-                                }}
-                            >
+                            <span className="chip absolute right-2 top-2 bg-lime px-1.5 py-0.5 text-[10px] text-ink">
                                 {t.pop}
                             </span>
                         )}
                         <SourceTile label={t.glyph} variant={t.tile} />
-                        <div
-                            style={{
-                                marginTop: 10,
-                                fontSize: 14,
-                                fontWeight: 600
-                            }}
-                        >
+                        <div className="mt-2.5 text-sm font-semibold">
                             {t.name}
                         </div>
-                        <div
-                            style={{
-                                fontSize: 11,
-                                color: "var(--ink-3)"
-                            }}
-                        >
-                            {t.sub}
-                        </div>
+                        <div className="text-[11px] text-ink-3">{t.sub}</div>
                         {t.kind && (
-                            <div
-                                className="mono"
-                                style={{
-                                    fontSize: 10,
-                                    color: "var(--ink-3)",
-                                    marginTop: 6
-                                }}
-                            >
+                            <div className="mono mt-1.5 text-[10px] text-ink-3">
                                 via {t.kind}
                             </div>
                         )}

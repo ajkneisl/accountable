@@ -12,7 +12,7 @@ import { Footer } from "./components/Footer"
 
 export default function Landing() {
     return (
-        <div className="acc" style={{ width: 1440, margin: "0 auto" }}>
+        <div className="acc mx-auto w-[1440px]">
             <NavBar />
             <Hero />
             <SourceMarquee />

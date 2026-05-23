@@ -18,7 +18,7 @@ export function RingChart({
               ? "var(--coral)"
               : "var(--ink)"
     return (
-        <div style={{ position: "relative", width: 140, height: 140 }}>
+        <div className="relative h-[140px] w-[140px]">
             <svg width="140" height="140">
                 <circle
                     cx="70"
@@ -40,39 +40,12 @@ export function RingChart({
                     transform="rotate(-90 70 70)"
                 />
             </svg>
-            <div
-                style={{
-                    position: "absolute",
-                    inset: 0,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center"
-                }}
-            >
-                <div
-                    className="mono"
-                    style={{
-                        fontSize: 30,
-                        fontWeight: 700,
-                        letterSpacing: "-0.03em",
-                        lineHeight: 1
-                    }}
-                >
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <div className="mono text-3xl font-bold leading-none tracking-[-0.03em]">
                     {pct}
-                    <span style={{ fontSize: 14, color: "var(--ink-3)" }}>
-                        %
-                    </span>
+                    <span className="text-sm text-ink-3">%</span>
                 </div>
-                <div
-                    style={{
-                        fontSize: 11,
-                        color: "var(--ink-3)",
-                        marginTop: 4
-                    }}
-                >
-                    {label}
-                </div>
+                <div className="mt-1 text-[11px] text-ink-3">{label}</div>
             </div>
         </div>
     )

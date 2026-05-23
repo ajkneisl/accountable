@@ -4,43 +4,21 @@ import { AccLogo } from "../../common/primitives"
 
 export function Footer() {
     return (
-        <footer
-            style={{
-                padding: "40px 64px 56px",
-                borderTop: "1px solid var(--line-2)",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-end",
-                color: "var(--ink-3)",
-                fontSize: 13
-            }}
-        >
+        <footer className="flex items-end justify-between border-t border-line-2 px-16 pb-14 pt-10 text-[13px] text-ink-3">
             <div>
                 <AccLogo />
-                <div style={{ marginTop: 12 }}>
+                <div className="mt-3">
                     © 2026 · Built by two friends who kept missing the gym.
                 </div>
             </div>
-            <div style={{ display: "flex", gap: 40 }}>
+            <div className="flex gap-10">
                 <div>
-                    <div className="eyebrow" style={{ marginBottom: 10 }}>
-                        Product
-                    </div>
-                    <div
-                        style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 6
-                        }}
-                    >
+                    <div className="eyebrow mb-2.5">Product</div>
+                    <div className="flex flex-col gap-1.5">
                         {["Sources", "Competitions", "Squads"].map((l) => (
                             <a
                                 key={l}
-                                style={{
-                                    color: "inherit",
-                                    textDecoration: "none",
-                                    cursor: "pointer"
-                                }}
+                                className="cursor-pointer text-inherit no-underline"
                             >
                                 {l}
                             </a>
@@ -48,24 +26,12 @@ export function Footer() {
                     </div>
                 </div>
                 <div>
-                    <div className="eyebrow" style={{ marginBottom: 10 }}>
-                        Company
-                    </div>
-                    <div
-                        style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 6
-                        }}
-                    >
+                    <div className="eyebrow mb-2.5">Company</div>
+                    <div className="flex flex-col gap-1.5">
                         {["About", "Manifesto", "Privacy"].map((l) => (
                             <a
                                 key={l}
-                                style={{
-                                    color: "inherit",
-                                    textDecoration: "none",
-                                    cursor: "pointer"
-                                }}
+                                className="cursor-pointer text-inherit no-underline"
                             >
                                 {l}
                             </a>

@@ -3,48 +3,23 @@
 import type { FeedEvent } from "../types"
 
 export function HourBar({ event }: { event: FeedEvent }) {
-    const tone = event.who === "you" ? "var(--lime)" : "var(--coral)"
-    const tonebg =
-        event.who === "you" ? "var(--lime-soft)" : "var(--coral-soft)"
+    const isYou = event.who === "you"
     return (
         <div
-            style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                padding: "10px 12px",
-                borderRadius: 10,
-                background: tonebg
-            }}
+            className={`flex items-center gap-3 rounded-[10px] px-3 py-2.5 ${isYou ? "bg-lime-soft" : "bg-coral-soft"}`}
         >
-            <div
-                className="mono"
-                style={{ fontSize: 11, color: "var(--ink-3)", width: 46 }}
-            >
+            <div className="mono w-[46px] text-[11px] text-ink-3">
                 {event.time}
             </div>
             <div
-                style={{
-                    width: 4,
-                    alignSelf: "stretch",
-                    background: tone,
-                    borderRadius: 2
-                }}
+                className={`w-1 self-stretch rounded-[2px] ${isYou ? "bg-lime" : "bg-coral"}`}
             />
-            <div style={{ flex: 1, fontSize: 13 }}>
-                <b>{event.who === "you" ? "You" : "Marcus"}</b>{" "}
-                <span style={{ color: "var(--ink-2)" }}>{event.text}</span>
+            <div className="flex-1 text-[13px]">
+                <b>{isYou ? "You" : "Marcus"}</b>{" "}
+                <span className="text-ink-2">{event.text}</span>
             </div>
             <div
-                className="mono"
-                style={{
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color:
-                        tone === "var(--lime)"
-                            ? "var(--lime-ink)"
-                            : "var(--coral-ink)"
-                }}
+                className={`mono text-xs font-semibold ${isYou ? "text-lime-ink" : "text-coral-ink"}`}
             >
                 +{event.pts}
             </div>

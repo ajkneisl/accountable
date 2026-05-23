@@ -24,12 +24,12 @@ export function DailyScoreChart({
     const today = 2 // wed
 
     return (
-        <div style={{ position: "relative" }}>
+        <div className="relative">
             <svg
                 viewBox={`0 0 ${W} ${H}`}
                 width="100%"
                 height={H}
-                style={{ display: "block", overflow: "visible" }}
+                className="block overflow-visible"
             >
                 {[0, max / 2, max].map((v, i) => (
                     <g key={i}>

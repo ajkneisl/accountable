@@ -21,62 +21,33 @@ export function WeekChart({
               : "var(--ink)"
     return (
         <div>
-            <div
-                style={{
-                    position: "relative",
-                    display: "flex",
-                    alignItems: "flex-end",
-                    gap: 6,
-                    height: 80
-                }}
-            >
+            <div className="relative flex h-20 items-end gap-1.5">
                 <div
-                    style={{
-                        position: "absolute",
-                        left: 0,
-                        right: 0,
-                        bottom: (target / max) * 80,
-                        height: 0,
-                        borderTop: "1px dashed var(--ink-3)",
-                        opacity: 0.5
-                    }}
+                    className="absolute left-0 right-0 h-0 border-t border-dashed border-ink-3 opacity-50"
+                    style={{ bottom: (target / max) * 80 }}
                 />
                 {vals.map((v, i) => (
                     <div
                         key={i}
-                        style={{
-                            flex: 1,
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            gap: 4
-                        }}
+                        className="flex flex-1 flex-col items-center gap-1"
                     >
                         <div
+                            className="w-full rounded-[3px] transition-[height] duration-300"
                             style={{
-                                width: "100%",
                                 height: (v / max) * 80,
                                 minHeight: v === 0 ? 0 : 4,
                                 background:
-                                    v >= target ? color : "var(--line)",
-                                borderRadius: 3,
-                                transition: "height .3s"
+                                    v >= target ? color : "var(--line)"
                             }}
                         />
                     </div>
                 ))}
             </div>
-            <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+            <div className="mt-1.5 flex gap-1.5">
                 {days.map((d, i) => (
                     <div
                         key={i}
-                        className="mono"
-                        style={{
-                            flex: 1,
-                            textAlign: "center",
-                            fontSize: 10,
-                            color: "var(--ink-3)"
-                        }}
+                        className="mono flex-1 text-center text-[10px] text-ink-3"
                     >
                         {d}
                     </div>

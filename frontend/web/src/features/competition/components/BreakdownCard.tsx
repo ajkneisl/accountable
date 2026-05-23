@@ -5,22 +5,12 @@ import { ScoreDelta } from "./ScoreDelta"
 
 export function BreakdownCard() {
     return (
-        <div className="card" style={{ padding: 24 }}>
-            <div className="eyebrow" style={{ marginBottom: 4 }}>
-                BREAKDOWN · BY SOURCE
-            </div>
-            <div
-                style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: 11,
-                    color: "var(--ink-3)",
-                    padding: "14px 0 0"
-                }}
-            >
-                <span style={{ marginLeft: 60 }}>You</span>
+        <div className="card p-6">
+            <div className="eyebrow mb-1">BREAKDOWN · BY SOURCE</div>
+            <div className="flex justify-between pt-3.5 text-[11px] text-ink-3">
+                <span className="ml-[60px]">You</span>
                 <span>Marcus</span>
-                <span style={{ width: 80 }} />
+                <span className="w-20" />
             </div>
             {CATS.map((c, i) => (
                 <ScoreDelta key={i} {...c} />

@@ -17,23 +17,11 @@ export function SourceMarquee() {
     ]
     const variants: TileVariant[] = ["ink", "lime", "coral", "", ""]
     return (
-        <section id="sources" style={{ padding: "0 64px 96px" }}>
-            <div
-                style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "baseline",
-                    marginBottom: 32
-                }}
-            >
+        <section id="sources" className="px-16 pb-24">
+            <div className="mb-8 flex items-baseline justify-between">
                 <div>
-                    <div className="eyebrow" style={{ marginBottom: 8 }}>
-                        01 · SOURCES
-                    </div>
-                    <h2
-                        className="display"
-                        style={{ fontSize: 48, margin: 0, maxWidth: 720 }}
-                    >
+                    <div className="eyebrow mb-2">01 · SOURCES</div>
+                    <h2 className="display m-0 max-w-[720px] text-5xl">
                         Wire up the apps you already use. We trust the data, not
                         the promises.
                     </h2>
@@ -41,39 +29,22 @@ export function SourceMarquee() {
                 <button className="btn btn-line">All 32 sources →</button>
             </div>
 
-            <div
-                style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(5, 1fr)",
-                    gap: 12
-                }}
-            >
+            <div className="grid grid-cols-5 gap-3">
                 {sources.map((s, i) => (
                     <div
                         key={i}
-                        className="card"
-                        style={{
-                            padding: 18,
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 14
-                        }}
+                        className="card flex items-center gap-3.5 p-[18px]"
                     >
                         <SourceTile
                             label={s.label}
                             glyph={s.glyph}
                             variant={variants[i % 5]}
                         />
-                        <div style={{ minWidth: 0 }}>
-                            <div style={{ fontSize: 15, fontWeight: 600 }}>
+                        <div className="min-w-0">
+                            <div className="text-[15px] font-semibold">
                                 {s.label}
                             </div>
-                            <div
-                                style={{
-                                    fontSize: 12,
-                                    color: "var(--ink-3)"
-                                }}
-                            >
+                            <div className="text-xs text-ink-3">
                                 {s.kind}
                             </div>
                         </div>

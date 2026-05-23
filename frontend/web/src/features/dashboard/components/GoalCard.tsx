@@ -6,102 +6,34 @@ import { WeekChart } from "./WeekChart"
 
 export function GoalCard({ goal }: { goal: GoalData }) {
     return (
-        <div
-            className="card"
-            style={{
-                padding: 22,
-                display: "flex",
-                flexDirection: "column",
-                gap: 18,
-                minHeight: 280
-            }}
-        >
-            <div
-                style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    justifyContent: "space-between"
-                }}
-            >
-                <div
-                    style={{
-                        display: "flex",
-                        gap: 12,
-                        alignItems: "center"
-                    }}
-                >
+        <div className="card flex min-h-[280px] flex-col gap-[18px] p-[22px]">
+            <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
                     <SourceTile label={goal.g} variant={goal.tile} />
                     <div>
-                        <div
-                            style={{
-                                fontSize: 16,
-                                fontWeight: 600,
-                                letterSpacing: "-0.01em"
-                            }}
-                        >
+                        <div className="text-base font-semibold tracking-[-0.01em]">
                             {goal.name}
                         </div>
-                        <div
-                            style={{
-                                fontSize: 12,
-                                color: "var(--ink-3)"
-                            }}
-                        >
-                            {goal.source}
-                        </div>
+                        <div className="text-xs text-ink-3">{goal.source}</div>
                     </div>
                 </div>
-                <button
-                    className="btn btn-ghost btn-sm"
-                    style={{ padding: 6 }}
-                >
-                    ⋯
-                </button>
+                <button className="btn btn-ghost btn-sm p-1.5">⋯</button>
             </div>
 
-            <div
-                style={{
-                    display: "flex",
-                    alignItems: "flex-end",
-                    gap: 14
-                }}
-            >
-                <div
-                    className="mono"
-                    style={{
-                        fontSize: 44,
-                        fontWeight: 700,
-                        letterSpacing: "-0.03em",
-                        lineHeight: 1
-                    }}
-                >
+            <div className="flex items-end gap-3.5">
+                <div className="mono text-[44px] font-bold leading-none tracking-[-0.03em]">
                     {goal.n}
                 </div>
-                <div
-                    style={{
-                        fontSize: 13,
-                        color: "var(--ink-3)",
-                        marginBottom: 6
-                    }}
-                >
+                <div className="mb-1.5 text-[13px] text-ink-3">
                     / {goal.target} {goal.unit}
                 </div>
-                <div style={{ marginLeft: "auto", textAlign: "right" }}>
+                <div className="ml-auto text-right">
                     <div
-                        className="mono"
-                        style={{
-                            fontSize: 14,
-                            color: goal.deltaPos
-                                ? "var(--lime-ink)"
-                                : "var(--coral-ink)",
-                            fontWeight: 600
-                        }}
+                        className={`mono text-sm font-semibold ${goal.deltaPos ? "text-lime-ink" : "text-coral-ink"}`}
                     >
                         {goal.deltaPos ? "↑" : "↓"} {goal.delta}
                     </div>
-                    <div style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                        vs last wk
-                    </div>
+                    <div className="text-[11px] text-ink-3">vs last wk</div>
                 </div>
             </div>
 
@@ -111,51 +43,26 @@ export function GoalCard({ goal }: { goal: GoalData }) {
                 tone={goal.tone}
             />
 
-            <div
-                style={{
-                    marginTop: "auto",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    paddingTop: 10,
-                    borderTop: "1px solid var(--line-2)"
-                }}
-            >
-                <div style={{ display: "flex" }}>
+            <div className="mt-auto flex items-center gap-2.5 border-t border-line-2 pt-2.5">
+                <div className="flex">
                     {goal.watchers.map((w, i) => (
                         <div
                             key={i}
+                            className="grid h-[22px] w-[22px] place-items-center rounded-full border-2 border-bg-card text-[9px] font-bold"
                             style={{
-                                width: 22,
-                                height: 22,
-                                borderRadius: "50%",
                                 background: w.c,
                                 color: w.dark ? "#fff" : "var(--ink)",
-                                marginLeft: i ? -6 : 0,
-                                border: "2px solid var(--bg-card)",
-                                display: "grid",
-                                placeItems: "center",
-                                fontSize: 9,
-                                fontWeight: 700
+                                marginLeft: i ? -6 : 0
                             }}
                         >
                             {w.l}
                         </div>
                     ))}
                 </div>
-                <div
-                    style={{
-                        fontSize: 12,
-                        color: "var(--ink-3)",
-                        flex: 1
-                    }}
-                >
+                <div className="flex-1 text-xs text-ink-3">
                     {goal.watchersLabel}
                 </div>
-                <div
-                    className="mono"
-                    style={{ fontSize: 11, color: "var(--ink-3)" }}
-                >
+                <div className="mono text-[11px] text-ink-3">
                     🔥 {goal.streak}d
                 </div>
             </div>

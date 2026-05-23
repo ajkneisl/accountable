@@ -4,26 +4,15 @@ import { Link } from "react-router-dom"
 
 export function DashboardHeader() {
     return (
-        <div
-            style={{
-                display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "space-between",
-                marginBottom: 28
-            }}
-        >
+        <div className="mb-7 flex items-start justify-between">
             <div>
-                <div className="eyebrow" style={{ marginBottom: 8 }}>
-                    WED · MAY 14 · 6:42 PM
-                </div>
-                <h1 className="display" style={{ fontSize: 40, margin: 0 }}>
+                <div className="eyebrow mb-2">WED · MAY 14 · 6:42 PM</div>
+                <h1 className="display m-0 text-[40px]">
                     Hey Lukas.{" "}
-                    <span style={{ color: "var(--ink-3)" }}>
-                        3 of 4 goals on track.
-                    </span>
+                    <span className="text-ink-3">3 of 4 goals on track.</span>
                 </h1>
             </div>
-            <div style={{ display: "flex", gap: 10 }}>
+            <div className="flex gap-2.5">
                 <button className="btn btn-line btn-sm">Add source</button>
                 <Link to="/onboarding" className="btn btn-primary btn-sm">
                     + New goal

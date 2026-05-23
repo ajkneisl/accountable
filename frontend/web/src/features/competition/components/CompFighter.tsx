@@ -25,96 +25,43 @@ export function CompFighter({
     won?: boolean
     marker: string
 }) {
+    const isLeft = side === "left"
     return (
         <div
-            style={{
-                flex: 1,
-                textAlign: side === "left" ? "left" : "right",
-                display: "flex",
-                flexDirection: "column",
-                gap: 10
-            }}
+            className={`flex flex-1 flex-col gap-2.5 ${isLeft ? "text-left" : "text-right"}`}
         >
             <div
-                style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 14,
-                    flexDirection: side === "left" ? "row" : "row-reverse"
-                }}
+                className={`flex items-center gap-3.5 ${isLeft ? "flex-row" : "flex-row-reverse"}`}
             >
-                <div style={{ position: "relative" }}>
+                <div className="relative">
                     <div
+                        className="grid h-16 w-16 place-items-center rounded-full text-[26px] font-bold"
                         style={{
-                            width: 64,
-                            height: 64,
-                            borderRadius: "50%",
                             background: color,
-                            color: dark ? "#fff" : "var(--ink)",
-                            display: "grid",
-                            placeItems: "center",
-                            fontSize: 26,
-                            fontWeight: 700
+                            color: dark ? "#fff" : "var(--ink)"
                         }}
                     >
                         {glyph}
                     </div>
                     {won && (
-                        <div
-                            style={{
-                                position: "absolute",
-                                top: -6,
-                                right: -6,
-                                width: 24,
-                                height: 24,
-                                borderRadius: "50%",
-                                background: "var(--lime)",
-                                color: "var(--ink)",
-                                display: "grid",
-                                placeItems: "center",
-                                fontSize: 12,
-                                fontWeight: 700
-                            }}
-                        >
+                        <div className="absolute -right-1.5 -top-1.5 grid h-6 w-6 place-items-center rounded-full bg-lime text-xs font-bold text-ink">
                             ★
                         </div>
                     )}
                 </div>
-                <div
-                    style={{
-                        textAlign: side === "left" ? "left" : "right"
-                    }}
-                >
-                    <div
-                        style={{
-                            fontSize: 22,
-                            fontWeight: 700,
-                            letterSpacing: "-0.02em"
-                        }}
-                    >
+                <div className={isLeft ? "text-left" : "text-right"}>
+                    <div className="text-[22px] font-bold tracking-[-0.02em]">
                         {name}
                     </div>
-                    <div
-                        className="mono"
-                        style={{ fontSize: 12, color: "var(--ink-3)" }}
-                    >
-                        {marker}
-                    </div>
+                    <div className="mono text-xs text-ink-3">{marker}</div>
                 </div>
             </div>
             <div
-                className="mono tab"
-                style={{
-                    fontSize: 96,
-                    fontWeight: 700,
-                    letterSpacing: "-0.05em",
-                    lineHeight: 0.9,
-                    color: big ? "var(--ink)" : "var(--ink-3)"
-                }}
+                className={`mono tab text-[96px] font-bold leading-[0.9] tracking-[-0.05em] ${big ? "text-ink" : "text-ink-3"}`}
             >
                 {score}
             </div>
-            <div style={{ fontSize: 13, color: "var(--ink-3)" }}>
+            <div className="text-[13px] text-ink-3">
                 streak {streak} · {vals} pts/day avg
             </div>
         </div>

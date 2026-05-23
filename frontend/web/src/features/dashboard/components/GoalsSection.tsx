@@ -6,20 +6,10 @@ import { GoalCard } from "./GoalCard"
 export function GoalsSection() {
     return (
         <>
-            <div
-                style={{
-                    marginBottom: 12,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between"
-                }}
-            >
+            <div className="mb-3 flex items-center justify-between">
                 <div className="eyebrow">YOUR GOALS · WEEK 19</div>
-                <div style={{ display: "flex", gap: 6, fontSize: 12 }}>
-                    <button
-                        className="btn btn-ghost btn-sm"
-                        style={{ background: "var(--bg-sunken)" }}
-                    >
+                <div className="flex gap-1.5 text-xs">
+                    <button className="btn btn-ghost btn-sm bg-bg-sunken">
                         Week
                     </button>
                     <button className="btn btn-ghost btn-sm">Month</button>
@@ -27,13 +17,7 @@ export function GoalsSection() {
                 </div>
             </div>
 
-            <div
-                style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(4, 1fr)",
-                    gap: 16
-                }}
-            >
+            <div className="grid grid-cols-4 gap-4">
                 {GOALS.map((g, i) => (
                     <GoalCard key={i} goal={g} />
                 ))}

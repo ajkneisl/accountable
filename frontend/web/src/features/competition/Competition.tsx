@@ -13,39 +13,24 @@ import { TrashTalkCard } from "./components/TrashTalkCard"
 export default function Competition() {
     const signOut = useSignOut()
     return (
-        <div
-            className="acc"
-            style={{
-                width: 1440,
-                margin: "0 auto",
-                minHeight: 1100,
-                display: "flex"
-            }}
-        >
+        <div className="acc mx-auto flex min-h-[1100px] w-[1440px]">
             <Sidebar onSignOut={signOut} />
 
-            <main style={{ flex: 1, padding: "28px 36px" }}>
+            <main className="flex-1 px-9 py-7">
                 <CompetitionHeader />
                 <Scoreboard />
 
                 <div
-                    style={{
-                        display: "grid",
-                        gridTemplateColumns: "1.2fr 1fr",
-                        gap: 16,
-                        marginBottom: 18
-                    }}
+                    className="mb-[18px] grid gap-4"
+                    style={{ gridTemplateColumns: "1.2fr 1fr" }}
                 >
                     <DailyScoreCard />
                     <BreakdownCard />
                 </div>
 
                 <div
-                    style={{
-                        display: "grid",
-                        gridTemplateColumns: "1.1fr 1fr",
-                        gap: 16
-                    }}
+                    className="grid gap-4"
+                    style={{ gridTemplateColumns: "1.1fr 1fr" }}
                 >
                     <TimelineCard />
                     <TrashTalkCard />

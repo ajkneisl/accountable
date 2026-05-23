@@ -1,166 +1,66 @@
 // Onboarding step 01 — account creation.
 
 import { Link } from "react-router-dom"
-import { inputStyle, labelStyle } from "../styles"
 import { OnbShell } from "./OnbShell"
+
+const labelClass = "block text-xs font-medium text-ink-2 mb-1.5"
+const inputClass =
+    "w-full border border-line rounded-[10px] px-3.5 py-[11px] text-sm outline-0 mb-3.5 font-[inherit]"
 
 export function StepSignup({ next }: { next: () => void }) {
     const side = (
-        <div className="card" style={{ padding: 32, width: 420 }}>
-            <div
-                style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 10,
-                    marginBottom: 22
-                }}
-            >
-                <button
-                    className="btn btn-line"
-                    style={{
-                        justifyContent: "flex-start",
-                        padding: "12px 16px"
-                    }}
-                >
-                    <span
-                        style={{
-                            width: 18,
-                            height: 18,
-                            borderRadius: 4,
-                            background: "var(--ink)",
-                            color: "var(--bg)",
-                            display: "inline-grid",
-                            placeItems: "center",
-                            fontSize: 11,
-                            fontWeight: 700
-                        }}
-                    >
+        <div className="card w-[420px] p-8">
+            <div className="mb-[22px] flex flex-col gap-2.5">
+                <button className="btn btn-line justify-start px-4 py-3">
+                    <span className="inline-grid h-[18px] w-[18px] place-items-center rounded bg-ink text-[11px] font-bold text-bg">
 
                     </span>
                     Continue with Apple
                 </button>
-                <button
-                    className="btn btn-line"
-                    style={{
-                        justifyContent: "flex-start",
-                        padding: "12px 16px"
-                    }}
-                >
+                <button className="btn btn-line justify-start px-4 py-3">
                     <span
+                        className="h-[18px] w-[18px] rounded-full"
                         style={{
-                            width: 18,
-                            height: 18,
-                            borderRadius: "50%",
                             background:
                                 "conic-gradient(from 0deg, #ea4335, #fbbc04, #34a853, #4285f4, #ea4335)"
                         }}
                     />
                     Continue with Google
                 </button>
-                <button
-                    className="btn btn-line"
-                    style={{
-                        justifyContent: "flex-start",
-                        padding: "12px 16px"
-                    }}
-                >
-                    <span
-                        style={{
-                            width: 18,
-                            height: 18,
-                            borderRadius: 4,
-                            background: "var(--ink)",
-                            color: "var(--bg)",
-                            display: "inline-grid",
-                            placeItems: "center",
-                            fontSize: 10,
-                            fontWeight: 700,
-                            fontFamily: "Geist Mono"
-                        }}
-                    >
+                <button className="btn btn-line justify-start px-4 py-3">
+                    <span className="inline-grid h-[18px] w-[18px] place-items-center rounded bg-ink font-mono text-[10px] font-bold text-bg">
                         GH
                     </span>
                     Continue with GitHub
                 </button>
             </div>
 
-            <div
-                style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    marginBottom: 18
-                }}
-            >
-                <hr className="divider" style={{ flex: 1 }} />
-                <span
-                    className="mono"
-                    style={{ fontSize: 11, color: "var(--ink-3)" }}
-                >
-                    OR EMAIL
-                </span>
-                <hr className="divider" style={{ flex: 1 }} />
+            <div className="mb-[18px] flex items-center gap-3">
+                <hr className="divider flex-1" />
+                <span className="mono text-[11px] text-ink-3">OR EMAIL</span>
+                <hr className="divider flex-1" />
             </div>
 
-            <label style={labelStyle}>Your name</label>
-            <input defaultValue="Lukas Kroon" style={inputStyle} />
+            <label className={labelClass}>Your name</label>
+            <input defaultValue="Lukas Kroon" className={inputClass} />
 
-            <label style={labelStyle}>Email</label>
-            <input defaultValue="lukas@kroon.work" style={inputStyle} />
+            <label className={labelClass}>Email</label>
+            <input defaultValue="lukas@kroon.work" className={inputClass} />
 
-            <label style={labelStyle}>Pick a username</label>
-            <div
-                style={{
-                    display: "flex",
-                    alignItems: "center",
-                    border: "1px solid var(--line)",
-                    borderRadius: 10,
-                    padding: "11px 14px",
-                    marginBottom: 6
-                }}
-            >
-                <span
-                    style={{
-                        color: "var(--ink-3)",
-                        fontSize: 14,
-                        marginRight: 2
-                    }}
-                >
+            <label className={labelClass}>Pick a username</label>
+            <div className="mb-1.5 flex items-center rounded-[10px] border border-line px-3.5 py-[11px]">
+                <span className="mr-0.5 text-sm text-ink-3">
                     accountable.so/
                 </span>
                 <input
                     defaultValue="lukas-k"
-                    style={{
-                        flex: 1,
-                        border: 0,
-                        font: "inherit",
-                        fontSize: 14,
-                        fontWeight: 600,
-                        outline: 0,
-                        background: "transparent",
-                        color: "var(--ink)"
-                    }}
+                    className="flex-1 border-0 bg-transparent text-sm font-semibold font-[inherit] text-ink outline-0"
                 />
-                <span
-                    style={{
-                        width: 18,
-                        height: 18,
-                        borderRadius: "50%",
-                        background: "var(--lime)",
-                        color: "var(--ink)",
-                        display: "grid",
-                        placeItems: "center",
-                        fontSize: 11,
-                        fontWeight: 700
-                    }}
-                >
+                <span className="grid h-[18px] w-[18px] place-items-center rounded-full bg-lime text-[11px] font-bold text-ink">
                     ✓
                 </span>
             </div>
-            <div
-                className="mono"
-                style={{ fontSize: 11, color: "var(--ink-3)" }}
-            >
+            <div className="mono text-[11px] text-ink-3">
                 available · friends find you here
             </div>
         </div>
@@ -179,16 +79,10 @@ export function StepSignup({ next }: { next: () => void }) {
             }
             side={side}
             footer={
-                <div
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 16
-                    }}
-                >
-                    <span style={{ fontSize: 13, color: "var(--ink-3)" }}>
+                <div className="flex items-center gap-4">
+                    <span className="text-[13px] text-ink-3">
                         Already have one?{" "}
-                        <Link to="/login" style={{ color: "var(--ink)" }}>
+                        <Link to="/login" className="text-ink">
                             Sign in
                         </Link>
                     </span>
@@ -202,26 +96,11 @@ export function StepSignup({ next }: { next: () => void }) {
                 </div>
             }
         >
-            <p
-                style={{
-                    fontSize: 17,
-                    color: "var(--ink-2)",
-                    maxWidth: 480,
-                    marginBottom: 28,
-                    lineHeight: 1.5
-                }}
-            >
+            <p className="mb-7 max-w-[480px] text-[17px] leading-[1.5] text-ink-2">
                 We&apos;ll set you up with one goal, one source, and one friend.
                 That&apos;s the whole onboarding. Should take about 90 seconds.
             </p>
-            <div
-                style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: 14,
-                    maxWidth: 460
-                }}
-            >
+            <div className="grid max-w-[460px] grid-cols-2 gap-3.5">
                 {[
                     { n: "90s", l: "avg setup" },
                     { n: "4,210", l: "on track this week" },
@@ -230,30 +109,12 @@ export function StepSignup({ next }: { next: () => void }) {
                 ].map((s, i) => (
                     <div
                         key={i}
-                        style={{
-                            padding: "12px 14px",
-                            borderLeft: "2px solid var(--ink)",
-                            background: "var(--bg-card)"
-                        }}
+                        className="border-l-2 border-ink bg-bg-card px-3.5 py-3"
                     >
-                        <div
-                            className="mono"
-                            style={{
-                                fontSize: 22,
-                                fontWeight: 700,
-                                letterSpacing: "-0.02em"
-                            }}
-                        >
+                        <div className="mono text-[22px] font-bold tracking-[-0.02em]">
                             {s.n}
                         </div>
-                        <div
-                            style={{
-                                fontSize: 12,
-                                color: "var(--ink-3)"
-                            }}
-                        >
-                            {s.l}
-                        </div>
+                        <div className="text-xs text-ink-3">{s.l}</div>
                     </div>
                 ))}
             </div>

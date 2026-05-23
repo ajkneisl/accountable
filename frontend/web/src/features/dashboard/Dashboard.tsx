@@ -13,28 +13,13 @@ import { ActivityPanel } from "./components/ActivityPanel"
 export default function Dashboard() {
     const signOut = useSignOut()
     return (
-        <div
-            className="acc"
-            style={{
-                width: 1440,
-                margin: "0 auto",
-                minHeight: 1000,
-                display: "flex"
-            }}
-        >
+        <div className="acc mx-auto flex min-h-[1000px] w-[1440px]">
             <Sidebar onSignOut={signOut} />
 
-            <main style={{ flex: 1, padding: "28px 36px" }}>
+            <main className="flex-1 px-9 py-7">
                 <DashboardHeader />
 
-                <div
-                    style={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr 1fr 1fr",
-                        gap: 16,
-                        marginBottom: 28
-                    }}
-                >
+                <div className="mb-7 grid grid-cols-3 gap-4">
                     <TodayCard />
                     <StreaksCard />
                     <CompetitionCard />

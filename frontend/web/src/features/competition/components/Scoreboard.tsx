@@ -5,37 +5,17 @@ import { CompFighter } from "./CompFighter"
 
 export function Scoreboard() {
     return (
-        <div
-            className="card"
-            style={{
-                background: "var(--ink)",
-                color: "var(--bg)",
-                border: "none",
-                padding: "36px 40px",
-                marginBottom: 18,
-                position: "relative",
-                overflow: "hidden"
-            }}
-        >
+        <div className="card relative mb-[18px] overflow-hidden border-none bg-ink px-10 py-9 text-bg">
             <div
+                className="pointer-events-none absolute inset-0"
                 style={{
-                    position: "absolute",
-                    inset: 0,
                     backgroundImage:
                         "linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)",
-                    backgroundSize: "100% 32px",
-                    pointerEvents: "none"
+                    backgroundSize: "100% 32px"
                 }}
             />
 
-            <div
-                style={{
-                    position: "relative",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 40
-                }}
-            >
+            <div className="relative flex items-center gap-10">
                 <CompFighter
                     side="left"
                     name="Lukas"
@@ -49,39 +29,14 @@ export function Scoreboard() {
                     won
                     marker="@lukas-k"
                 />
-                <div
-                    style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        gap: 6
-                    }}
-                >
-                    <div
-                        style={{
-                            fontSize: 11,
-                            opacity: 0.5,
-                            fontFamily: "Geist Mono",
-                            letterSpacing: "0.1em"
-                        }}
-                    >
+                <div className="flex flex-col items-center gap-1.5">
+                    <div className="font-mono text-[11px] tracking-[0.1em] opacity-50">
                         VS
                     </div>
-                    <div
-                        className="mono"
-                        style={{
-                            fontSize: 38,
-                            fontWeight: 700,
-                            color: "var(--lime)",
-                            letterSpacing: "-0.04em",
-                            lineHeight: 1
-                        }}
-                    >
+                    <div className="mono text-[38px] font-bold leading-none tracking-[-0.04em] text-lime">
                         +3
                     </div>
-                    <div style={{ fontSize: 11, opacity: 0.6 }}>
-                        your lead
-                    </div>
+                    <div className="text-[11px] opacity-60">your lead</div>
                 </div>
                 <CompFighter
                     side="right"
@@ -96,47 +51,16 @@ export function Scoreboard() {
                 />
             </div>
 
-            <div
-                style={{
-                    position: "relative",
-                    marginTop: 32,
-                    paddingTop: 22,
-                    borderTop: "1px solid rgba(255,255,255,0.08)",
-                    display: "grid",
-                    gridTemplateColumns: "repeat(4, 1fr)",
-                    gap: 24
-                }}
-            >
+            <div className="relative mt-8 grid grid-cols-4 gap-6 border-t border-white/10 pt-[22px]">
                 {STAKES.map((x, i) => (
                     <div key={i}>
-                        <div
-                            style={{
-                                fontSize: 10,
-                                color: "var(--lime)",
-                                fontFamily: "Geist Mono",
-                                letterSpacing: "0.1em",
-                                marginBottom: 6
-                            }}
-                        >
+                        <div className="mb-1.5 font-mono text-[10px] tracking-[0.1em] text-lime">
                             {x.l}
                         </div>
-                        <div
-                            style={{
-                                fontSize: 16,
-                                fontWeight: 600,
-                                marginBottom: 2
-                            }}
-                        >
+                        <div className="mb-0.5 text-base font-semibold">
                             {x.v}
                         </div>
-                        <div
-                            style={{
-                                fontSize: 11,
-                                opacity: 0.5
-                            }}
-                        >
-                            {x.sub}
-                        </div>
+                        <div className="text-[11px] opacity-50">{x.sub}</div>
                     </div>
                 ))}
             </div>

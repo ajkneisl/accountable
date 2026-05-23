@@ -5,131 +5,48 @@ import { ActivityRow } from "./ActivityRow"
 
 export function ActivityPanel() {
     return (
-        <aside
-            style={{
-                width: 320,
-                borderLeft: "1px solid var(--line-2)",
-                padding: "28px 24px",
-                background: "var(--bg)"
-            }}
-        >
-            <div
-                style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: 18
-                }}
-            >
+        <aside className="w-[320px] border-l border-line-2 bg-bg px-6 py-7">
+            <div className="mb-[18px] flex items-center justify-between">
                 <div className="eyebrow">ACTIVITY · LIVE</div>
-                <span
-                    style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: "50%",
-                        background: "var(--lime)"
-                    }}
-                />
+                <span className="h-2 w-2 rounded-full bg-lime" />
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column" }}>
+            <div className="flex flex-col">
                 {ACTIVITY.map((a, i) => (
                     <ActivityRow key={i} a={a} />
                 ))}
             </div>
 
-            <div
-                style={{
-                    marginTop: 28,
-                    padding: 18,
-                    background: "var(--bg-sunken)",
-                    borderRadius: 14
-                }}
-            >
-                <div className="eyebrow" style={{ marginBottom: 8 }}>
-                    UP NEXT
-                </div>
-                <div
-                    style={{
-                        fontSize: 14,
-                        fontWeight: 600,
-                        marginBottom: 4
-                    }}
-                >
+            <div className="mt-7 rounded-[14px] bg-bg-sunken p-[18px]">
+                <div className="eyebrow mb-2">UP NEXT</div>
+                <div className="mb-1 text-sm font-semibold">
                     Solve 2 more LeetCode
                 </div>
-                <div
-                    style={{
-                        fontSize: 12,
-                        color: "var(--ink-3)",
-                        marginBottom: 12
-                    }}
-                >
+                <div className="mb-3 text-xs text-ink-3">
                     To stay on today&#39;s plan. ~24 min based on your average.
                 </div>
-                <button
-                    className="btn btn-primary btn-sm"
-                    style={{ width: "100%" }}
-                >
+                <button className="btn btn-primary btn-sm w-full">
                     Open LeetCode →
                 </button>
             </div>
 
-            <div
-                style={{
-                    marginTop: 18,
-                    padding: 18,
-                    border: "1px dashed var(--line)",
-                    borderRadius: 14
-                }}
-            >
-                <div
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        marginBottom: 8
-                    }}
-                >
-                    <div
-                        style={{
-                            width: 24,
-                            height: 24,
-                            borderRadius: "50%",
-                            background: "var(--coral)",
-                            color: "#fff",
-                            display: "grid",
-                            placeItems: "center",
-                            fontSize: 11,
-                            fontWeight: 600
-                        }}
-                    >
+            <div className="mt-[18px] rounded-[14px] border border-dashed border-line p-[18px]">
+                <div className="mb-2 flex items-center gap-2">
+                    <div className="grid h-6 w-6 place-items-center rounded-full bg-coral text-[11px] font-semibold text-white">
                         M
                     </div>
-                    <div style={{ fontSize: 13, fontWeight: 600 }}>
+                    <div className="text-[13px] font-semibold">
                         Marcus nudged you
                     </div>
                 </div>
-                <div
-                    style={{
-                        fontSize: 13,
-                        color: "var(--ink-2)",
-                        marginBottom: 12
-                    }}
-                >
+                <div className="mb-3 text-[13px] text-ink-2">
                     “two leetcodes is like 20 minutes lol”
                 </div>
-                <div style={{ display: "flex", gap: 6 }}>
-                    <button
-                        className="btn btn-line btn-sm"
-                        style={{ flex: 1, padding: "6px 10px" }}
-                    >
+                <div className="flex gap-1.5">
+                    <button className="btn btn-line btn-sm flex-1 px-2.5 py-1.5">
                         👍 ok ok
                     </button>
-                    <button
-                        className="btn btn-line btn-sm"
-                        style={{ flex: 1, padding: "6px 10px" }}
-                    >
+                    <button className="btn btn-line btn-sm flex-1 px-2.5 py-1.5">
                         Reply
                     </button>
                 </div>

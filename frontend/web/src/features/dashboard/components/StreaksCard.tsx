@@ -5,17 +5,9 @@ import { Stat } from "./Stat"
 
 export function StreaksCard() {
     return (
-        <div className="card" style={{ padding: 24 }}>
-            <div className="eyebrow" style={{ marginBottom: 14 }}>
-                STREAKS
-            </div>
-            <div
-                style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: 18
-                }}
-            >
+        <div className="card p-6">
+            <div className="eyebrow mb-3.5">STREAKS</div>
+            <div className="grid grid-cols-2 gap-[18px]">
                 <Stat
                     label="LONGEST"
                     value="23d"
@@ -24,22 +16,8 @@ export function StreaksCard() {
                 />
                 <Stat label="ACTIVE" value="3" sub="of 4 goals streaking" />
             </div>
-            <div
-                style={{
-                    marginTop: 18,
-                    paddingTop: 14,
-                    borderTop: "1px solid var(--line-2)"
-                }}
-            >
-                <div
-                    style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        marginBottom: 8,
-                        fontSize: 12,
-                        color: "var(--ink-3)"
-                    }}
-                >
+            <div className="mt-[18px] border-t border-line-2 pt-3.5">
+                <div className="mb-2 flex justify-between text-xs text-ink-3">
                     <span>last 14 days</span>
                     <span className="mono">11 / 14 perfect</span>
                 </div>
@@ -47,12 +25,7 @@ export function StreaksCard() {
                     {STREAK_14.map((s, i) => (
                         <div
                             key={i}
-                            className={`streak-dot ${s === "today" ? "on today" : s}`}
-                            style={{
-                                flex: 1,
-                                height: 22,
-                                borderRadius: 4
-                            }}
+                            className={`streak-dot h-[22px] flex-1 rounded ${s === "today" ? "on today" : s}`}
                         />
                     ))}
                 </div>

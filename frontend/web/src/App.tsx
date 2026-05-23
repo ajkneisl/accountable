@@ -44,16 +44,8 @@ function App() {
 
     if (hydrating) {
         return (
-            <main
-                className="acc"
-                style={{
-                    minHeight: "100vh",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center"
-                }}
-            >
-                <p style={{ color: "var(--ink-3)" }}>Loading…</p>
+            <main className="acc flex min-h-screen items-center justify-center">
+                <p className="text-ink-3">Loading…</p>
             </main>
         )
     }

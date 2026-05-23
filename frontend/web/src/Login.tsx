@@ -7,26 +7,9 @@ import { AccLogo } from "./features/common/primitives"
 
 type Mode = "login" | "register"
 
-const labelStyle: React.CSSProperties = {
-    display: "block",
-    fontSize: 12,
-    fontWeight: 500,
-    color: "var(--ink-2)",
-    marginBottom: 6
-}
-
-const inputStyle: React.CSSProperties = {
-    width: "100%",
-    border: "1px solid var(--line)",
-    borderRadius: 10,
-    padding: "11px 14px",
-    font: "inherit",
-    fontSize: 14,
-    outline: 0,
-    color: "var(--ink)",
-    background: "var(--bg-card)",
-    marginBottom: 14
-}
+const labelClass = "block text-xs font-medium text-ink-2 mb-1.5"
+const inputClass =
+    "w-full border border-line rounded-[10px] px-3.5 py-[11px] text-sm outline-0 text-ink bg-bg-card mb-3.5 font-[inherit]"
 
 const STATS = [
     { n: "90s", l: "avg setup" },
@@ -73,125 +56,44 @@ function Login() {
     const isLogin = mode === "login"
 
     return (
-        <div
-            className="acc"
-            style={{
-                width: "100%",
-                maxWidth: 1440,
-                margin: "0 auto",
-                minHeight: "100vh",
-                display: "flex",
-                flexDirection: "column",
-                background: "var(--bg)"
-            }}
-        >
+        <div className="acc mx-auto flex min-h-screen w-full max-w-[1440px] flex-col bg-bg">
             {/* Top bar */}
-            <header
-                style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    padding: "24px 36px"
-                }}
-            >
-                <Link
-                    to="/"
-                    style={{ textDecoration: "none", color: "inherit" }}
-                >
+            <header className="flex items-center justify-between px-9 py-6">
+                <Link to="/" className="text-inherit no-underline">
                     <AccLogo />
                 </Link>
-                <Link
-                    to="/"
-                    style={{
-                        fontSize: 13,
-                        color: "var(--ink-3)",
-                        textDecoration: "none"
-                    }}
-                >
+                <Link to="/" className="text-[13px] text-ink-3 no-underline">
                     ← Back to home
                 </Link>
             </header>
 
             {/* Body — split: prompt + form */}
-            <div
-                style={{
-                    flex: 1,
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    padding: "20px 0 0",
-                    alignItems: "stretch"
-                }}
-            >
+            <div className="grid flex-1 grid-cols-2 items-stretch pt-5">
                 {/* Left — kicker + prompt */}
-                <div
-                    style={{
-                        padding: "40px 36px 40px 88px",
-                        display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "center"
-                    }}
-                >
-                    <div className="eyebrow" style={{ marginBottom: 14 }}>
+                <div className="flex flex-col justify-center py-10 pl-[88px] pr-9">
+                    <div className="eyebrow mb-3.5">
                         {isLogin ? "WELCOME BACK" : "CREATE YOUR ACCOUNT"}
                     </div>
-                    <h1
-                        className="display"
-                        style={{
-                            fontSize: 56,
-                            margin: "0 0 20px",
-                            maxWidth: 560
-                        }}
-                    >
+                    <h1 className="display mb-5 mt-0 max-w-[560px] text-[56px]">
                         Goals stick when
                         <br />
                         someone&apos;s watching.
                     </h1>
-                    <p
-                        style={{
-                            fontSize: 17,
-                            color: "var(--ink-2)",
-                            maxWidth: 480,
-                            marginBottom: 28,
-                            lineHeight: 1.5
-                        }}
-                    >
+                    <p className="mb-7 max-w-[480px] text-[17px] leading-[1.5] text-ink-2">
                         {isLogin
                             ? "Sign in to check on your goals, your streaks, and whoever is currently losing to you."
                             : "We'll set you up with one goal, one source, and one friend. That's the whole onboarding — about 90 seconds."}
                     </p>
-                    <div
-                        style={{
-                            display: "grid",
-                            gridTemplateColumns: "1fr 1fr",
-                            gap: 14,
-                            maxWidth: 460
-                        }}
-                    >
+                    <div className="grid max-w-[460px] grid-cols-2 gap-3.5">
                         {STATS.map((s, i) => (
                             <div
                                 key={i}
-                                style={{
-                                    padding: "12px 14px",
-                                    borderLeft: "2px solid var(--ink)",
-                                    background: "var(--bg-card)"
-                                }}
+                                className="border-l-2 border-ink bg-bg-card px-3.5 py-3"
                             >
-                                <div
-                                    className="mono"
-                                    style={{
-                                        fontSize: 22,
-                                        fontWeight: 700,
-                                        letterSpacing: "-0.02em"
-                                    }}
-                                >
+                                <div className="mono text-[22px] font-bold tracking-[-0.02em]">
                                     {s.n}
                                 </div>
-                                <div
-                                    style={{
-                                        fontSize: 12,
-                                        color: "var(--ink-3)"
-                                    }}
-                                >
+                                <div className="text-xs text-ink-3">
                                     {s.l}
                                 </div>
                             </div>
@@ -200,54 +102,33 @@ function Login() {
                 </div>
 
                 {/* Right — form card */}
-                <div
-                    style={{
-                        padding: "40px 88px 40px 36px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center"
-                    }}
-                >
+                <div className="flex items-center justify-center py-10 pl-9 pr-[88px]">
                     <form
                         onSubmit={onSubmit}
-                        className="card"
-                        style={{ padding: 32, width: 420 }}
+                        className="card w-[420px] p-8"
                     >
-                        <h2
-                            style={{
-                                fontSize: 22,
-                                fontWeight: 700,
-                                letterSpacing: "-0.02em",
-                                margin: "0 0 4px"
-                            }}
-                        >
+                        <h2 className="mb-1 mt-0 text-[22px] font-bold tracking-[-0.02em]">
                             {isLogin ? "Sign in" : "Create your account"}
                         </h2>
-                        <p
-                            style={{
-                                fontSize: 13,
-                                color: "var(--ink-3)",
-                                margin: "0 0 22px"
-                            }}
-                        >
+                        <p className="mb-[22px] mt-0 text-[13px] text-ink-3">
                             {isLogin
                                 ? "Welcome back to Accountable."
                                 : "One goal, one source, one friend."}
                         </p>
 
-                        <label style={labelStyle}>Username</label>
+                        <label className={labelClass}>Username</label>
                         <input
                             type="text"
                             autoComplete="username"
                             required
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
-                            style={inputStyle}
+                            className={inputClass}
                         />
 
                         {!isLogin && (
                             <>
-                                <label style={labelStyle}>Email</label>
+                                <label className={labelClass}>Email</label>
                                 <input
                                     type="email"
                                     autoComplete="email"
@@ -256,12 +137,12 @@ function Login() {
                                     onChange={(e) =>
                                         setEmail(e.target.value)
                                     }
-                                    style={inputStyle}
+                                    className={inputClass}
                                 />
                             </>
                         )}
 
-                        <label style={labelStyle}>Password</label>
+                        <label className={labelClass}>Password</label>
                         <input
                             type="password"
                             autoComplete={
@@ -273,24 +154,13 @@ function Login() {
                             minLength={8}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            style={{ ...inputStyle, marginBottom: 6 }}
+                            className={`${inputClass} !mb-1.5`}
                         />
 
                         {errors.length > 0 && (
                             <ul
                                 role="alert"
-                                style={{
-                                    listStyle: "none",
-                                    margin: "12px 0 0",
-                                    padding: 12,
-                                    background: "var(--coral-soft)",
-                                    color: "var(--coral-ink)",
-                                    borderRadius: 10,
-                                    fontSize: 12,
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: 4
-                                }}
+                                className="mt-3 flex list-none flex-col gap-1 rounded-[10px] bg-coral-soft p-3 text-xs text-coral-ink"
                             >
                                 {errors.map((msg, i) => (
                                     <li key={i}>{msg}</li>
@@ -301,8 +171,7 @@ function Login() {
                         <button
                             type="submit"
                             disabled={submitting}
-                            className="btn btn-primary"
-                            style={{ width: "100%", marginTop: 18 }}
+                            className="btn btn-primary mt-[18px] w-full"
                         >
                             {submitting
                                 ? "Please wait…"
@@ -311,25 +180,12 @@ function Login() {
                                   : "Create account →"}
                         </button>
 
-                        <div
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 12,
-                                margin: "20px 0"
-                            }}
-                        >
-                            <hr className="divider" style={{ flex: 1 }} />
-                            <span
-                                className="mono"
-                                style={{
-                                    fontSize: 11,
-                                    color: "var(--ink-3)"
-                                }}
-                            >
+                        <div className="my-5 flex items-center gap-3">
+                            <hr className="divider flex-1" />
+                            <span className="mono text-[11px] text-ink-3">
                                 {isLogin ? "NEW HERE?" : "ALREADY HAVE ONE?"}
                             </span>
-                            <hr className="divider" style={{ flex: 1 }} />
+                            <hr className="divider flex-1" />
                         </div>
 
                         <button
@@ -340,8 +196,7 @@ function Login() {
                                     m === "login" ? "register" : "login"
                                 )
                             }}
-                            className="btn btn-line"
-                            style={{ width: "100%" }}
+                            className="btn btn-line w-full"
                         >
                             {isLogin
                                 ? "Create an account"
@@ -352,20 +207,10 @@ function Login() {
             </div>
 
             {/* Footer */}
-            <footer
-                style={{
-                    display: "flex",
-                    justifyContent: "flex-end",
-                    alignItems: "center",
-                    padding: "20px 36px 36px"
-                }}
-            >
-                <span style={{ fontSize: 13, color: "var(--ink-3)" }}>
+            <footer className="flex items-center justify-end px-9 pb-9 pt-5">
+                <span className="text-[13px] text-ink-3">
                     First time?{" "}
-                    <Link
-                        to="/onboarding"
-                        style={{ color: "var(--ink)" }}
-                    >
+                    <Link to="/onboarding" className="text-ink">
                         Take the guided setup
                     </Link>
                 </span>
