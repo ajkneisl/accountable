@@ -4,16 +4,25 @@ import api.suspendTransaction
 import integrations.GitHubTable
 import integrations.LeetCodeTable
 import integrations.api.IntegrationTable
-import integrations.api.startOfUtcDay
 import java.time.DayOfWeek
 import java.time.Instant
-import java.time.ZoneOffset
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.UUID
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.selectAll
+import user.zoneOf
 
 const val MS_PER_DAY = 24L * 60 * 60 * 1000
+
+/** Ms-epoch of the start of [this] local date in [zone]. */
+private fun LocalDate.startMs(zone: ZoneId): Long =
+    atStartOfDay(zone).toInstant().toEpochMilli()
+
+/** The local date in [zone] containing the ms-epoch [now]. */
+private fun localDate(now: Long, zone: ZoneId): LocalDate =
+    Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
 
 /**
  * A metric a [Goal] can track. Pairs a provider name + metric key with the [IntegrationTable]
@@ -42,18 +51,17 @@ object GoalMetrics {
 
 /**
  * Start (inclusive) and end (exclusive) ms-epoch bounds of the current [period] window containing
- * [now]. Weekly windows start on Monday in UTC.
+ * [now], evaluated in [zone]. Daily windows are that local calendar day; weekly windows start on
+ * the local Monday. Computed via calendar arithmetic so DST transitions stay correct.
  */
-fun currentWindow(period: GoalPeriod, now: Long): Pair<Long, Long> {
-    val today = startOfUtcDay(now)
+fun currentWindow(period: GoalPeriod, now: Long, zone: ZoneId): Pair<Long, Long> {
+    val date = localDate(now, zone)
     return when (period) {
-        GoalPeriod.DAILY -> today to today + MS_PER_DAY
+        GoalPeriod.DAILY -> date.startMs(zone) to date.plusDays(1).startMs(zone)
         GoalPeriod.WEEKLY -> {
-            val date = Instant.ofEpochMilli(today).atOffset(ZoneOffset.UTC).toLocalDate()
             val daysFromMonday = (date.dayOfWeek.value - DayOfWeek.MONDAY.value).toLong()
             val monday = date.minusDays(daysFromMonday)
-            val start = monday.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
-            start to start + 7 * MS_PER_DAY
+            monday.startMs(zone) to monday.plusWeeks(1).startMs(zone)
         }
     }
 }
@@ -81,7 +89,7 @@ suspend fun sumMetric(userID: UUID, goal: GoalDefinition, start: Long, end: Long
  * registered or no rows exist in the window.
  */
 suspend fun progressFor(userID: UUID, goal: Goal, now: Long): Long {
-    val (start, end) = currentWindow(goal.period, now)
+    val (start, end) = currentWindow(goal.period, now, zoneOf(userID))
     return sumMetric(userID, goal, start, end)
 }
 
@@ -92,9 +100,10 @@ suspend fun progressFor(userID: UUID, goal: Goal, now: Long): Long {
 suspend fun perDayValues(userID: UUID, goal: GoalDefinition, days: Int, now: Long): List<Long> {
     require(days > 0) { "days must be positive" }
     val metric = GoalMetrics.byKey[goal.integration to goal.metric] ?: return List(days) { 0L }
-    val todayStart = startOfUtcDay(now)
-    val windowStart = todayStart - (days - 1) * MS_PER_DAY
-    val windowEnd = todayStart + MS_PER_DAY
+    val zone = zoneOf(userID)
+    val today = localDate(now, zone)
+    val windowStart = today.minusDays((days - 1).toLong()).startMs(zone)
+    val windowEnd = today.plusDays(1).startMs(zone)
 
     val byDay: Map<Long, Long> = suspendTransaction {
         metric.table
@@ -107,5 +116,7 @@ suspend fun perDayValues(userID: UUID, goal: GoalDefinition, days: Int, now: Lon
             .associate { it[metric.table.date] to it[metric.column] }
     }
 
-    return (days - 1 downTo 0).map { offset -> byDay[todayStart - offset * MS_PER_DAY] ?: 0L }
+    return (days - 1 downTo 0).map { offset ->
+        byDay[today.minusDays(offset.toLong()).startMs(zone)] ?: 0L
+    }
 }

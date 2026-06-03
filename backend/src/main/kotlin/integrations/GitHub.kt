@@ -5,7 +5,7 @@ import integrations.api.Integration
 import integrations.api.IntegrationRecord
 import integrations.api.IntegrationTable
 import integrations.api.externalIDFor
-import integrations.api.startOfUtcDay
+import integrations.api.startOfDay
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
@@ -17,7 +17,6 @@ import io.ktor.client.request.parameter
 import io.ktor.http.HttpHeaders
 import io.ktor.serialization.kotlinx.json.json
 import java.time.Instant
-import java.time.ZoneOffset
 import java.util.UUID
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -26,6 +25,7 @@ import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.upsert
+import user.zoneOf
 
 /** Per-day commit counts pulled from GitHub. */
 object GitHubTable : IntegrationTable("integrations_github") {
@@ -47,8 +47,9 @@ object GitHub : Integration<GitHub.GitHubData> {
      */
     override suspend fun pullData(userID: UUID, date: Long): GitHubData {
         val externalID = externalIDFor(userID, name)
-        val dayStart = startOfUtcDay(date)
-        val day = Instant.ofEpochMilli(dayStart).atOffset(ZoneOffset.UTC).toLocalDate()
+        val zone = zoneOf(userID)
+        val dayStart = startOfDay(date, zone)
+        val day = Instant.ofEpochMilli(dayStart).atZone(zone).toLocalDate()
         val query = "author:$externalID author-date:$day"
 
         val response: SearchCommitsResponse =
@@ -79,9 +80,9 @@ object GitHub : Integration<GitHub.GitHubData> {
         return IntegrationRecord(data, now)
     }
 
-    override suspend fun getDay(userID: UUID, date: Long): IntegrationRecord<GitHubData>? =
-        suspendTransaction {
-            val dayStart = startOfUtcDay(date)
+    override suspend fun getDay(userID: UUID, date: Long): IntegrationRecord<GitHubData>? {
+        val dayStart = startOfDay(date, zoneOf(userID))
+        return suspendTransaction {
             GitHubTable.selectAll()
                 .where { (GitHubTable.userID eq userID) and (GitHubTable.date eq dayStart) }
                 .limit(1)
@@ -97,6 +98,7 @@ object GitHub : Integration<GitHub.GitHubData> {
                     )
                 }
         }
+    }
 
     /** Full per-day history for a user, most-recent day first. */
     suspend fun history(userID: UUID): List<GitHubData> = suspendTransaction {

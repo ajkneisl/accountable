@@ -1,4 +1,8 @@
-// Shared design primitives — reused across Landing, Dashboard, Competition, Onboarding.
+// Shared design primitives — reused across Landing, Dashboard, Competition, Register.
+
+import { useAtomValue } from "jotai"
+import { Link } from "react-router-dom"
+import { isAuthenticatedAtom } from "../../auth"
 
 export type TileVariant = "ink" | "lime" | "coral" | ""
 
@@ -10,6 +14,19 @@ export function AccLogo({ size = "md" }: { size?: "md" | "lg" | number }) {
             <span className="dot" />
             Accountable
         </span>
+    )
+}
+
+/**
+ * Wordmark wrapped in a link that points to the dashboard when signed in,
+ * or the landing page otherwise. Used by the navbars.
+ */
+export function LogoLink({ size = "md" }: { size?: "md" | "lg" | number }) {
+    const authed = useAtomValue(isAuthenticatedAtom)
+    return (
+        <Link to={authed ? "/dashboard" : "/"} className="text-inherit no-underline">
+            <AccLogo size={size} />
+        </Link>
     )
 }
 

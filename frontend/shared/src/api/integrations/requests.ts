@@ -9,9 +9,37 @@ export interface IntegrationStatus {
     externalID: string | null
 }
 
+/**
+ * A day's integration data plus, for today, when it was last refreshed upstream.
+ * `data` is the provider-specific payload and is left untyped here.
+ */
+export interface IntegrationDayResponse {
+    data: unknown
+    lastFetched: number | null
+}
+
 /** GET /api/integrations — list every supported integration with the user's connection state. */
 export function listIntegrations(config: ApiConfig): Promise<IntegrationStatus[]> {
     return request(config, "GET", "/integrations", undefined, { auth: true })
+}
+
+/**
+ * GET /api/integrations/{name}?date={ms} — fetch a day's data. When {date} is today
+ * (the default) and the stored row is missing or stale, the backend refreshes it from
+ * upstream before responding.
+ */
+export function getIntegration(
+    config: ApiConfig,
+    name: string,
+    date: number = Date.now()
+): Promise<IntegrationDayResponse> {
+    return request(
+        config,
+        "GET",
+        `/integrations/${encodeURIComponent(name)}?date=${date}`,
+        undefined,
+        { auth: true }
+    )
 }
 
 /** POST /api/integrations/{name} — link {name} to an upstream account. */

@@ -1,21 +1,45 @@
-// Landing section 01 — the grid of supported data sources.
-
 import { SourceTile, type TileVariant } from "../../common/primitives"
 
+const sources = [
+    {
+        label: "GitHub",
+        glyph: "GH",
+        kind: "commits",
+        desc: "Track commits, PRs, and review activity straight from your repos."
+    },
+    {
+        label: "LeetCode",
+        glyph: "LC",
+        kind: "problems",
+        desc: "Count solved problems and streaks to keep your prep on pace."
+    },
+    {
+        label: "Apple Health",
+        glyph: "♥︎",
+        kind: "workouts / steps",
+        desc: "Pull in workouts, steps, and activity rings from your iPhone."
+    },
+    {
+        label: "Screen Time",
+        glyph: "⏱",
+        kind: "app limits",
+        desc: "Hold yourself to daily app limits and cut down distractions."
+    },
+    {
+        label: "Sleep",
+        glyph: "ZZ",
+        kind: "hours slept",
+        desc: "Log hours slept and stay honest about your rest schedule."
+    }
+]
+const variants: TileVariant[] = ["ink", "lime", "coral", "", ""]
+
+/**
+ * Landing section 1
+ *
+ * Information about sources.
+ */
 export function SourceMarquee() {
-    const sources = [
-        { label: "GitHub", glyph: "GH", kind: "commits / PRs" },
-        { label: "LeetCode", glyph: "LC", kind: "problems" },
-        { label: "Apple Health", glyph: "♥︎", kind: "workouts / steps" },
-        { label: "Screen Time", glyph: "⏱", kind: "app limits" },
-        { label: "Strava", glyph: "ST", kind: "rides / runs" },
-        { label: "Duolingo", glyph: "DL", kind: "lessons" },
-        { label: "Spotify", glyph: "SP", kind: "minutes" },
-        { label: "Notion", glyph: "NT", kind: "pages written" },
-        { label: "Sleep Cycle", glyph: "ZZ", kind: "hours slept" },
-        { label: "Webcam", glyph: "📷", kind: "desk check-ins" }
-    ]
-    const variants: TileVariant[] = ["ink", "lime", "coral", "", ""]
     return (
         <section id="sources" className="px-16 pb-24">
             <div className="mb-8 flex items-baseline justify-between">
@@ -33,7 +57,7 @@ export function SourceMarquee() {
                 {sources.map((s, i) => (
                     <div
                         key={i}
-                        className="card flex items-center gap-3.5 p-[18px]"
+                        className="card group relative flex items-center gap-3.5 p-[18px]"
                     >
                         <SourceTile
                             label={s.label}
@@ -47,6 +71,9 @@ export function SourceMarquee() {
                             <div className="text-xs text-ink-3">
                                 {s.kind}
                             </div>
+                        </div>
+                        <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-max max-w-[220px] -translate-x-1/2 translate-y-1 rounded-lg bg-ink px-3 py-2 text-xs leading-relaxed text-white opacity-0 shadow-lg transition-all duration-200 ease-out group-hover:translate-y-0 group-hover:opacity-100">
+                            {s.desc}
                         </div>
                     </div>
                 ))}

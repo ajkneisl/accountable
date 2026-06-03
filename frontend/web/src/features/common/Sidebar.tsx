@@ -11,7 +11,7 @@ import {
     integrationVisual,
     isOnTrack
 } from "../dashboard/types"
-import { AccLogo, SourceTile } from "./primitives"
+import { LogoLink, SourceTile } from "./primitives"
 
 function GoalItem({ goal }: { goal: Goal }) {
     const visual = integrationVisual(goal.integration)
@@ -70,12 +70,14 @@ function CompetitionItem({ comp }: { comp: CompetitionSummary }) {
 
 export function Sidebar({
     onSignOut,
+    onNewGoal,
     user,
     goals,
     streak,
     competitions
 }: {
     onSignOut?: () => void
+    onNewGoal?: () => void
     user: SelfResponse | null
     goals: Goal[]
     streak: number
@@ -86,9 +88,30 @@ export function Sidebar({
 
     return (
         <aside className="flex w-[280px] flex-col gap-7 border-r border-line-2 bg-bg px-5 py-6">
-            <Link to="/dashboard" className="text-inherit no-underline">
-                <AccLogo size={16} />
-            </Link>
+            <LogoLink size={16} />
+
+            <button
+                type="button"
+                onClick={onSignOut}
+                title={onSignOut ? "Sign out" : undefined}
+                style={{ font: "inherit" }}
+                className={`flex w-full items-center gap-2.5 rounded-xl border-none bg-bg-sunken px-2.5 py-2 text-left ${
+                    onSignOut ? "cursor-pointer" : "cursor-default"
+                }`}
+            >
+                <div className="grid h-8 w-8 place-items-center rounded-full bg-lime text-[13px] font-semibold text-ink">
+                    {initial}
+                </div>
+                <div className="min-w-0 flex-1">
+                    <div className="truncate text-[13px] font-semibold">
+                        {displayName}
+                    </div>
+                    <div className="text-[11px] text-ink-3">
+                        streak {streak}d
+                    </div>
+                </div>
+                <span className="text-[12px] text-ink-3">⌄</span>
+            </button>
 
             <div>
                 <div className="eyebrow mb-3">MY GOALS</div>
@@ -105,12 +128,22 @@ export function Sidebar({
                             />
                         ))
                     )}
-                    <Link
-                        to="/onboarding"
-                        className="btn btn-line btn-sm mt-1.5 justify-start"
-                    >
-                        + New goal
-                    </Link>
+                    {onNewGoal ? (
+                        <button
+                            type="button"
+                            onClick={onNewGoal}
+                            className="btn btn-line btn-sm mt-1.5 justify-start"
+                        >
+                            + New goal
+                        </button>
+                    ) : (
+                        <Link
+                            to="/dashboard"
+                            className="btn btn-line btn-sm mt-1.5 justify-start"
+                        >
+                            + New goal
+                        </Link>
+                    )}
                 </div>
             </div>
 
@@ -128,29 +161,6 @@ export function Sidebar({
                     )}
                 </div>
             </div>
-
-            <button
-                type="button"
-                onClick={onSignOut}
-                title={onSignOut ? "Sign out" : undefined}
-                style={{ font: "inherit" }}
-                className={`mt-auto flex w-full items-center gap-2.5 rounded-xl border-none bg-bg-sunken px-2.5 py-2 text-left ${
-                    onSignOut ? "cursor-pointer" : "cursor-default"
-                }`}
-            >
-                <div className="grid h-8 w-8 place-items-center rounded-full bg-lime text-[13px] font-semibold text-ink">
-                    {initial}
-                </div>
-                <div className="min-w-0 flex-1">
-                    <div className="truncate text-[13px] font-semibold">
-                        {displayName}
-                    </div>
-                    <div className="text-[11px] text-ink-3">
-                        streak {streak}d
-                    </div>
-                </div>
-                <span className="text-[12px] text-ink-3">⌄</span>
-            </button>
         </aside>
     )
 }

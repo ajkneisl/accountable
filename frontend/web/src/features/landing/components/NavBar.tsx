@@ -1,7 +1,7 @@
 // Landing top navigation.
 
 import { Link } from "react-router-dom"
-import { AccLogo } from "../../common/primitives"
+import { LogoLink } from "../../common/primitives"
 
 // Each entry jumps to a section's id on the landing page.
 const NAV_LINKS = [
@@ -14,7 +14,7 @@ const NAV_LINKS = [
 export function NavBar() {
     return (
         <nav className="flex items-center justify-between px-16 py-6">
-            <AccLogo />
+            <LogoLink />
             <div className="flex items-center gap-8 text-[14px]">
                 {NAV_LINKS.map((l) => (
                     <a
@@ -30,7 +30,7 @@ export function NavBar() {
                 <Link to="/login" className="btn btn-ghost btn-sm">
                     Sign in
                 </Link>
-                <Link to="/onboarding" className="btn btn-primary btn-sm">
+                <Link to="/register" className="btn btn-primary btn-sm">
                     Start free
                 </Link>
             </div>

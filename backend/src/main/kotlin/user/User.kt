@@ -5,6 +5,8 @@ import api.toEntity
 import api.verify.VerificationScope
 import api.verify.Verifiable
 import api.verify.Verifier
+import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.UUID
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.insert
@@ -28,6 +30,9 @@ object Users : Table("users") {
     /** [User.createdAt] */
     val createdAt = long("created_at").clientDefault { System.currentTimeMillis() }
 
+    /** [User.timezone] */
+    val timezone = varchar("timezone", 64).default("UTC")
+
     override val primaryKey = PrimaryKey(id)
 }
 
@@ -39,6 +44,7 @@ object Users : Table("users") {
  * @param password The user's password
  * @param email The user's unique email.
  * @param createdAt The ms epoch when the account was created.
+ * @param timezone The user's IANA timezone id, used to bucket their data by local day.
  */
 @MappedTable(Users::class)
 @Verifiable(UserVerifier::class)
@@ -48,6 +54,7 @@ data class User(
     val password: String,
     val email: String,
     val createdAt: Long,
+    val timezone: String = "UTC",
 )
 
 private val USERNAME_PATTERN = Regex("^[A-Za-z0-9_-]+$")
@@ -76,6 +83,10 @@ fun findUserByID(id: UUID): User? = transaction {
     Users.selectAll().where { Users.id eq id }.limit(1).firstOrNull()?.toEntity<User>()
 }
 
+/** The [id]'s configured [ZoneId], falling back to UTC when unset or unparseable. */
+fun zoneOf(id: UUID): ZoneId =
+    findUserByID(id)?.timezone?.let { runCatching { ZoneId.of(it) }.getOrNull() } ?: ZoneOffset.UTC
+
 /** Find a user by [username]. */
 fun findUserByUsername(username: String): User? = transaction {
     Users.selectAll().where { Users.username eq username }.limit(1).firstOrNull()?.toEntity<User>()
@@ -92,8 +103,14 @@ fun findUserByEmail(email: String): User? = transaction {
  * @param username The user's unique username.
  * @param email The user's email.
  * @param passwordHash The user's hashed password.
+ * @param timezone The user's IANA timezone id (defaults to UTC).
  */
-fun createUser(username: String, email: String, passwordHash: String): User = transaction {
+fun createUser(
+    username: String,
+    email: String,
+    passwordHash: String,
+    timezone: String = "UTC",
+): User = transaction {
     val id = UUID.randomUUID()
     val createdAt = System.currentTimeMillis()
     Users.insert {
@@ -102,6 +119,7 @@ fun createUser(username: String, email: String, passwordHash: String): User = tr
         it[Users.email] = email
         it[Users.password] = passwordHash
         it[Users.createdAt] = createdAt
+        it[Users.timezone] = timezone
     }
-    User(id, username, passwordHash, email, createdAt)
+    User(id, username, passwordHash, email, createdAt, timezone)
 }

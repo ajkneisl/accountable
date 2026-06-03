@@ -1,6 +1,5 @@
 // The "Your goals" section — the goal card grid backed by real data.
 
-import { Link } from "react-router-dom"
 import type { Goal } from "@shared/index"
 import { GoalCard } from "./GoalCard"
 
@@ -13,7 +12,13 @@ function isoWeekNumber(d: Date): number {
     return Math.ceil(((+utc - +yearStart) / 86400000 + 1) / 7)
 }
 
-export function GoalsSection({ goals }: { goals: Goal[] }) {
+export function GoalsSection({
+    goals,
+    onNewGoal
+}: {
+    goals: Goal[]
+    onNewGoal: () => void
+}) {
     const week = isoWeekNumber(new Date())
 
     if (goals.length === 0) {
@@ -30,9 +35,13 @@ export function GoalsSection({ goals }: { goals: Goal[] }) {
                         Add a goal to start tracking your commits, LeetCode
                         problems, and more.
                     </div>
-                    <Link to="/onboarding" className="btn btn-primary btn-sm">
+                    <button
+                        type="button"
+                        onClick={onNewGoal}
+                        className="btn btn-primary btn-sm"
+                    >
                         + New goal
-                    </Link>
+                    </button>
                 </div>
             </>
         )

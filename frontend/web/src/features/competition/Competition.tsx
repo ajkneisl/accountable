@@ -394,7 +394,10 @@ export default function Competition() {
                     />
                     {detail ? (
                         <>
-                            <MembersCard competition={detail} meID={user?.userID} />
+                            <MembersCard
+                                competition={detail}
+                                meID={user?.userID}
+                            />
                             <GoalsCard competition={detail} />
                         </>
                     ) : (

@@ -15,9 +15,15 @@ import kotlinx.serialization.Serializable
  * @param username The requested username.
  * @param email The requested email.
  * @param password The requested password
+ * @param timezone The client's IANA timezone id (e.g. "America/Chicago"); defaults to UTC.
  */
 @Serializable
-data class RegisterRequest(val username: String, val email: String, val password: String)
+data class RegisterRequest(
+    val username: String,
+    val email: String,
+    val password: String,
+    val timezone: String? = null,
+)
 
 /**
  * POST /api/auth/register
@@ -27,7 +33,7 @@ data class RegisterRequest(val username: String, val email: String, val password
 private val USER_REGISTER_ROUTE: suspend RoutingContext.() -> Unit = {
     val req = call.receive<RegisterRequest>()
 
-    val tokens = Auth.register(req.username, req.email, req.password)
+    val tokens = Auth.register(req.username, req.email, req.password, req.timezone ?: "UTC")
 
     call.respond(tokens)
 }

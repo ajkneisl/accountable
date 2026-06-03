@@ -12,6 +12,7 @@ import user.findUserByID
 import user.findUserByUsername
 import api.verify.verify
 import java.security.SecureRandom
+import java.time.ZoneId
 import java.util.HexFormat
 import java.util.UUID
 import kotlinx.serialization.Serializable
@@ -43,8 +44,14 @@ object Auth {
      * @param username The user provided username.
      * @param email The user provided email.
      * @param plainPassword The user provided password.
+     * @param timezone The user's IANA timezone id; ignored and replaced with UTC if unparseable.
      */
-    suspend fun register(username: String, email: String, plainPassword: String): TokenResponse {
+    suspend fun register(
+        username: String,
+        email: String,
+        plainPassword: String,
+        timezone: String = "UTC",
+    ): TokenResponse {
         if (findUserByUsername(username) != null) Error.unauthorized("username already taken")
 
         val errors = User(UUID.randomUUID(), username, "", email, 0).verify().toMutableList()
@@ -54,8 +61,9 @@ object Auth {
         if (plainPassword.none(Char::isDigit)) errors += "password must contain a digit"
         if (errors.isNotEmpty()) MultiError.texts(errors)
 
+        val tz = timezone.takeIf { runCatching { ZoneId.of(it) }.isSuccess } ?: "UTC"
         val hash = BCrypt.withDefaults().hashToString(12, plainPassword.toCharArray())
-        val user = createUser(username, email, hash)
+        val user = createUser(username, email, hash, tz)
 
         return issueTokens(user)
     }

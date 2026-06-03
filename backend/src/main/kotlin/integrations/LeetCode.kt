@@ -5,7 +5,7 @@ import integrations.api.Integration
 import integrations.api.IntegrationRecord
 import integrations.api.IntegrationTable
 import integrations.api.externalIDFor
-import integrations.api.startOfUtcDay
+import integrations.api.startOfDay
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
@@ -15,6 +15,7 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
+import java.time.Instant
 import java.util.UUID
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -26,6 +27,7 @@ import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.upsert
+import user.zoneOf
 
 /** Per-day counts of accepted LeetCode submissions, bucketed by problem difficulty. */
 object LeetCodeTable : IntegrationTable("integrations_leetcode") {
@@ -40,9 +42,8 @@ object LeetCode : Integration<LeetCode.LeetCodeData> {
     private const val ENDPOINT = "https://leetcode.com/graphql"
 
     // LeetCode's recentAcSubmissionList caps at 20; users solving more than that in a single
-    // UTC day will under-count. Acceptable for an MVP — revisit if it bites.
+    // day will under-count. Acceptable for an MVP — revisit if it bites.
     private const val RECENT_LIMIT = 20
-    private const val MS_PER_DAY = 24L * 60 * 60 * 1000
 
     /** Mutable so tests can swap in a `MockEngine`-backed client. */
     internal var client: HttpClient =
