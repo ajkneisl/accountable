@@ -11,6 +11,7 @@ import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.RoutingContext
+import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
@@ -35,6 +36,49 @@ private const val REFRESH_COOLDOWN_MS = 15L * 60 * 1000
  */
 @Serializable
 data class IntegrationDayResponse(val data: IntegrationData, val lastFetched: Long? = null)
+
+/**
+ * One entry in [INTEGRATION_LIST_ROUTE].
+ *
+ * @param name Stable integration name (matches [Integration.name]).
+ * @param enabled Whether the authenticated user has linked an upstream account.
+ * @param externalID Linked upstream account identifier; `null` when [enabled] is false.
+ */
+@Serializable
+data class IntegrationStatus(val name: String, val enabled: Boolean, val externalID: String? = null)
+
+/**
+ * GET /api/integrations
+ *
+ * List every integration the server supports, with whether the authenticated user has linked it
+ * and the upstream identifier they linked.
+ */
+private val INTEGRATION_LIST_ROUTE: suspend RoutingContext.() -> Unit = {
+    val userID = call.userID()
+    val links = integrationLinksFor(userID)
+    val statuses =
+        Integrations.all.map { integration ->
+            val external = links[integration.name]
+            IntegrationStatus(
+                name = integration.name,
+                enabled = external != null,
+                externalID = external,
+            )
+        }
+    call.respond(statuses)
+}
+
+/**
+ * DELETE /api/integrations/{name}
+ *
+ * Disconnect the authenticated user from {name}. Leaves previously fetched per-day rows in place.
+ */
+private val INTEGRATION_DISABLE_ROUTE: suspend RoutingContext.() -> Unit = {
+    val userID = call.userID()
+    val name = call.integrationName()
+    disableIntegration(userID, name)
+    call.respond(HttpStatusCode.NoContent)
+}
 
 /**
  * POST /api/integrations/{name}
@@ -109,7 +153,9 @@ private fun ApplicationCall.integrationName(): String {
 fun Route.integrationRoutes() {
     authenticate("jwt") {
         route("/integrations") {
+            get("", INTEGRATION_LIST_ROUTE)
             post("/{name}", INTEGRATION_ENABLE_ROUTE)
+            delete("/{name}", INTEGRATION_DISABLE_ROUTE)
             get("/{name}", INTEGRATION_GET_ROUTE)
         }
     }

@@ -88,9 +88,16 @@ private val USER_LOGOUT_ROUTE: suspend RoutingContext.() -> Unit = {
 
 fun Route.authRoutes() {
     route("/auth") {
+        // POST /api/auth/register
         post("/register", USER_REGISTER_ROUTE)
+
+        // POST /api/auth/register
         post("/login", USER_LOGIN_ROUTE)
+
+        // POST /api/auth/refresh
         post("/refresh", USER_REFRESH_ROUTE)
+
+        // POST /api/auht/logout
         post("/logout", USER_LOGOUT_ROUTE)
     }
 }

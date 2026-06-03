@@ -53,6 +53,13 @@ suspend fun integrationsFor(userID: UUID): List<String> = suspendTransaction {
         .map { it[UserIntegrations.integration] }
 }
 
+/** Map of integration name → upstream externalID for every integration [userID] has enabled. */
+suspend fun integrationLinksFor(userID: UUID): Map<String, String> = suspendTransaction {
+    UserIntegrations.selectAll()
+        .where { UserIntegrations.userID eq userID }
+        .associate { it[UserIntegrations.integration] to it[UserIntegrations.externalID] }
+}
+
 /**
  * Look up the upstream account identifier for [userID] on [integration].
  * @throws IllegalStateException if the user has not enabled this integration.

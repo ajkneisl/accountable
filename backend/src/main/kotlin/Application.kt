@@ -4,6 +4,9 @@ import api.initDb
 import auth.JwtConfig
 import auth.authRoutes
 import dev.hayden.KHealth
+import features.competition.competitionRoutes
+import features.goals.goalRoutes
+import features.streak.streakRoutes
 import integrations.api.integrationRoutes
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
@@ -125,11 +128,17 @@ fun Application.configureModule() {
         get("/") { singlePageApplication { react("dist") } }
 
         route("/api") {
-            get("/version") { call.respond("accountable") }
+            // GET /api/version
+            get("/version") {
+                call.respond("Accountable v1.0.0")
+            }
 
             authRoutes()
             userRoutes()
             integrationRoutes()
+            goalRoutes()
+            streakRoutes()
+            competitionRoutes()
         }
     }
 }

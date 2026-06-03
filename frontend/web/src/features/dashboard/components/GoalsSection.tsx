@@ -1,25 +1,55 @@
-// The "Your goals" section — timeframe filter plus the goal card grid.
+// The "Your goals" section — the goal card grid backed by real data.
 
-import { GOALS } from "../data"
+import { Link } from "react-router-dom"
+import type { Goal } from "@shared/index"
 import { GoalCard } from "./GoalCard"
 
-export function GoalsSection() {
+function isoWeekNumber(d: Date): number {
+    const utc = new Date(
+        Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
+    )
+    utc.setUTCDate(utc.getUTCDate() + 4 - (utc.getUTCDay() || 7))
+    const yearStart = new Date(Date.UTC(utc.getUTCFullYear(), 0, 1))
+    return Math.ceil(((+utc - +yearStart) / 86400000 + 1) / 7)
+}
+
+export function GoalsSection({ goals }: { goals: Goal[] }) {
+    const week = isoWeekNumber(new Date())
+
+    if (goals.length === 0) {
+        return (
+            <>
+                <div className="mb-3 flex items-center justify-between">
+                    <div className="eyebrow">YOUR GOALS</div>
+                </div>
+                <div className="card flex flex-col items-start gap-3 p-6">
+                    <div className="text-[15px] font-semibold">
+                        No goals yet.
+                    </div>
+                    <div className="text-[13px] text-ink-3">
+                        Add a goal to start tracking your commits, LeetCode
+                        problems, and more.
+                    </div>
+                    <Link to="/onboarding" className="btn btn-primary btn-sm">
+                        + New goal
+                    </Link>
+                </div>
+            </>
+        )
+    }
+
     return (
         <>
             <div className="mb-3 flex items-center justify-between">
-                <div className="eyebrow">YOUR GOALS · WEEK 19</div>
-                <div className="flex gap-1.5 text-xs">
-                    <button className="btn btn-ghost btn-sm bg-bg-sunken">
-                        Week
-                    </button>
-                    <button className="btn btn-ghost btn-sm">Month</button>
-                    <button className="btn btn-ghost btn-sm">All time</button>
-                </div>
+                <div className="eyebrow">YOUR GOALS · WEEK {week}</div>
             </div>
 
             <div className="grid grid-cols-4 gap-4">
-                {GOALS.map((g, i) => (
-                    <GoalCard key={i} goal={g} />
+                {goals.map((g) => (
+                    <GoalCard
+                        key={`${g.integration}:${g.metric}:${g.period}`}
+                        goal={g}
+                    />
                 ))}
             </div>
         </>

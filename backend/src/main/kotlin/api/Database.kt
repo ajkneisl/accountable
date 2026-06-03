@@ -1,5 +1,9 @@
 package api
 
+import features.competition.CompetitionGoals
+import features.competition.CompetitionMembers
+import features.competition.Competitions
+import features.goals.Goals
 import integrations.api.IntegrationTables
 import integrations.api.UserIntegrations
 import user.RefreshTokens
@@ -53,6 +57,10 @@ fun initDb() {
             Users,
             RefreshTokens,
             UserIntegrations,
+            Goals,
+            Competitions,
+            CompetitionMembers,
+            CompetitionGoals,
             *IntegrationTables.all.toTypedArray(),
         )
     }

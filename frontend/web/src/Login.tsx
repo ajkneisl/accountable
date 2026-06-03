@@ -62,9 +62,12 @@ function Login() {
                 <Link to="/" className="text-inherit no-underline">
                     <AccLogo />
                 </Link>
-                <Link to="/" className="text-[13px] text-ink-3 no-underline">
-                    ← Back to home
-                </Link>
+                <Link
+                    to="/"
+                    className="text-[13px] text-ink-3 no-underline"
+                >
+            </Link>
+                ← Back to home
             </header>
 
             {/* Body — split: prompt + form */}
@@ -93,9 +96,7 @@ function Login() {
                                 <div className="mono text-[22px] font-bold tracking-[-0.02em]">
                                     {s.n}
                                 </div>
-                                <div className="text-xs text-ink-3">
-                                    {s.l}
-                                </div>
+                                <div className="text-xs text-ink-3">{s.l}</div>
                             </div>
                         ))}
                     </div>
@@ -103,10 +104,7 @@ function Login() {
 
                 {/* Right — form card */}
                 <div className="flex items-center justify-center py-10 pl-9 pr-[88px]">
-                    <form
-                        onSubmit={onSubmit}
-                        className="card w-[420px] p-8"
-                    >
+                    <form onSubmit={onSubmit} className="card w-[420px] p-8">
                         <h2 className="mb-1 mt-0 text-[22px] font-bold tracking-[-0.02em]">
                             {isLogin ? "Sign in" : "Create your account"}
                         </h2>
@@ -134,9 +132,7 @@ function Login() {
                                     autoComplete="email"
                                     required
                                     value={email}
-                                    onChange={(e) =>
-                                        setEmail(e.target.value)
-                                    }
+                                    onChange={(e) => setEmail(e.target.value)}
                                     className={inputClass}
                                 />
                             </>
@@ -146,9 +142,7 @@ function Login() {
                         <input
                             type="password"
                             autoComplete={
-                                isLogin
-                                    ? "current-password"
-                                    : "new-password"
+                                isLogin ? "current-password" : "new-password"
                             }
                             required
                             minLength={8}
@@ -198,9 +192,7 @@ function Login() {
                             }}
                             className="btn btn-line w-full"
                         >
-                            {isLogin
-                                ? "Create an account"
-                                : "Sign in instead"}
+                            {isLogin ? "Create an account" : "Sign in instead"}
                         </button>
                     </form>
                 </div>

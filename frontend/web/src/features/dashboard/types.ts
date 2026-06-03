@@ -1,32 +1,67 @@
-// Shared types for the dashboard feature.
+// Display helpers for rendering real backend Goal data on the dashboard.
 
+import type { Goal } from "@shared/index"
 import type { TileVariant } from "../common/primitives"
 
-export type Watcher = { l: string; c: string; dark?: boolean }
-
-export type GoalData = {
-    g: string
-    tile: TileVariant
-    name: string
-    source: string
-    n: number
-    target: number
-    unit: string
-    tone: TileVariant
-    vals: number[]
-    dailyTarget: number
-    delta: string
-    deltaPos: boolean
-    streak: number
-    watchers: Watcher[]
-    watchersLabel: string
+/** Stable per-integration display badge. */
+export const INTEGRATION_VISUAL: Record<
+    string,
+    { glyph: string; tile: TileVariant; sourceLabel: string }
+> = {
+    github: { glyph: "GH", tile: "ink", sourceLabel: "GitHub" },
+    leetcode: { glyph: "LC", tile: "lime", sourceLabel: "LeetCode" }
 }
 
-export type Activity = {
-    user: string
-    userColor: string
-    userDark?: boolean
-    action: string
-    detail: string
-    time: string
+const FALLBACK_VISUAL = {
+    glyph: "?",
+    tile: "" as TileVariant,
+    sourceLabel: "Unknown"
+}
+
+export function integrationVisual(integration: string) {
+    return INTEGRATION_VISUAL[integration] ?? FALLBACK_VISUAL
+}
+
+/** Pretty unit name for a (integration, metric) pair. */
+export function unitLabel(integration: string, metric: string): string {
+    if (integration === "github" && metric === "commits") return "commits"
+    if (integration === "leetcode") return `${metric} problems`
+    return metric
+}
+
+/** "Ship 5 commits / week" style label. */
+export function goalTitle(goal: Goal): string {
+    const unit = unitLabel(goal.integration, goal.metric)
+    const cadence = goal.period === "DAILY" ? "day" : "week"
+    return `${goal.target} ${unit} / ${cadence}`
+}
+
+/** Day-of-ISO-week (Mon=1..Sun=7) for the current UTC instant. */
+export function dayOfIsoWeek(now = Date.now()): number {
+    const d = new Date(now)
+    const isoDow = d.getUTCDay() // 0=Sun..6=Sat
+    return isoDow === 0 ? 7 : isoDow
+}
+
+/**
+ * Target value the user should have reached by *now* to be considered on track:
+ * - DAILY: the full target
+ * - WEEKLY: prorated target × (days-into-week / 7)
+ */
+export function targetByNow(goal: Goal, now = Date.now()): number {
+    if (goal.period === "DAILY") return goal.target
+    const dow = dayOfIsoWeek(now)
+    return (goal.target * dow) / 7
+}
+
+/** True iff [goal.progress] meets the prorated [targetByNow]. */
+export function isOnTrack(goal: Goal, now = Date.now()): boolean {
+    return goal.progress >= targetByNow(goal, now)
+}
+
+/** Fraction of target hit *so far in the current window*, clamped to [0, 1]. */
+export function onTrackFraction(goal: Goal, now = Date.now()): number {
+    const target = targetByNow(goal, now)
+    if (target <= 0) return 1
+    return Math.min(1, goal.progress / target)
 }

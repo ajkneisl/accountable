@@ -1,56 +1,85 @@
-// Right-hand panel — live activity feed, up-next, and a friend nudge.
+// Right-hand panel — today's goal status + an "up next" nudge.
+// The activity feed mock was removed; the backend does not expose a feed yet.
 
-import { ACTIVITY } from "../data"
-import { ActivityRow } from "./ActivityRow"
+import type { Goal } from "@shared/index"
+import { SourceTile } from "../../common/primitives"
+import {
+    goalTitle,
+    integrationVisual,
+    isOnTrack,
+    onTrackFraction
+} from "../types"
 
-export function ActivityPanel() {
+function pluralUnit(goal: Goal, n: number) {
+    return n === 1 ? goal.metric.replace(/s$/, "") : goal.metric
+}
+
+function GoalRow({ goal }: { goal: Goal }) {
+    const visual = integrationVisual(goal.integration)
+    const onTrack = isOnTrack(goal)
+    return (
+        <div className="flex items-center gap-3 border-t border-line-2 py-2.5">
+            <SourceTile label={visual.glyph} variant={visual.tile} />
+            <div className="min-w-0 flex-1">
+                <div className="text-[13px] font-medium">{goalTitle(goal)}</div>
+                <div
+                    className={`text-[11px] ${
+                        onTrack ? "text-lime-ink" : "text-coral-ink"
+                    }`}
+                >
+                    {goal.progress} / {goal.target}{" "}
+                    {goal.period === "DAILY" ? "today" : "this week"}
+                </div>
+            </div>
+            <div className="mono text-[11px] text-ink-3">
+                {Math.round(onTrackFraction(goal) * 100)}%
+            </div>
+        </div>
+    )
+}
+
+export function ActivityPanel({ goals }: { goals: Goal[] }) {
+    const behind = goals.filter((g) => !isOnTrack(g))
+    const worst = behind.length === 0
+        ? null
+        : [...behind].sort((a, b) => onTrackFraction(a) - onTrackFraction(b))[0]
+
     return (
         <aside className="w-[320px] border-l border-line-2 bg-bg px-6 py-7">
             <div className="mb-[18px] flex items-center justify-between">
-                <div className="eyebrow">ACTIVITY · LIVE</div>
+                <div className="eyebrow">TODAY · STATUS</div>
                 <span className="h-2 w-2 rounded-full bg-lime" />
             </div>
 
             <div className="flex flex-col">
-                {ACTIVITY.map((a, i) => (
-                    <ActivityRow key={i} a={a} />
-                ))}
+                {goals.length === 0 ? (
+                    <div className="border-t border-line-2 py-2.5 text-[13px] text-ink-3">
+                        Nothing to track yet.
+                    </div>
+                ) : (
+                    goals.map((g) => (
+                        <GoalRow
+                            key={`${g.integration}:${g.metric}:${g.period}`}
+                            goal={g}
+                        />
+                    ))
+                )}
             </div>
 
-            <div className="mt-7 rounded-[14px] bg-bg-sunken p-[18px]">
-                <div className="eyebrow mb-2">UP NEXT</div>
-                <div className="mb-1 text-sm font-semibold">
-                    Solve 2 more LeetCode
-                </div>
-                <div className="mb-3 text-xs text-ink-3">
-                    To stay on today&#39;s plan. ~24 min based on your average.
-                </div>
-                <button className="btn btn-primary btn-sm w-full">
-                    Open LeetCode →
-                </button>
-            </div>
-
-            <div className="mt-[18px] rounded-[14px] border border-dashed border-line p-[18px]">
-                <div className="mb-2 flex items-center gap-2">
-                    <div className="grid h-6 w-6 place-items-center rounded-full bg-coral text-[11px] font-semibold text-white">
-                        M
+            {worst && (
+                <div className="mt-7 rounded-[14px] bg-bg-sunken p-[18px]">
+                    <div className="eyebrow mb-2">UP NEXT</div>
+                    <div className="mb-1 text-sm font-semibold">
+                        {Math.max(0, worst.target - worst.progress)}{" "}
+                        more {pluralUnit(worst, Math.max(0, worst.target - worst.progress))}
                     </div>
-                    <div className="text-[13px] font-semibold">
-                        Marcus nudged you
+                    <div className="mb-3 text-xs text-ink-3">
+                        To meet your{" "}
+                        {worst.period === "DAILY" ? "daily" : "weekly"} goal of{" "}
+                        {worst.target}.
                     </div>
                 </div>
-                <div className="mb-3 text-[13px] text-ink-2">
-                    “two leetcodes is like 20 minutes lol”
-                </div>
-                <div className="flex gap-1.5">
-                    <button className="btn btn-line btn-sm flex-1 px-2.5 py-1.5">
-                        👍 ok ok
-                    </button>
-                    <button className="btn btn-line btn-sm flex-1 px-2.5 py-1.5">
-                        Reply
-                    </button>
-                </div>
-            </div>
+            )}
         </aside>
     )
 }
