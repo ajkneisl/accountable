@@ -14,13 +14,11 @@ const DATE_FMT = new Intl.DateTimeFormat(undefined, {
 export function DashboardHeader({
     user,
     goals,
-    onNewGoal,
-    onManageIntegrations
+    onNewGoal
 }: {
     user: SelfResponse | null
     goals: Goal[]
     onNewGoal: () => void
-    onManageIntegrations: () => void
 }) {
     const firstName = user?.username ?? "there"
     const onTrack = goals.filter((g) => isOnTrack(g)).length
@@ -42,13 +40,6 @@ export function DashboardHeader({
                 </h1>
             </div>
             <div className="flex gap-2.5">
-                <button
-                    type="button"
-                    onClick={onManageIntegrations}
-                    className="btn btn-line btn-sm"
-                >
-                    Manage integrations
-                </button>
                 <button
                     type="button"
                     onClick={onNewGoal}

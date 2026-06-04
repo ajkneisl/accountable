@@ -79,6 +79,7 @@ data class WorkoutResponse(
 
 object AppleFitness : Integration<AppleFitness.AppleFitnessData> {
     override val name = "apple_fitness"
+    override val table = AppleFitnessTable
 
     /** Placeholder externalID. Apple Fitness has no upstream account today, but the
      *  [UserIntegrations] schema requires a non-null value. */
@@ -141,6 +142,22 @@ object AppleFitness : Integration<AppleFitness.AppleFitnessData> {
                 }
         }
     }
+
+    override suspend fun history(userID: UUID, since: Long): List<AppleFitnessData> =
+        suspendTransaction {
+            AppleFitnessTable.selectAll()
+                .where {
+                    (AppleFitnessTable.userID eq userID) and (AppleFitnessTable.date greaterEq since)
+                }
+                .orderBy(AppleFitnessTable.date, SortOrder.DESC)
+                .map {
+                    AppleFitnessData(
+                        date = it[AppleFitnessTable.date],
+                        calories = it[AppleFitnessTable.calories],
+                        workouts = it[AppleFitnessTable.workouts],
+                    )
+                }
+        }
 
     @Serializable
     @SerialName("apple_fitness")

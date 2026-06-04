@@ -38,6 +38,7 @@ object LeetCodeTable : IntegrationTable("integrations_leetcode") {
 
 object LeetCode : Integration<LeetCode.LeetCodeData> {
     override val name = "leetcode"
+    override val table = LeetCodeTable
 
     private const val ENDPOINT = "https://leetcode.com/graphql"
 
@@ -127,9 +128,9 @@ object LeetCode : Integration<LeetCode.LeetCodeData> {
         }
     }
 
-    suspend fun history(userID: UUID): List<LeetCodeData> = suspendTransaction {
+    override suspend fun history(userID: UUID, since: Long): List<LeetCodeData> = suspendTransaction {
         LeetCodeTable.selectAll()
-            .where { LeetCodeTable.userID eq userID }
+            .where { (LeetCodeTable.userID eq userID) and (LeetCodeTable.date greaterEq since) }
             .orderBy(LeetCodeTable.date, SortOrder.DESC)
             .map {
                 LeetCodeData(

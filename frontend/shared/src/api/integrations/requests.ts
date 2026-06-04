@@ -7,6 +7,8 @@ export interface IntegrationStatus {
     name: string
     enabled: boolean
     externalID: string | null
+    /** Ms epoch of the last upstream refresh; null when not enabled or never fetched. */
+    lastFetched: number | null
 }
 
 /**
@@ -18,8 +20,48 @@ export interface IntegrationDayResponse {
     lastFetched: number | null
 }
 
+/**
+ * One day of stored integration data. Discriminated by `type`, matching the backend's
+ * polymorphic `IntegrationData` serialization. `date` is the UTC-day start in ms epoch.
+ */
+export type IntegrationHistoryDay =
+    | { type: "github"; date: number; commits: number }
+    | {
+          type: "leetcode"
+          date: number
+          easy: number
+          medium: number
+          hard: number
+      }
+    | {
+          type: "apple_fitness"
+          date: number
+          calories: number
+          workouts: number
+      }
+
+/**
+ * GET /api/integrations/{name}/history?days={n} — stored per-day data for the last {days}
+ * calendar days (default 14), most-recent day first. Read-only; never triggers an upstream refresh.
+ */
+export function getIntegrationHistory(
+    config: ApiConfig,
+    name: string,
+    days = 14
+): Promise<IntegrationHistoryDay[]> {
+    return request(
+        config,
+        "GET",
+        `/integrations/${encodeURIComponent(name)}/history?days=${days}`,
+        undefined,
+        { auth: true }
+    )
+}
+
 /** GET /api/integrations — list every supported integration with the user's connection state. */
-export function listIntegrations(config: ApiConfig): Promise<IntegrationStatus[]> {
+export function listIntegrations(
+    config: ApiConfig
+): Promise<IntegrationStatus[]> {
     return request(config, "GET", "/integrations", undefined, { auth: true })
 }
 
@@ -58,7 +100,10 @@ export function enableIntegration(
 }
 
 /** DELETE /api/integrations/{name} — disconnect {name}. */
-export function disableIntegration(config: ApiConfig, name: string): Promise<void> {
+export function disableIntegration(
+    config: ApiConfig,
+    name: string
+): Promise<void> {
     return request(
         config,
         "DELETE",

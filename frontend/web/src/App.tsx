@@ -3,12 +3,15 @@ import { useAtom } from "jotai"
 import { Navigate, Outlet, Route, Routes } from "react-router-dom"
 import { getSelf, useApi } from "@shared/index"
 import { tokenStore, userAtom } from "./auth"
+import { AppShell } from "./features/common/AppShell"
 import { Footer } from "./features/common/Footer"
 import Login from "./Login"
 import Register from "./Register"
 import Landing from "./features/landing"
 import Dashboard from "./features/dashboard"
-import Competition from "./features/competition"
+import Competition, { AllCompetitions } from "./features/competition"
+import IntegrationPage from "./features/integration"
+import { ProfilePage, SettingsPage } from "./features/account"
 
 /** Wraps every page with the shared site footer. */
 function Layout() {
@@ -33,7 +36,9 @@ function App() {
     const api = useApi()
     const [, setUser] = useAtom(userAtom)
     // Only hydrate when there's a stored token to validate.
-    const [hydrating, setHydrating] = useState(() => tokenStore.getAccess() != null)
+    const [hydrating, setHydrating] = useState(
+        () => tokenStore.getAccess() != null
+    )
 
     // Restore the session from the stored access token on first load.
     useEffect(() => {
@@ -70,8 +75,20 @@ function App() {
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route element={<RequireAuth />}>
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/competition" element={<Competition />} />
+                    <Route element={<AppShell />}>
+                        <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/competition" element={<Competition />} />
+                        <Route
+                            path="/competitions"
+                            element={<AllCompetitions />}
+                        />
+                        <Route
+                            path="/integrations/:name"
+                            element={<IntegrationPage />}
+                        />
+                        <Route path="/profile" element={<ProfilePage />} />
+                        <Route path="/settings" element={<SettingsPage />} />
+                    </Route>
                 </Route>
             </Route>
 

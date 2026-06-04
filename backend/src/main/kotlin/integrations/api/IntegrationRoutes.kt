@@ -23,6 +23,12 @@ import user.zoneOf
 /** Minimum time between user-triggered refreshes for today's row. */
 private const val REFRESH_COOLDOWN_MS = 15L * 60 * 1000
 
+private const val DAY_MS = 24L * 60 * 60 * 1000
+
+/** Default and maximum number of days returned by [INTEGRATION_HISTORY_ROUTE]. */
+private const val DEFAULT_HISTORY_DAYS = 14
+private const val MAX_HISTORY_DAYS = 90
+
 /**
  * Request body for enabling an integration.
  *
@@ -45,9 +51,16 @@ data class IntegrationDayResponse(val data: IntegrationData, val lastFetched: Lo
  * @param name Stable integration name (matches [Integration.name]).
  * @param enabled Whether the authenticated user has linked an upstream account.
  * @param externalID Linked upstream account identifier; `null` when [enabled] is false.
+ * @param lastFetched When this integration was last refreshed from upstream (ms epoch); `null` when
+ *   not enabled or no data has been fetched yet.
  */
 @Serializable
-data class IntegrationStatus(val name: String, val enabled: Boolean, val externalID: String? = null)
+data class IntegrationStatus(
+    val name: String,
+    val enabled: Boolean,
+    val externalID: String? = null,
+    val lastFetched: Long? = null,
+)
 
 /**
  * GET /api/integrations
@@ -65,6 +78,8 @@ private val INTEGRATION_LIST_ROUTE: suspend RoutingContext.() -> Unit = {
                 name = integration.name,
                 enabled = external != null,
                 externalID = external,
+                lastFetched =
+                    if (external != null) latestFetchedAt(userID, integration.table) else null,
             )
         }
     call.respond(statuses)
@@ -145,6 +160,28 @@ private val INTEGRATION_GET_ROUTE: suspend RoutingContext.() -> Unit = {
     call.respond(IntegrationDayResponse(data = data, lastFetched = lastFetched))
 }
 
+/**
+ * GET /api/integrations/{name}/history?days={n}
+ *
+ * Returns the integration's stored per-day data for the last `days` calendar days (default
+ * [DEFAULT_HISTORY_DAYS], capped at [MAX_HISTORY_DAYS]), most-recent day first. Reads from storage
+ * only — it does not trigger an upstream refresh.
+ */
+private val INTEGRATION_HISTORY_ROUTE: suspend RoutingContext.() -> Unit = {
+    val userID = call.userID()
+    val name = call.integrationName()
+    val integration = Integrations.byName[name] ?: Error.notFound("integration")
+
+    val days =
+        (call.request.queryParameters["days"]?.toIntOrNull() ?: DEFAULT_HISTORY_DAYS)
+            .coerceIn(1, MAX_HISTORY_DAYS)
+
+    val zone = zoneOf(userID)
+    val since = startOfDay(System.currentTimeMillis() - (days - 1) * DAY_MS, zone)
+
+    call.respond(integration.history(userID, since))
+}
+
 private fun ApplicationCall.userID(): UUID =
     principal<JWTPrincipal>()!!.subject?.let(UUID::fromString) ?: Error.text("invalid token")
 
@@ -161,6 +198,7 @@ fun Route.integrationRoutes() {
             // Per-integration sub-routes — must come before /{name} so Ktor matches the more
             // specific path first.
             appleFitnessRoutes()
+            get("/{name}/history", INTEGRATION_HISTORY_ROUTE)
             post("/{name}", INTEGRATION_ENABLE_ROUTE)
             delete("/{name}", INTEGRATION_DISABLE_ROUTE)
             get("/{name}", INTEGRATION_GET_ROUTE)

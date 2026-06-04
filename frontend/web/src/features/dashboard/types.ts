@@ -27,8 +27,10 @@ export function integrationVisual(integration: string) {
 export function unitLabel(integration: string, metric: string): string {
     if (integration === "github" && metric === "commits") return "commits"
     if (integration === "leetcode") return `${metric} problems`
-    if (integration === "apple_fitness" && metric === "workouts") return "workouts"
-    if (integration === "apple_fitness" && metric === "calories") return "calories"
+    if (integration === "apple_fitness" && metric === "workouts")
+        return "workouts"
+    if (integration === "apple_fitness" && metric === "calories")
+        return "calories"
     return metric
 }
 
@@ -37,6 +39,16 @@ export function goalTitle(goal: Goal): string {
     const unit = unitLabel(goal.integration, goal.metric)
     const cadence = goal.period === "DAILY" ? "day" : "week"
     return `${goal.target} ${unit} / ${cadence}`
+}
+
+/** Compact "Jun 3, 2:14 PM" style stamp for when an integration last refreshed. */
+export function formatRefreshed(ms: number): string {
+    return new Date(ms).toLocaleString(undefined, {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit"
+    })
 }
 
 /** Day-of-ISO-week (Mon=1..Sun=7) for the current UTC instant. */

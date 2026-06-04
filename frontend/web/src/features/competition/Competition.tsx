@@ -2,25 +2,18 @@
 
 import { useEffect, useState } from "react"
 import { useAtomValue } from "jotai"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import {
     ApiError,
     type CompetitionDetail,
-    type CompetitionSummary,
-    createCompetition,
     deleteCompetition,
     getCompetition,
-    joinCompetition,
     leaveCompetition,
     useApi
 } from "@shared/index"
-import { useSignOut, userAtom } from "../../auth"
-import { Sidebar } from "../common/Sidebar"
-import {
-    goalTitle,
-    integrationVisual
-} from "../dashboard/types"
-import { useDashboardData } from "../dashboard/useDashboardData"
+import { userAtom } from "../../auth"
+import { useAppData } from "../common/AppShell"
+import { goalTitle, integrationVisual } from "../dashboard/types"
 
 function Header({
     competition,
@@ -169,89 +162,26 @@ function GoalsCard({ competition }: { competition: CompetitionDetail }) {
     )
 }
 
-function CompetitionList({
-    competitions,
-    activeID,
-    onSelect,
-    onCreate,
-    onJoin
-}: {
-    competitions: CompetitionSummary[]
-    activeID: string | null
-    onSelect: (id: string) => void
-    onCreate: () => void
-    onJoin: () => void
-}) {
-    return (
-        <div className="card p-6">
-            <div className="mb-3.5 flex items-center justify-between">
-                <div className="eyebrow">YOUR COMPETITIONS</div>
-                <div className="flex gap-1.5">
-                    <button
-                        type="button"
-                        onClick={onJoin}
-                        className="btn btn-line btn-sm"
-                    >
-                        Join
-                    </button>
-                    <button
-                        type="button"
-                        onClick={onCreate}
-                        className="btn btn-primary btn-sm"
-                    >
-                        + New
-                    </button>
-                </div>
-            </div>
-            {competitions.length === 0 ? (
-                <div className="text-[13px] text-ink-3">
-                    You're not in any competitions yet.
-                </div>
-            ) : (
-                <div className="flex flex-col gap-1.5">
-                    {competitions.map((c) => (
-                        <button
-                            key={c.id}
-                            type="button"
-                            onClick={() => onSelect(c.id)}
-                            style={{ font: "inherit" }}
-                            className={`flex w-full items-center justify-between rounded-[10px] border-none px-3 py-2 text-left ${
-                                activeID === c.id
-                                    ? "bg-bg-sunken"
-                                    : "bg-transparent"
-                            }`}
-                        >
-                            <div>
-                                <div className="text-[14px] font-semibold">
-                                    {c.name}
-                                </div>
-                                <div className="text-[11px] text-ink-3">
-                                    code · {c.joinCode}
-                                </div>
-                            </div>
-                            <span className="text-[12px] text-ink-3">→</span>
-                        </button>
-                    ))}
-                </div>
-            )}
-        </div>
-    )
-}
-
 export default function Competition() {
     const api = useApi()
-    const signOut = useSignOut()
     const navigate = useNavigate()
+    const [searchParams] = useSearchParams()
     const user = useAtomValue(userAtom)
-    const { data: dashData, loading: dashLoading, reload } = useDashboardData()
+    const { data: dashData, reload } = useAppData()
 
-    const [activeID, setActiveID] = useState<string | null>(null)
+    const requestedID = searchParams.get("c")
+    const [activeID, setActiveID] = useState<string | null>(requestedID)
     const [detail, setDetail] = useState<CompetitionDetail | null>(null)
     const [detailLoading, setDetailLoading] = useState(false)
     const [actionBusy, setActionBusy] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
     const competitions = dashData.competitions
+
+    // Honor ?c=<id> (e.g. after creating/joining from the sidebar), even if already mounted.
+    useEffect(() => {
+        if (requestedID) setActiveID(requestedID)
+    }, [requestedID])
 
     useEffect(() => {
         if (activeID === null && competitions.length > 0) {
@@ -283,36 +213,6 @@ export default function Competition() {
         }
     }, [api, activeID])
 
-    async function onCreate() {
-        const name = window.prompt("Competition name?")
-        if (!name) return
-        setActionBusy(true)
-        try {
-            const created = await createCompetition(api, { name })
-            setActiveID(created.id)
-            reload()
-        } catch (err) {
-            setError(messageFor(err))
-        } finally {
-            setActionBusy(false)
-        }
-    }
-
-    async function onJoin() {
-        const code = window.prompt("Join code?")
-        if (!code) return
-        setActionBusy(true)
-        try {
-            const joined = await joinCompetition(api, code.trim())
-            setActiveID(joined.id)
-            reload()
-        } catch (err) {
-            setError(messageFor(err))
-        } finally {
-            setActionBusy(false)
-        }
-    }
-
     async function onLeaveOrDelete() {
         if (!detail || !user) return
         const isOwner = detail.ownerID === user.userID
@@ -337,79 +237,51 @@ export default function Competition() {
         }
     }
 
-    if (dashLoading) {
-        return (
-            <main className="acc flex min-h-screen items-center justify-center">
-                <p className="text-ink-3">Loading…</p>
-            </main>
-        )
-    }
-
     const isOwner = detail?.ownerID === user?.userID
 
     return (
-        <div className="acc mx-auto flex min-h-[1100px] w-[1440px]">
-            <Sidebar
-                onSignOut={signOut}
-                user={user}
-                goals={dashData.goals}
-                streak={dashData.streak}
-                competitions={dashData.competitions}
-            />
+        <main className="flex-1 px-9 py-7">
+            {error && (
+                <div className="card mb-5 bg-coral-soft p-4 text-[13px] text-coral-ink">
+                    {error}
+                </div>
+            )}
+            {detail ? (
+                <Header
+                    competition={detail}
+                    isOwner={isOwner}
+                    onAction={onLeaveOrDelete}
+                    busy={actionBusy}
+                />
+            ) : (
+                <div className="mb-7">
+                    <div className="eyebrow mb-2">COMPETITION</div>
+                    <h1 className="display m-0 text-[40px]">
+                        {competitions.length === 0
+                            ? "No competitions yet."
+                            : "Pick a competition."}
+                    </h1>
+                </div>
+            )}
 
-            <main className="flex-1 px-9 py-7">
-                {error && (
-                    <div className="card mb-5 bg-coral-soft p-4 text-[13px] text-coral-ink">
-                        {error}
-                    </div>
-                )}
-                {detail ? (
-                    <Header
-                        competition={detail}
-                        isOwner={isOwner}
-                        onAction={onLeaveOrDelete}
-                        busy={actionBusy}
-                    />
-                ) : (
-                    <div className="mb-7">
-                        <div className="eyebrow mb-2">COMPETITION</div>
-                        <h1 className="display m-0 text-[40px]">
-                            {competitions.length === 0
-                                ? "No competitions yet."
-                                : "Pick a competition."}
-                        </h1>
-                    </div>
-                )}
-
+            {detail ? (
                 <div
                     className="grid gap-4"
-                    style={{ gridTemplateColumns: "1fr 1.4fr 1fr" }}
+                    style={{ gridTemplateColumns: "1.4fr 1fr" }}
                 >
-                    <CompetitionList
-                        competitions={competitions}
-                        activeID={activeID}
-                        onSelect={setActiveID}
-                        onCreate={onCreate}
-                        onJoin={onJoin}
-                    />
-                    {detail ? (
-                        <>
-                            <MembersCard
-                                competition={detail}
-                                meID={user?.userID}
-                            />
-                            <GoalsCard competition={detail} />
-                        </>
-                    ) : (
-                        <div className="card p-6 text-[13px] text-ink-3">
-                            {detailLoading
-                                ? "Loading…"
-                                : "Select a competition to see its members and shared goals."}
-                        </div>
-                    )}
+                    <MembersCard competition={detail} meID={user?.userID} />
+                    <GoalsCard competition={detail} />
                 </div>
-            </main>
-        </div>
+            ) : (
+                <div className="card p-6 text-[13px] text-ink-3">
+                    {detailLoading
+                        ? "Loading…"
+                        : competitions.length === 0
+                          ? "Create or join a competition from the sidebar to get started."
+                          : "Select a competition from the sidebar to see its members and shared goals."}
+                </div>
+            )}
+        </main>
     )
 }
 

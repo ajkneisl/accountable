@@ -34,6 +34,7 @@ object GitHubTable : IntegrationTable("integrations_github") {
 
 object GitHub : Integration<GitHub.GitHubData> {
     override val name = "github"
+    override val table = GitHubTable
 
     private val token: String? = System.getenv("GITHUB_TOKEN")
 
@@ -100,10 +101,9 @@ object GitHub : Integration<GitHub.GitHubData> {
         }
     }
 
-    /** Full per-day history for a user, most-recent day first. */
-    suspend fun history(userID: UUID): List<GitHubData> = suspendTransaction {
+    override suspend fun history(userID: UUID, since: Long): List<GitHubData> = suspendTransaction {
         GitHubTable.selectAll()
-            .where { GitHubTable.userID eq userID }
+            .where { (GitHubTable.userID eq userID) and (GitHubTable.date greaterEq since) }
             .orderBy(GitHubTable.date, SortOrder.DESC)
             .map { GitHubData(date = it[GitHubTable.date], commits = it[GitHubTable.commits]) }
     }

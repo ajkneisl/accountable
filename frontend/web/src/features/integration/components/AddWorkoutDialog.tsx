@@ -2,12 +2,7 @@
 // The same POST endpoint will accept rows from an iOS companion app later.
 
 import { useState } from "react"
-import {
-    ApiError,
-    logWorkout,
-    useApi,
-    type WorkoutType
-} from "@shared/index"
+import { ApiError, logWorkout, useApi, type WorkoutType } from "@shared/index"
 
 const TYPES: { value: WorkoutType; label: string }[] = [
     { value: "RUN", label: "Run" },

@@ -6,12 +6,14 @@ import {
     type CompetitionSummary,
     type DayStatus,
     type Goal,
+    type IntegrationStatus,
     type Workout,
     getCompetition,
     getStreak,
     getStreakHistory,
     listCompetitions,
     listGoals,
+    listIntegrations,
     listWorkouts,
     useApi
 } from "@shared/index"
@@ -23,6 +25,7 @@ export interface DashboardData {
     competitions: CompetitionSummary[]
     topCompetition: CompetitionDetail | null
     workouts: Workout[]
+    integrations: IntegrationStatus[]
 }
 
 const EMPTY: DashboardData = {
@@ -31,7 +34,8 @@ const EMPTY: DashboardData = {
     history: [],
     competitions: [],
     topCompetition: null,
-    workouts: []
+    workouts: [],
+    integrations: []
 }
 
 export function useDashboardData(): {
@@ -52,14 +56,21 @@ export function useDashboardData(): {
         setError(null)
         ;(async () => {
             try {
-                const [goals, streakResp, historyResp, competitions, workouts] =
-                    await Promise.all([
-                        listGoals(api),
-                        getStreak(api),
-                        getStreakHistory(api, 14),
-                        listCompetitions(api),
-                        listWorkouts(api)
-                    ])
+                const [
+                    goals,
+                    streakResp,
+                    historyResp,
+                    competitions,
+                    workouts,
+                    integrations
+                ] = await Promise.all([
+                    listGoals(api),
+                    getStreak(api),
+                    getStreakHistory(api, 14),
+                    listCompetitions(api),
+                    listWorkouts(api),
+                    listIntegrations(api)
+                ])
                 let topCompetition: CompetitionDetail | null = null
                 if (competitions.length > 0) {
                     topCompetition = await getCompetition(
@@ -74,13 +85,12 @@ export function useDashboardData(): {
                     history: historyResp.days,
                     competitions,
                     topCompetition,
-                    workouts
+                    workouts,
+                    integrations
                 })
             } catch (err) {
                 if (cancelled) return
-                setError(
-                    err instanceof Error ? err.message : "failed to load"
-                )
+                setError(err instanceof Error ? err.message : "failed to load")
             } finally {
                 if (!cancelled) setLoading(false)
             }
