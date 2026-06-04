@@ -67,3 +67,71 @@ export function disableIntegration(config: ApiConfig, name: string): Promise<voi
         { auth: true, expectJson: false }
     )
 }
+
+/** Recognized Apple Workout types. Matches the backend enum. */
+export type WorkoutType =
+    | "RUN"
+    | "WEIGHTLIFTING"
+    | "BASKETBALL"
+    | "PICKLEBALL"
+    | "OTHER"
+
+/** Where a workout row came from. `APPLE` is reserved for a future iOS companion app. */
+export type WorkoutSource = "MANUAL" | "APPLE"
+
+/** A single Apple Fitness workout as stored on the backend. */
+export interface Workout {
+    id: string
+    type: WorkoutType
+    durationMin: number
+    calories: number
+    happenedAt: number
+    source: WorkoutSource
+}
+
+export interface LogWorkoutRequest {
+    type: WorkoutType
+    durationMin: number
+    calories: number
+    /** Ms epoch when the workout occurred. Defaults to now if omitted. */
+    happenedAt?: number
+}
+
+/** GET /api/integrations/apple_fitness/workouts?date={ms} — workouts for that calendar day. */
+export function listWorkouts(
+    config: ApiConfig,
+    date: number = Date.now()
+): Promise<Workout[]> {
+    return request(
+        config,
+        "GET",
+        `/integrations/apple_fitness/workouts?date=${date}`,
+        undefined,
+        { auth: true }
+    )
+}
+
+/** POST /api/integrations/apple_fitness/workouts — manually log a workout. */
+export function logWorkout(
+    config: ApiConfig,
+    body: LogWorkoutRequest
+): Promise<Workout> {
+    return request(
+        config,
+        "POST",
+        "/integrations/apple_fitness/workouts",
+        body,
+        { auth: true }
+    )
+}
+
+/** DELETE /api/integrations/apple_fitness/workouts/{id} — remove a workout. */
+export function deleteWorkout(config: ApiConfig, id: string): Promise<void> {
+    return request(
+        config,
+        "DELETE",
+        `/integrations/apple_fitness/workouts/${encodeURIComponent(id)}`,
+        undefined,
+        { auth: true, expectJson: false }
+    )
+}

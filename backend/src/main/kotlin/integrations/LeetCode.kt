@@ -51,8 +51,10 @@ object LeetCode : Integration<LeetCode.LeetCodeData> {
 
     override suspend fun pullData(userID: UUID, date: Long): LeetCodeData {
         val externalID = externalIDFor(userID, name)
-        val dayStart = startOfUtcDay(date)
-        val dayEnd = dayStart + MS_PER_DAY
+        val zone = zoneOf(userID)
+        val dayStart = startOfDay(date, zone)
+        val day = Instant.ofEpochMilli(dayStart).atZone(zone).toLocalDate()
+        val dayEnd = day.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
 
         val recent: RecentAcResponse =
             graphql(
@@ -103,9 +105,9 @@ object LeetCode : Integration<LeetCode.LeetCodeData> {
         return IntegrationRecord(data, now)
     }
 
-    override suspend fun getDay(userID: UUID, date: Long): IntegrationRecord<LeetCodeData>? =
-        suspendTransaction {
-            val dayStart = startOfUtcDay(date)
+    override suspend fun getDay(userID: UUID, date: Long): IntegrationRecord<LeetCodeData>? {
+        val dayStart = startOfDay(date, zoneOf(userID))
+        return suspendTransaction {
             LeetCodeTable.selectAll()
                 .where { (LeetCodeTable.userID eq userID) and (LeetCodeTable.date eq dayStart) }
                 .limit(1)
@@ -123,6 +125,7 @@ object LeetCode : Integration<LeetCode.LeetCodeData> {
                     )
                 }
         }
+    }
 
     suspend fun history(userID: UUID): List<LeetCodeData> = suspendTransaction {
         LeetCodeTable.selectAll()

@@ -6,11 +6,13 @@ import {
     type CompetitionSummary,
     type DayStatus,
     type Goal,
+    type Workout,
     getCompetition,
     getStreak,
     getStreakHistory,
     listCompetitions,
     listGoals,
+    listWorkouts,
     useApi
 } from "@shared/index"
 
@@ -20,6 +22,7 @@ export interface DashboardData {
     history: DayStatus[]
     competitions: CompetitionSummary[]
     topCompetition: CompetitionDetail | null
+    workouts: Workout[]
 }
 
 const EMPTY: DashboardData = {
@@ -27,7 +30,8 @@ const EMPTY: DashboardData = {
     streak: 0,
     history: [],
     competitions: [],
-    topCompetition: null
+    topCompetition: null,
+    workouts: []
 }
 
 export function useDashboardData(): {
@@ -48,12 +52,13 @@ export function useDashboardData(): {
         setError(null)
         ;(async () => {
             try {
-                const [goals, streakResp, historyResp, competitions] =
+                const [goals, streakResp, historyResp, competitions, workouts] =
                     await Promise.all([
                         listGoals(api),
                         getStreak(api),
                         getStreakHistory(api, 14),
-                        listCompetitions(api)
+                        listCompetitions(api),
+                        listWorkouts(api)
                     ])
                 let topCompetition: CompetitionDetail | null = null
                 if (competitions.length > 0) {
@@ -68,7 +73,8 @@ export function useDashboardData(): {
                     streak: streakResp.streak,
                     history: historyResp.days,
                     competitions,
-                    topCompetition
+                    topCompetition,
+                    workouts
                 })
             } catch (err) {
                 if (cancelled) return

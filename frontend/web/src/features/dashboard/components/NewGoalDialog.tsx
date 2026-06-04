@@ -8,21 +8,51 @@ import {
     type GoalPeriod,
     useApi
 } from "@shared/index"
-import { SourceTile, type TileVariant } from "../../common/primitives"
+import { IntegrationIcon, SourceTile, type TileVariant } from "../../common/primitives"
 import { unitLabel } from "../types"
 
-const METRICS: {
+type Source = {
     integration: string
-    metric: string
     label: string
-    sub: string
     glyph: string
     tile: TileVariant
-}[] = [
-    { integration: "github", metric: "commits", label: "GitHub", sub: "commits", glyph: "GH", tile: "ink" },
-    { integration: "leetcode", metric: "easy", label: "LeetCode", sub: "easy", glyph: "LC", tile: "lime" },
-    { integration: "leetcode", metric: "medium", label: "LeetCode", sub: "medium", glyph: "LC", tile: "lime" },
-    { integration: "leetcode", metric: "hard", label: "LeetCode", sub: "hard", glyph: "LC", tile: "lime" }
+    /** Eyebrow label for the metric chips row when there are multiple metrics. */
+    optionLabel: string
+    metrics: { metric: string; label: string }[]
+}
+
+const SOURCES: Source[] = [
+    {
+        integration: "github",
+        label: "GitHub",
+        glyph: "GH",
+        tile: "ink",
+        optionLabel: "METRIC",
+        metrics: [{ metric: "commits", label: "Commits" }]
+    },
+    {
+        integration: "leetcode",
+        label: "LeetCode",
+        glyph: "LC",
+        tile: "lime",
+        optionLabel: "DIFFICULTY",
+        metrics: [
+            { metric: "easy", label: "Easy" },
+            { metric: "medium", label: "Medium" },
+            { metric: "hard", label: "Hard" }
+        ]
+    },
+    {
+        integration: "apple_fitness",
+        label: "Workout",
+        glyph: "WO",
+        tile: "",
+        optionLabel: "METRIC",
+        metrics: [
+            { metric: "workouts", label: "Workouts" },
+            { metric: "calories", label: "Calories" }
+        ]
+    }
 ]
 
 export function NewGoalDialog({
@@ -33,16 +63,22 @@ export function NewGoalDialog({
     onCreated: () => void
 }) {
     const api = useApi()
-    const [selected, setSelected] = useState(0)
+    const [sourceIdx, setSourceIdx] = useState(0)
+    const [metric, setMetric] = useState(SOURCES[0].metrics[0].metric)
     const [period, setPeriod] = useState<GoalPeriod>("WEEKLY")
     const [target, setTarget] = useState("5")
     const [submitting, setSubmitting] = useState(false)
     const [errors, setErrors] = useState<string[]>([])
 
-    const choice = METRICS[selected]
+    const source = SOURCES[sourceIdx]
     const targetNum = Number(target)
-    const unit = unitLabel(choice.integration, choice.metric)
+    const unit = unitLabel(source.integration, metric)
     const cadence = period === "DAILY" ? "day" : "week"
+
+    function pickSource(i: number) {
+        setSourceIdx(i)
+        setMetric(SOURCES[i].metrics[0].metric)
+    }
 
     async function submit() {
         if (!Number.isFinite(targetNum) || targetNum <= 0) {
@@ -53,8 +89,8 @@ export function NewGoalDialog({
         setSubmitting(true)
         try {
             await createGoal(api, {
-                integration: choice.integration,
-                metric: choice.metric,
+                integration: source.integration,
+                metric,
                 period,
                 target: targetNum
             })
@@ -97,30 +133,59 @@ export function NewGoalDialog({
 
                 <div className="eyebrow mb-2.5">SOURCE</div>
                 <div className="mb-5 grid grid-cols-2 gap-2">
-                    {METRICS.map((m, i) => (
+                    {SOURCES.map((s, i) => (
                         <button
-                            key={`${m.integration}:${m.metric}`}
+                            key={s.integration}
                             type="button"
-                            onClick={() => setSelected(i)}
+                            onClick={() => pickSource(i)}
                             style={{ font: "inherit" }}
                             className={`flex items-center gap-2.5 rounded-[10px] border px-3 py-2.5 text-left ${
-                                selected === i
+                                sourceIdx === i
                                     ? "border-ink bg-bg-sunken"
                                     : "border-line bg-bg-card"
                             }`}
                         >
-                            <SourceTile label={m.glyph} variant={m.tile} />
+                            <SourceTile
+                                label={s.glyph}
+                                variant={s.tile}
+                                icon={<IntegrationIcon name={s.integration} />}
+                            />
                             <div className="min-w-0">
                                 <div className="text-[13px] font-semibold">
-                                    {m.label}
+                                    {s.label}
                                 </div>
                                 <div className="text-[11px] text-ink-3">
-                                    {m.sub}
+                                    {s.metrics.length === 1
+                                        ? s.metrics[0].label.toLowerCase()
+                                        : `${s.metrics.length} options`}
                                 </div>
                             </div>
                         </button>
                     ))}
                 </div>
+
+                {source.metrics.length > 1 && (
+                    <>
+                        <div className="eyebrow mb-2.5">{source.optionLabel}</div>
+                        <div className="mb-5 flex gap-2">
+                            {source.metrics.map((m) => (
+                                <button
+                                    key={m.metric}
+                                    type="button"
+                                    onClick={() => setMetric(m.metric)}
+                                    style={{ font: "inherit" }}
+                                    className={`flex-1 rounded-[10px] border px-3 py-2.5 text-[13px] font-semibold ${
+                                        metric === m.metric
+                                            ? "border-ink bg-bg-sunken"
+                                            : "border-line bg-bg-card"
+                                    }`}
+                                >
+                                    {m.label}
+                                </button>
+                            ))}
+                        </div>
+                    </>
+                )}
 
                 <div className="eyebrow mb-2.5">CADENCE</div>
                 <div className="mb-5 flex gap-2">

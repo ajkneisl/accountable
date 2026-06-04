@@ -1,6 +1,7 @@
 package features.goals
 
 import api.suspendTransaction
+import integrations.AppleFitnessTable
 import integrations.GitHubTable
 import integrations.LeetCodeTable
 import integrations.api.IntegrationTable
@@ -43,6 +44,18 @@ object GoalMetrics {
             GoalMetric("leetcode", "easy", LeetCodeTable, LeetCodeTable.easy),
             GoalMetric("leetcode", "medium", LeetCodeTable, LeetCodeTable.medium),
             GoalMetric("leetcode", "hard", LeetCodeTable, LeetCodeTable.hard),
+            GoalMetric(
+                "apple_fitness",
+                "workouts",
+                AppleFitnessTable,
+                AppleFitnessTable.workouts,
+            ),
+            GoalMetric(
+                "apple_fitness",
+                "calories",
+                AppleFitnessTable,
+                AppleFitnessTable.calories,
+            ),
         )
 
     val byKey: Map<Pair<String, String>, GoalMetric> =

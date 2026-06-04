@@ -4,6 +4,7 @@ import features.competition.CompetitionGoals
 import features.competition.CompetitionMembers
 import features.competition.Competitions
 import features.goals.Goals
+import integrations.AppleFitnessWorkouts
 import integrations.api.IntegrationTables
 import integrations.api.UserIntegrations
 import user.RefreshTokens
@@ -63,6 +64,7 @@ fun initDb() {
             Competitions,
             CompetitionMembers,
             CompetitionGoals,
+            AppleFitnessWorkouts,
             *IntegrationTables.all.toTypedArray(),
         )
     }

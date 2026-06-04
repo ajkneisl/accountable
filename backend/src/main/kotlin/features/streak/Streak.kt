@@ -25,7 +25,7 @@ private const val MAX_STREAK_DAYS = 366
  * worked on. The walk also stops once [dayStart] would dip below [floor], which lets competition
  * streaks bound themselves to a member's join date. Empty [goals] returns 0.
  *
- * @param floor Earliest UTC day-start (inclusive) the walker is allowed to consider. Defaults to
+ * @param floor Earliest day-start (inclusive) the walker is allowed to consider. Defaults to
  *   no bound.
  */
 suspend fun streakFor(

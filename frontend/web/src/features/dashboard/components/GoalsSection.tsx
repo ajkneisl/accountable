@@ -1,6 +1,7 @@
 // The "Your goals" section — the goal card grid backed by real data.
 
 import type { Goal } from "@shared/index"
+import { Spinner } from "../../common/primitives"
 import { GoalCard } from "./GoalCard"
 
 function isoWeekNumber(d: Date): number {
@@ -14,10 +15,12 @@ function isoWeekNumber(d: Date): number {
 
 export function GoalsSection({
     goals,
-    onNewGoal
+    onNewGoal,
+    loading = false
 }: {
     goals: Goal[]
     onNewGoal: () => void
+    loading?: boolean
 }) {
     const week = isoWeekNumber(new Date())
 
@@ -25,11 +28,14 @@ export function GoalsSection({
         return (
             <>
                 <div className="mb-3 flex items-center justify-between">
-                    <div className="eyebrow">YOUR GOALS</div>
+                    <div className="eyebrow flex items-center gap-2">
+                        <span>YOUR GOALS</span>
+                        {loading && <Spinner />}
+                    </div>
                 </div>
                 <div className="card flex flex-col items-start gap-3 p-6">
                     <div className="text-[15px] font-semibold">
-                        No goals yet.
+                        {loading ? "Loading goals…" : "No goals yet."}
                     </div>
                     <div className="text-[13px] text-ink-3">
                         Add a goal to start tracking your commits, LeetCode
@@ -50,7 +56,10 @@ export function GoalsSection({
     return (
         <>
             <div className="mb-3 flex items-center justify-between">
-                <div className="eyebrow">YOUR GOALS · WEEK {week}</div>
+                <div className="eyebrow flex items-center gap-2">
+                    <span>YOUR GOALS · WEEK {week}</span>
+                    {loading && <Spinner />}
+                </div>
             </div>
 
             <div className="grid grid-cols-4 gap-4">

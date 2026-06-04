@@ -237,6 +237,13 @@ body {
         background: var(--ink);
         color: var(--bg);
     }
+    .source-tile.has-icon::before {
+        display: none;
+    }
+    .source-tile.has-icon {
+        background: var(--bg-sunken);
+        color: var(--ink);
+    }
 
     /* Headline display */
     .display {

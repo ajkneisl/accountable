@@ -11,7 +11,7 @@ import {
     integrationVisual,
     isOnTrack
 } from "../dashboard/types"
-import { LogoLink, SourceTile } from "./primitives"
+import { IntegrationIcon, LogoLink, SourceTile, Spinner } from "./primitives"
 
 function GoalItem({ goal }: { goal: Goal }) {
     const visual = integrationVisual(goal.integration)
@@ -35,7 +35,11 @@ function GoalItem({ goal }: { goal: Goal }) {
 
     return (
         <div className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2">
-            <SourceTile label={visual.glyph} variant={visual.tile} />
+            <SourceTile
+                label={visual.glyph}
+                variant={visual.tile}
+                icon={<IntegrationIcon name={goal.integration} />}
+            />
             <div className="min-w-0 flex-1">
                 <div className="truncate text-[13px] font-semibold">
                     {goalTitle(goal)}
@@ -74,7 +78,8 @@ export function Sidebar({
     user,
     goals,
     streak,
-    competitions
+    competitions,
+    loading = false
 }: {
     onSignOut?: () => void
     onNewGoal?: () => void
@@ -82,6 +87,7 @@ export function Sidebar({
     goals: Goal[]
     streak: number
     competitions: CompetitionSummary[]
+    loading?: boolean
 }) {
     const initial = (user?.username[0] ?? "?").toUpperCase()
     const displayName = user?.username ?? "Signed out"
@@ -114,11 +120,14 @@ export function Sidebar({
             </button>
 
             <div>
-                <div className="eyebrow mb-3">MY GOALS</div>
+                <div className="eyebrow mb-3 flex items-center gap-2">
+                    <span>MY GOALS</span>
+                    {loading && <Spinner />}
+                </div>
                 <div className="flex flex-col gap-1">
                     {goals.length === 0 ? (
                         <div className="px-2.5 py-2 text-[12px] text-ink-3">
-                            No goals yet.
+                            {loading ? "Loading…" : "No goals yet."}
                         </div>
                     ) : (
                         goals.map((g) => (
@@ -148,11 +157,14 @@ export function Sidebar({
             </div>
 
             <div>
-                <div className="eyebrow mb-3">COMPETITIONS</div>
+                <div className="eyebrow mb-3 flex items-center gap-2">
+                    <span>COMPETITIONS</span>
+                    {loading && <Spinner />}
+                </div>
                 <div className="flex flex-col gap-1">
                     {competitions.length === 0 ? (
                         <div className="px-2.5 py-2 text-[12px] text-ink-3">
-                            None yet.
+                            {loading ? "Loading…" : "None yet."}
                         </div>
                     ) : (
                         competitions.map((c) => (

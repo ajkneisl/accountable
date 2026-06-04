@@ -9,7 +9,8 @@ export const INTEGRATION_VISUAL: Record<
     { glyph: string; tile: TileVariant; sourceLabel: string }
 > = {
     github: { glyph: "GH", tile: "ink", sourceLabel: "GitHub" },
-    leetcode: { glyph: "LC", tile: "lime", sourceLabel: "LeetCode" }
+    leetcode: { glyph: "LC", tile: "lime", sourceLabel: "LeetCode" },
+    apple_fitness: { glyph: "F", tile: "coral", sourceLabel: "Fitness" }
 }
 
 const FALLBACK_VISUAL = {
@@ -26,6 +27,8 @@ export function integrationVisual(integration: string) {
 export function unitLabel(integration: string, metric: string): string {
     if (integration === "github" && metric === "commits") return "commits"
     if (integration === "leetcode") return `${metric} problems`
+    if (integration === "apple_fitness" && metric === "workouts") return "workouts"
+    if (integration === "apple_fitness" && metric === "calories") return "calories"
     return metric
 }
 

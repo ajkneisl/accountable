@@ -2,6 +2,7 @@ package integrations.api
 
 import api.Error
 import integrations.IntegrationData
+import integrations.appleFitnessRoutes
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.auth.authenticate
@@ -17,6 +18,7 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import java.util.UUID
 import kotlinx.serialization.Serializable
+import user.zoneOf
 
 /** Minimum time between user-triggered refreshes for today's row. */
 private const val REFRESH_COOLDOWN_MS = 15L * 60 * 1000
@@ -101,9 +103,10 @@ private val INTEGRATION_ENABLE_ROUTE: suspend RoutingContext.() -> Unit = {
 /**
  * GET /api/integrations/{name}?date={ms-epoch}
  *
- * Returns the integration's data for the UTC day containing `date`. If `date` is today, a stale
- * row (older than [REFRESH_COOLDOWN_MS]) or a missing row triggers an upstream refresh, and
- * `lastFetched` is included. Past days are served from storage only and omit `lastFetched`.
+ * Returns the integration's data for the calendar day (in the user's timezone) containing `date`.
+ * If `date` is today, a stale row (older than [REFRESH_COOLDOWN_MS]) or a missing row triggers
+ * an upstream refresh, and `lastFetched` is included. Past days are served from storage only
+ * and omit `lastFetched`.
  */
 private val INTEGRATION_GET_ROUTE: suspend RoutingContext.() -> Unit = {
     val userID = call.userID()
@@ -115,8 +118,9 @@ private val INTEGRATION_GET_ROUTE: suspend RoutingContext.() -> Unit = {
         call.request.queryParameters["date"]?.toLongOrNull()
             ?: Error.text("missing or invalid 'date' query parameter")
 
-    val target = startOfUtcDay(dateMs)
-    val today = startOfUtcDay(System.currentTimeMillis())
+    val zone = zoneOf(userID)
+    val target = startOfDay(dateMs, zone)
+    val today = startOfDay(System.currentTimeMillis(), zone)
 
     val (data, lastFetched) =
         when {
@@ -154,6 +158,9 @@ fun Route.integrationRoutes() {
     authenticate("jwt") {
         route("/integrations") {
             get("", INTEGRATION_LIST_ROUTE)
+            // Per-integration sub-routes — must come before /{name} so Ktor matches the more
+            // specific path first.
+            appleFitnessRoutes()
             post("/{name}", INTEGRATION_ENABLE_ROUTE)
             delete("/{name}", INTEGRATION_DISABLE_ROUTE)
             get("/{name}", INTEGRATION_GET_ROUTE)

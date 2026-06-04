@@ -12,8 +12,9 @@ interface Integration<T : IntegrationData> {
     val name: String
 
     /**
-     * Fetch fresh data from the upstream provider for the UTC day containing [date], using the
-     * external account linked in [UserIntegrations] for [userID]. Does not persist.
+     * Fetch fresh data from the upstream provider for the calendar day (in [userID]'s timezone)
+     * containing [date], using the external account linked in [UserIntegrations] for [userID].
+     * Does not persist.
      */
     suspend fun pullData(userID: UUID, date: Long): T
 

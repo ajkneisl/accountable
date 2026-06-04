@@ -11,7 +11,7 @@ import {
     listIntegrations,
     useApi
 } from "@shared/index"
-import { SourceTile } from "../../common/primitives"
+import { IntegrationIcon, SourceTile } from "../../common/primitives"
 import { integrationVisual } from "../types"
 
 function messageFor(err: unknown): string {
@@ -156,6 +156,7 @@ export function ManageIntegrationsDialog({
                                         <SourceTile
                                             label={visual.glyph}
                                             variant={visual.tile}
+                                            icon={<IntegrationIcon name={it.name} />}
                                         />
                                         <div className="min-w-0 flex-1">
                                             <div className="text-[14px] font-semibold">
