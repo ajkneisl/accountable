@@ -5,7 +5,7 @@ import integrations.api.Integration
 import integrations.api.IntegrationRecord
 import integrations.api.IntegrationTable
 import integrations.api.externalIDFor
-import integrations.api.startOfUtcDay
+import integrations.api.startOfDay
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
@@ -15,6 +15,7 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
+import java.time.Instant
 import java.util.UUID
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -26,6 +27,7 @@ import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.upsert
+import user.zoneOf
 
 /** Per-day counts of accepted LeetCode submissions, bucketed by problem difficulty. */
 object LeetCodeTable : IntegrationTable("integrations_leetcode") {
@@ -36,13 +38,13 @@ object LeetCodeTable : IntegrationTable("integrations_leetcode") {
 
 object LeetCode : Integration<LeetCode.LeetCodeData> {
     override val name = "leetcode"
+    override val table = LeetCodeTable
 
     private const val ENDPOINT = "https://leetcode.com/graphql"
 
     // LeetCode's recentAcSubmissionList caps at 20; users solving more than that in a single
-    // UTC day will under-count. Acceptable for an MVP — revisit if it bites.
+    // day will under-count. Acceptable for an MVP — revisit if it bites.
     private const val RECENT_LIMIT = 20
-    private const val MS_PER_DAY = 24L * 60 * 60 * 1000
 
     /** Mutable so tests can swap in a `MockEngine`-backed client. */
     internal var client: HttpClient =
@@ -50,8 +52,10 @@ object LeetCode : Integration<LeetCode.LeetCodeData> {
 
     override suspend fun pullData(userID: UUID, date: Long): LeetCodeData {
         val externalID = externalIDFor(userID, name)
-        val dayStart = startOfUtcDay(date)
-        val dayEnd = dayStart + MS_PER_DAY
+        val zone = zoneOf(userID)
+        val dayStart = startOfDay(date, zone)
+        val day = Instant.ofEpochMilli(dayStart).atZone(zone).toLocalDate()
+        val dayEnd = day.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
 
         val recent: RecentAcResponse =
             graphql(
@@ -102,9 +106,9 @@ object LeetCode : Integration<LeetCode.LeetCodeData> {
         return IntegrationRecord(data, now)
     }
 
-    override suspend fun getDay(userID: UUID, date: Long): IntegrationRecord<LeetCodeData>? =
-        suspendTransaction {
-            val dayStart = startOfUtcDay(date)
+    override suspend fun getDay(userID: UUID, date: Long): IntegrationRecord<LeetCodeData>? {
+        val dayStart = startOfDay(date, zoneOf(userID))
+        return suspendTransaction {
             LeetCodeTable.selectAll()
                 .where { (LeetCodeTable.userID eq userID) and (LeetCodeTable.date eq dayStart) }
                 .limit(1)
@@ -122,10 +126,11 @@ object LeetCode : Integration<LeetCode.LeetCodeData> {
                     )
                 }
         }
+    }
 
-    suspend fun history(userID: UUID): List<LeetCodeData> = suspendTransaction {
+    override suspend fun history(userID: UUID, since: Long): List<LeetCodeData> = suspendTransaction {
         LeetCodeTable.selectAll()
-            .where { LeetCodeTable.userID eq userID }
+            .where { (LeetCodeTable.userID eq userID) and (LeetCodeTable.date greaterEq since) }
             .orderBy(LeetCodeTable.date, SortOrder.DESC)
             .map {
                 LeetCodeData(

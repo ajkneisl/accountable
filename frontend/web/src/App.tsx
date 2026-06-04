@@ -1,26 +1,44 @@
-import { useEffect, useState, type ReactNode } from "react"
+import { useEffect, useState } from "react"
 import { useAtom } from "jotai"
-import { Navigate, Route, Routes } from "react-router-dom"
+import { Navigate, Outlet, Route, Routes } from "react-router-dom"
 import { getSelf, useApi } from "@shared/index"
 import { tokenStore, userAtom } from "./auth"
+import { AppShell } from "./features/common/AppShell"
+import { Footer } from "./features/common/Footer"
 import Login from "./Login"
+import Register from "./Register"
 import Landing from "./features/landing"
 import Dashboard from "./features/dashboard"
-import Competition from "./features/competition"
-import Onboarding from "./features/onboarding"
+import Competition, { AllCompetitions } from "./features/competition"
+import IntegrationPage from "./features/integration"
+import { ProfilePage, SettingsPage } from "./features/account"
 
-/** Gates a route behind an authenticated session. */
-function RequireAuth({ children }: { children: ReactNode }) {
+/** Wraps every page with the shared site footer. */
+function Layout() {
+    return (
+        <div className="flex min-h-screen flex-col">
+            <Outlet />
+            <div className="acc mx-auto w-[1440px]">
+                <Footer />
+            </div>
+        </div>
+    )
+}
+
+/** Gates nested routes behind an authenticated session. */
+function RequireAuth() {
     const [user] = useAtom(userAtom)
     if (!user) return <Navigate to="/login" replace />
-    return <>{children}</>
+    return <Outlet />
 }
 
 function App() {
     const api = useApi()
     const [, setUser] = useAtom(userAtom)
     // Only hydrate when there's a stored token to validate.
-    const [hydrating, setHydrating] = useState(() => tokenStore.getAccess() != null)
+    const [hydrating, setHydrating] = useState(
+        () => tokenStore.getAccess() != null
+    )
 
     // Restore the session from the stored access token on first load.
     useEffect(() => {
@@ -52,25 +70,28 @@ function App() {
 
     return (
         <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/onboarding" element={<Onboarding />} />
-            <Route
-                path="/dashboard"
-                element={
-                    <RequireAuth>
-                        <Dashboard />
-                    </RequireAuth>
-                }
-            />
-            <Route
-                path="/competition"
-                element={
-                    <RequireAuth>
-                        <Competition />
-                    </RequireAuth>
-                }
-            />
+            <Route element={<Layout />}>
+                <Route path="/" element={<Landing />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route element={<RequireAuth />}>
+                    <Route element={<AppShell />}>
+                        <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/competition" element={<Competition />} />
+                        <Route
+                            path="/competitions"
+                            element={<AllCompetitions />}
+                        />
+                        <Route
+                            path="/integrations/:name"
+                            element={<IntegrationPage />}
+                        />
+                        <Route path="/profile" element={<ProfilePage />} />
+                        <Route path="/settings" element={<SettingsPage />} />
+                    </Route>
+                </Route>
+            </Route>
+
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     )

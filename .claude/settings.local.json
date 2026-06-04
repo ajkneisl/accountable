@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew compileKotlin compileTestKotlin --no-daemon)",
+      "Bash(./gradlew test *)",
+      "Bash(npx tsc *)",
+      "Bash(./gradlew compileKotlin --no-daemon)"
+    ]
+  }
+}

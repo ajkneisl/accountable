@@ -1,7 +1,7 @@
 import { useState, type SubmitEvent } from "react"
 import { useSetAtom } from "jotai"
 import { Link, useNavigate } from "react-router-dom"
-import { ApiError, getSelf, login, useApi } from "@shared/api"
+import { ApiError, getSelf, register, useApi } from "@shared/api"
 import { tokenStore, userAtom } from "./auth"
 import { LogoLink } from "./features/common/primitives"
 
@@ -10,14 +10,15 @@ const inputClass =
     "w-full border border-line rounded-[10px] px-3.5 py-[11px] text-sm outline-0 text-ink bg-bg-card mb-3.5 font-[inherit]"
 
 /**
- * Sign-in page. New users create an account on the /register page,
- * which is launched from the "Create an account" button.
+ * Account creation page. Mirrors the Login page layout — new users land here
+ * from the "Create an account" button.
  */
-function Login() {
+function Register() {
     const api = useApi()
     const navigate = useNavigate()
     const setUser = useSetAtom(userAtom)
     const [username, setUsername] = useState("")
+    const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
     const [submitting, setSubmitting] = useState(false)
     const [errors, setErrors] = useState<string[]>([])
@@ -27,7 +28,7 @@ function Login() {
         setErrors([])
         setSubmitting(true)
         try {
-            const tokens = await login(api, username, password)
+            const tokens = await register(api, username, password, email)
             tokenStore.set(tokens)
             setUser(await getSelf(api))
             navigate("/dashboard")
@@ -54,7 +55,7 @@ function Login() {
             <div className="grid flex-1 grid-cols-2 items-stretch pt-5">
                 {/* Left — kicker + prompt */}
                 <div className="flex flex-col justify-center py-10 pl-[88px] pr-9">
-                     <div className="eyebrow mb-3.5">WELCOME BACK</div>
+                    <div className="eyebrow mb-3.5">CREATE YOUR ACCOUNT</div>
 
                     <h1 className="display mb-5 mt-0 max-w-[560px] text-[56px]">
                         Goals stick when
@@ -66,8 +67,7 @@ function Login() {
                     </h1>
 
                     <p className="mb-7 max-w-[480px] text-[17px] leading-[1.5] text-ink-2">
-                        Sign in to check on your goals, your streaks, and whoever
-                        is currently losing to you.
+                        We&apos;ll set you up with one goal, one source, and one friend.
                     </p>
                 </div>
 
@@ -75,10 +75,10 @@ function Login() {
                 <div className="flex items-center justify-center py-10 pl-9 pr-[88px]">
                     <form onSubmit={onSubmit} className="card w-[420px] p-8">
                         <h2 className="mb-1 mt-0 text-[22px] font-bold tracking-[-0.02em]">
-                            Sign in
+                            Create your account
                         </h2>
                         <p className="mb-[22px] mt-0 text-[13px] text-ink-3">
-                            Welcome back to Accountable.
+                            One goal, one source, one friend.
                         </p>
 
                         <label className={labelClass}>Username</label>
@@ -91,10 +91,20 @@ function Login() {
                             className={inputClass}
                         />
 
+                        <label className={labelClass}>Email</label>
+                        <input
+                            type="email"
+                            autoComplete="email"
+                            required
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className={inputClass}
+                        />
+
                         <label className={labelClass}>Password</label>
                         <input
                             type="password"
-                            autoComplete="current-password"
+                            autoComplete="new-password"
                             required
                             minLength={8}
                             value={password}
@@ -118,23 +128,23 @@ function Login() {
                             disabled={submitting}
                             className="btn btn-primary mt-[18px] w-full"
                         >
-                            {submitting ? "Please wait…" : "Sign in →"}
+                            {submitting ? "Please wait…" : "Create account →"}
                         </button>
 
                         <div className="my-5 flex items-center gap-3">
                             <hr className="divider flex-1" />
                             <span className="mono text-[11px] text-ink-3">
-                                NEW HERE?
+                                ALREADY HAVE ONE?
                             </span>
                             <hr className="divider flex-1" />
                         </div>
 
                         <button
                             type="button"
-                            onClick={() => navigate("/register")}
+                            onClick={() => navigate("/login")}
                             className="btn btn-line w-full"
                         >
-                            Create an account
+                            Sign in instead
                         </button>
                     </form>
                 </div>
@@ -143,4 +153,4 @@ function Login() {
     )
 }
 
-export default Login
+export default Register

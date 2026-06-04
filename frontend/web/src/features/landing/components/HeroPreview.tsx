@@ -1,7 +1,10 @@
-// Hero preview card — a stylized phone screen showing today's goals.
-
 import { SourceTile, type TileVariant } from "../../common/primitives"
 
+/**
+ * Hero preview.
+ *
+ * @link Hero
+ */
 export function HeroPreview() {
     const goals = [
         { src: "GH", tile: "ink", title: "Ship 5 commits", n: 3, goal: 5, unit: "/wk", tone: "lime" },

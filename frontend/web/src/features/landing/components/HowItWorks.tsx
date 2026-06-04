@@ -9,7 +9,7 @@ export function HowItWorks() {
             {
                 n: "01",
                 title: "Set a goal",
-                body: "Pick something specific and measurable. We help you scale it down until it’s attainable — not aspirational.",
+                body: "Pick something specific and measurable, we help you scale it down until it's attainable.",
                 preview: (
                     <div className="card p-[18px] text-[13px]">
                         <div className="eyebrow mb-2">NEW GOAL</div>
@@ -31,7 +31,7 @@ export function HowItWorks() {
             {
                 n: "02",
                 title: "Connect a source",
-                body: "Authenticate with the apps that already track this. No self-reporting, no fudging the numbers.",
+                body: "Authenticate with the apps that already track this. No self-reporting, no ducking your friends.",
                 preview: (
                     <div className="card p-3.5 text-[13px]">
                         <div className="flex flex-col gap-2">
@@ -92,7 +92,7 @@ export function HowItWorks() {
             {
                 n: "03",
                 title: "Bring friends",
-                body: "Add 1 friend or a whole group. Stakes are optional. Public shame is included by default.",
+                body: "Add 1 friend or a whole group. Stakes are optional, but public shame is included by default.",
                 preview: (
                     <div className="card p-3.5">
                         <div className="eyebrow mb-2.5">SQUAD · DEEP WORK</div>
@@ -145,7 +145,7 @@ export function HowItWorks() {
             <div className="mb-10">
                 <div className="eyebrow mb-2">02 · HOW IT WORKS</div>
                 <h2 className="display m-0 max-w-[760px] text-5xl">
-                    Three steps. Then you’re just keeping a promise — out loud.
+                    Three steps to make sure your promises are kept.
                 </h2>
             </div>
             <div className="grid grid-cols-3 gap-7">

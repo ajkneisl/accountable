@@ -4,7 +4,7 @@ import api.Error
 import features.goals.GoalPeriod
 import features.streak.streakFor
 import integrations.api.Integrations
-import integrations.api.startOfUtcDay
+import integrations.api.startOfDay
 import features.goals.GoalMetrics
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
@@ -22,6 +22,7 @@ import io.ktor.server.routing.route
 import java.util.UUID
 import kotlinx.serialization.Serializable
 import user.findUserByID
+import user.zoneOf
 
 /** Request body for creating a competition. */
 @Serializable data class CreateCompetitionRequest(val name: String)
@@ -114,7 +115,7 @@ private val COMPETITION_DETAIL_ROUTE: suspend RoutingContext.() -> Unit = {
                     userID = member.userID,
                     goals = goals,
                     now = now,
-                    floor = startOfUtcDay(member.joinedAt),
+                    floor = startOfDay(member.joinedAt, zoneOf(member.userID)),
                 )
             CompetitionMemberView(
                 userID = member.userID.toString(),

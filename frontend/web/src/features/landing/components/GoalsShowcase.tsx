@@ -1,13 +1,34 @@
-// Landing section 03 — showcase of attainable goal cards.
-
 import { SourceTile, type TileVariant } from "../../common/primitives"
 
+/**
+ * Section 3 on the landing page, discusses goals.
+ */
 export function GoalsShowcase() {
     const goals = [
-        { src: "GH", tile: "ink", title: "Ship 5 commits / week", who: "3 of us. 2 weeks running.", pct: 60 },
-        { src: "LC", tile: "lime", title: "Solve 3 LeetCode / day", who: "Just me, but Marcus is checking.", pct: 33 },
-        { src: "♥︎", tile: "coral", title: "4 workouts / week", who: "The Saturday Soreness Club", pct: 100 },
-        { src: "⏱", tile: "", title: "Under 2h on Instagram / day", who: "6 of us trying not to scroll.", pct: 70 }
+        {
+            src: "GH",
+            tile: "ink",
+            title: "Ship 5 commits / week",
+            pct: 60
+        },
+        {
+            src: "LC",
+            tile: "lime",
+            title: "Solve 1 LeetCode / day",
+            pct: 0
+        },
+        {
+            src: "♥︎",
+            tile: "coral",
+            title: "4 workouts / week",
+            pct: 100
+        },
+        {
+            src: "⏱",
+            tile: "",
+            title: "Under 4h Screentime",
+            pct: 70
+        }
     ] as const
     return (
         <section id="goals" className="px-16 pb-24">
@@ -21,9 +42,8 @@ export function GoalsShowcase() {
                     </h2>
                 </div>
                 <div className="max-w-[320px] text-sm text-ink-2">
-                    We&#39;ll talk you out of <i>“get jacked”</i> and into{" "}
-                    <i>“four workouts a week, measured by Apple Health”</i>. The
-                    first goal is half the work.
+                    We talk you out of unreasonable goals and into ones you and
+                    your friends can track.
                 </div>
             </div>
 
@@ -37,14 +57,13 @@ export function GoalsShowcase() {
                             label={g.src}
                             variant={g.tile as TileVariant}
                         />
+
                         <div className="flex-1">
-                            <div className="mb-2 text-lg font-semibold tracking-[-0.01em]">
+                            <div className="text-lg font-semibold tracking-[-0.01em]">
                                 {g.title}
                             </div>
-                            <div className="text-[13px] text-ink-3">
-                                {g.who}
-                            </div>
                         </div>
+
                         <div>
                             <div className="mb-1.5 flex justify-between text-xs">
                                 <span className="text-ink-3">this week</span>

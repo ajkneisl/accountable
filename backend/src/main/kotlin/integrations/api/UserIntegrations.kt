@@ -3,6 +3,7 @@ package integrations.api
 import api.suspendTransaction
 import java.util.UUID
 import org.jetbrains.exposed.sql.ReferenceOption
+import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
@@ -58,6 +59,19 @@ suspend fun integrationLinksFor(userID: UUID): Map<String, String> = suspendTran
     UserIntegrations.selectAll()
         .where { UserIntegrations.userID eq userID }
         .associate { it[UserIntegrations.integration] to it[UserIntegrations.externalID] }
+}
+
+/**
+ * Most recent `fetchedAt` across every stored day for [userID] in [table], or `null` if the user
+ * has no rows yet. Used to surface when an integration was last refreshed from upstream.
+ */
+suspend fun latestFetchedAt(userID: UUID, table: IntegrationTable): Long? = suspendTransaction {
+    table.select(table.fetchedAt)
+        .where { table.userID eq userID }
+        .orderBy(table.fetchedAt to SortOrder.DESC)
+        .limit(1)
+        .firstOrNull()
+        ?.get(table.fetchedAt)
 }
 
 /**

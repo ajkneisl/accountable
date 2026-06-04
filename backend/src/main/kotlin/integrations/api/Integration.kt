@@ -11,9 +11,13 @@ interface Integration<T : IntegrationData> {
     /** Stable provider identifier used in logs, config, and the polymorphic JSON discriminator. */
     val name: String
 
+    /** The per-day table this integration persists its records in. */
+    val table: IntegrationTable
+
     /**
-     * Fetch fresh data from the upstream provider for the UTC day containing [date], using the
-     * external account linked in [UserIntegrations] for [userID]. Does not persist.
+     * Fetch fresh data from the upstream provider for the calendar day (in [userID]'s timezone)
+     * containing [date], using the external account linked in [UserIntegrations] for [userID].
+     * Does not persist.
      */
     suspend fun pullData(userID: UUID, date: Long): T
 
@@ -25,6 +29,12 @@ interface Integration<T : IntegrationData> {
 
     /** Read a single day's stored row, including when it was last fetched. */
     suspend fun getDay(userID: UUID, date: Long): IntegrationRecord<T>?
+
+    /**
+     * Stored per-day data for [userID] on or after [since] (ms epoch), most-recent day first.
+     * Backs the integration detail page's history view. Reads only — never hits upstream.
+     */
+    suspend fun history(userID: UUID, since: Long): List<IntegrationData>
 }
 
 /**

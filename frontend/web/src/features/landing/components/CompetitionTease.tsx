@@ -18,7 +18,7 @@ export function CompetitionTease() {
                     <p className="mb-7 max-w-[480px] text-[17px] leading-[1.5] opacity-70">
                         Drop a weekly score against one friend, or set a bounty:
                         loser buys coffee, loser writes a postcard, loser owns
-                        it in the group chat. Stakes optional. Pride mandatory.
+                        it in the group chat.
                     </p>
                     <Link to="/competition" className="btn btn-accent btn-lg">
                         Start a competition →

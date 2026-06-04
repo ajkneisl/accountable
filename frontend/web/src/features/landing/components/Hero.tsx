@@ -1,8 +1,11 @@
-// Landing hero — headline, CTAs, and the phone preview.
-
 import { Link } from "react-router-dom"
 import { HeroPreview } from "./HeroPreview"
 
+/**
+ * Hero section of Accountable.
+ *
+ * TODO: This includes a fake number of people using the app, make this real.
+ */
 export function Hero() {
     return (
         <section
@@ -10,20 +13,11 @@ export function Hero() {
             style={{ gridTemplateColumns: "1.05fr 1fr" }}
         >
             <div>
-                <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-line-2 bg-bg-card py-1.5 pl-1.5 pr-3">
-                    <span className="chip bg-lime px-2 py-[3px] text-ink">
-                        NEW
-                    </span>
-                    <span className="text-[13px] text-ink-2">
-                        Group bets &amp; head-to-head weeks
-                    </span>
-                    <span className="text-sm text-ink-3">›</span>
-                </div>
                 <h1 className="display mb-6 mt-0 text-[92px]">
                     Goals get done
-                    <br />
+                    <div className="h-4" />
                     when friends are
-                    <br />
+                    <div className="h-4" />
                     <span
                         className="rounded-xl bg-lime px-3"
                         style={{
@@ -34,18 +28,21 @@ export function Hero() {
                         watching.
                     </span>
                 </h1>
+
                 <p className="mb-8 mt-0 max-w-[520px] text-[19px] leading-[1.5] text-ink-2">
-                    Accountable plugs into the tools you already use — GitHub,
-                    LeetCode, Apple Health, Screen Time — and keeps you and your
-                    friends honest about the goals you set together.
+                    Accountable integrates into the tools you already have to
+                    keep you and your friends honest about your goals. Track
+                    GitHub commits, LeetCode problems, and workouts all in one
+                    place.
                 </p>
 
                 <div className="mb-7 flex items-center gap-3">
-                    <Link to="/onboarding" className="btn btn-primary btn-lg">
-                        Start a goal — free
+                    <Link to="/register" className="btn btn-primary btn-lg">
+                        Set your first goal
                     </Link>
+
                     <Link to="/dashboard" className="btn btn-line btn-lg">
-                        See a live dashboard →
+                        Login
                     </Link>
                 </div>
 
@@ -67,6 +64,7 @@ export function Hero() {
                             />
                         ))}
                     </div>
+
                     <span>
                         <b className="text-ink-2">4,210 people</b> stayed on
                         their goals this week.

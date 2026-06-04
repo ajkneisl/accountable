@@ -4,6 +4,7 @@ import features.competition.CompetitionGoals
 import features.competition.CompetitionMembers
 import features.competition.Competitions
 import features.goals.Goals
+import integrations.AppleFitnessWorkouts
 import integrations.api.IntegrationTables
 import integrations.api.UserIntegrations
 import user.RefreshTokens
@@ -43,6 +44,8 @@ fun initDb() {
             username = System.getenv("DATABASE_USER") ?: "postgres"
             password = System.getenv("DATABASE_PASSWORD") ?: "postgres"
 
+            println(jdbcUrl)
+
             driverClassName = "org.postgresql.Driver"
             maximumPoolSize = 10
             isAutoCommit = false
@@ -61,6 +64,7 @@ fun initDb() {
             Competitions,
             CompetitionMembers,
             CompetitionGoals,
+            AppleFitnessWorkouts,
             *IntegrationTables.all.toTypedArray(),
         )
     }

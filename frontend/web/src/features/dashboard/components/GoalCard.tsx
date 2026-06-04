@@ -1,7 +1,7 @@
 // A single goal card — progress, weekly chart, source label.
 
 import type { Goal } from "@shared/index"
-import { SourceTile } from "../../common/primitives"
+import { IntegrationIcon, SourceTile } from "../../common/primitives"
 import { goalTitle, integrationVisual, isOnTrack, unitLabel } from "../types"
 import { WeekChart } from "./WeekChart"
 
@@ -35,7 +35,11 @@ export function GoalCard({ goal }: { goal: Goal }) {
         <div className="card flex min-h-[280px] flex-col gap-[18px] p-[22px]">
             <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                    <SourceTile label={visual.glyph} variant={visual.tile} />
+                    <SourceTile
+                        label={visual.glyph}
+                        variant={visual.tile}
+                        icon={<IntegrationIcon name={goal.integration} />}
+                    />
                     <div>
                         <div className="text-base font-semibold tracking-[-0.01em]">
                             {goalTitle(goal)}

@@ -1,14 +1,16 @@
-// Landing footer.
+import { LogoLink } from "./primitives"
 
-import { AccLogo } from "../../common/primitives"
-
+/**
+ * Site-wide footer — wordmark + product/company links.
+ * Used across every page (Landing, Login, Register, Dashboard, Competition).
+ */
 export function Footer() {
     return (
         <footer className="flex items-end justify-between border-t border-line-2 px-16 pb-14 pt-10 text-[13px] text-ink-3">
             <div>
-                <AccLogo />
+                <LogoLink />
                 <div className="mt-3">
-                    © 2026 · Built by two friends who kept missing the gym.
+                    © 2026 · built by two chuds
                 </div>
             </div>
             <div className="flex gap-10">
