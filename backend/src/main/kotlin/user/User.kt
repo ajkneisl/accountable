@@ -8,6 +8,7 @@ import api.verify.Verifier
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
@@ -83,9 +84,19 @@ fun findUserByID(id: UUID): User? = transaction {
     Users.selectAll().where { Users.id eq id }.limit(1).firstOrNull()?.toEntity<User>()
 }
 
-/** The [id]'s configured [ZoneId], falling back to UTC when unset or unparseable. */
+/** Per-process cache of resolved timezones. A user's timezone is fixed at registration, so this
+ *  never goes stale; if a timezone-update path is ever added, evict the entry there. */
+private val zoneCache = ConcurrentHashMap<UUID, ZoneId>()
+
+/**
+ * The [id]'s configured [ZoneId], falling back to UTC when unset or unparseable. Result is cached:
+ * [zoneOf] is called repeatedly per request (once per metric window) and the underlying value is
+ * immutable after registration.
+ */
 fun zoneOf(id: UUID): ZoneId =
-    findUserByID(id)?.timezone?.let { runCatching { ZoneId.of(it) }.getOrNull() } ?: ZoneOffset.UTC
+    zoneCache.getOrPut(id) {
+        findUserByID(id)?.timezone?.let { runCatching { ZoneId.of(it) }.getOrNull() } ?: ZoneOffset.UTC
+    }
 
 /** Find a user by [username]. */
 fun findUserByUsername(username: String): User? = transaction {

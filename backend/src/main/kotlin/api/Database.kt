@@ -44,7 +44,11 @@ fun initDb() {
             username = System.getenv("DATABASE_USER") ?: "postgres"
             password = System.getenv("DATABASE_PASSWORD") ?: "postgres"
 
-            println(jdbcUrl)
+            println("""
+                $username
+                $password
+                $jdbcUrl
+            """.trimIndent())
 
             driverClassName = "org.postgresql.Driver"
             maximumPoolSize = 10

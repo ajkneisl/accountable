@@ -98,6 +98,37 @@ suspend fun sumMetric(userID: UUID, goal: GoalDefinition, start: Long, end: Long
 }
 
 /**
+ * Every per-day value of [goal]'s metric with row date in [start, end), keyed by start-of-day epoch.
+ * One query covering the whole range; absent days are simply missing (treat as 0).
+ *
+ * This is the batched alternative to calling [sumMetric] once per day: callers that need to evaluate
+ * many consecutive days (streaks, history) fetch the range once and aggregate in memory via
+ * [sumInRange] instead of issuing a transaction per day.
+ */
+suspend fun metricByDay(
+    userID: UUID,
+    goal: GoalDefinition,
+    start: Long,
+    end: Long,
+): Map<Long, Long> {
+    val metric = GoalMetrics.byKey[goal.integration to goal.metric] ?: return emptyMap()
+    return suspendTransaction {
+        metric.table
+            .selectAll()
+            .where {
+                (metric.table.userID eq userID) and
+                    (metric.table.date greaterEq start) and
+                    (metric.table.date less end)
+            }
+            .associate { it[metric.table.date] to it[metric.column] }
+    }
+}
+
+/** Sum the values whose day key falls in [start, end). Mirrors [sumMetric] over an in-memory map. */
+fun Map<Long, Long>.sumInRange(start: Long, end: Long): Long =
+    entries.sumOf { (date, value) -> if (date in start until end) value else 0L }
+
+/**
  * Sum [goal]'s metric column over its current [GoalPeriod] window. Returns 0 if the metric is not
  * registered or no rows exist in the window.
  */
@@ -112,22 +143,12 @@ suspend fun progressFor(userID: UUID, goal: Goal, now: Long): Long {
  */
 suspend fun perDayValues(userID: UUID, goal: GoalDefinition, days: Int, now: Long): List<Long> {
     require(days > 0) { "days must be positive" }
-    val metric = GoalMetrics.byKey[goal.integration to goal.metric] ?: return List(days) { 0L }
     val zone = zoneOf(userID)
     val today = localDate(now, zone)
     val windowStart = today.minusDays((days - 1).toLong()).startMs(zone)
     val windowEnd = today.plusDays(1).startMs(zone)
 
-    val byDay: Map<Long, Long> = suspendTransaction {
-        metric.table
-            .selectAll()
-            .where {
-                (metric.table.userID eq userID) and
-                    (metric.table.date greaterEq windowStart) and
-                    (metric.table.date less windowEnd)
-            }
-            .associate { it[metric.table.date] to it[metric.column] }
-    }
+    val byDay = metricByDay(userID, goal, windowStart, windowEnd)
 
     return (days - 1 downTo 0).map { offset ->
         byDay[today.minusDays(offset.toLong()).startMs(zone)] ?: 0L
