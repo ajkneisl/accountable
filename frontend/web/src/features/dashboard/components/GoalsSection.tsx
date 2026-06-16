@@ -10,7 +10,7 @@ function isoWeekNumber(d: Date): number {
     )
     utc.setUTCDate(utc.getUTCDate() + 4 - (utc.getUTCDay() || 7))
     const yearStart = new Date(Date.UTC(utc.getUTCFullYear(), 0, 1))
-    return Math.ceil(((+utc - +yearStart) / 86400000 + 1) / 7)
+    return Math.ceil(((+utc -    +yearStart) / 86400000 + 1) / 7)
 }
 
 export function GoalsSection({

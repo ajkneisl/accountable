@@ -2,16 +2,29 @@
 // Integration-specific configuration lives on each integration's own page.
 
 import { useAtomValue } from "jotai"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { useSignOut, userAtom } from "../../auth"
 import { AccountShell, InfoRow } from "./AccountShell"
 
 export default function SettingsPage() {
     const signOut = useSignOut()
     const user = useAtomValue(userAtom)
+    const navigate = useNavigate()
+
+    function back() {
+        if (window.history.length > 1) navigate(-1)
+        else navigate("/dashboard")
+    }
 
     return (
         <AccountShell eyebrow="ACCOUNT" title="Settings">
+            <button
+                type="button"
+                onClick={back}
+                className="btn btn-line btn-sm mb-5"
+            >
+                ← Back
+            </button>
             <div className="flex max-w-[560px] flex-col gap-4">
                 <div className="card p-6">
                     <div className="eyebrow mb-3.5">ACCOUNT</div>

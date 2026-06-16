@@ -116,12 +116,13 @@ private val INTEGRATION_ENABLE_ROUTE: suspend RoutingContext.() -> Unit = {
 }
 
 /**
- * GET /api/integrations/{name}?date={ms-epoch}
+ * GET /api/integrations/{name}?date={ms-epoch}&force={bool}
  *
  * Returns the integration's data for the calendar day (in the user's timezone) containing `date`.
  * If `date` is today, a stale row (older than [REFRESH_COOLDOWN_MS]) or a missing row triggers
- * an upstream refresh, and `lastFetched` is included. Past days are served from storage only
- * and omit `lastFetched`.
+ * an upstream refresh, and `lastFetched` is included. Pass `force=true` to refresh today
+ * regardless of the cooldown (used by the on-login refresh). Past days are served from storage
+ * only and omit `lastFetched`.
  */
 private val INTEGRATION_GET_ROUTE: suspend RoutingContext.() -> Unit = {
     val userID = call.userID()
@@ -132,6 +133,7 @@ private val INTEGRATION_GET_ROUTE: suspend RoutingContext.() -> Unit = {
     val dateMs =
         call.request.queryParameters["date"]?.toLongOrNull()
             ?: Error.text("missing or invalid 'date' query parameter")
+    val force = call.request.queryParameters["force"].toBoolean()
 
     val zone = zoneOf(userID)
     val target = startOfDay(dateMs, zone)
@@ -144,7 +146,8 @@ private val INTEGRATION_GET_ROUTE: suspend RoutingContext.() -> Unit = {
                 val cached = integration.getDay(userID, target)
                 val record =
                     if (
-                        cached == null ||
+                        force ||
+                            cached == null ||
                             System.currentTimeMillis() - cached.fetchedAt >= REFRESH_COOLDOWN_MS
                     ) {
                         integration.refresh(userID, target)

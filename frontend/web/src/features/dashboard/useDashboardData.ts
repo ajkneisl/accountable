@@ -1,6 +1,6 @@
 // Fetches every piece of backend state the dashboard renders, in parallel.
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import {
     type CompetitionDetail,
     type CompetitionSummary,
@@ -9,6 +9,7 @@ import {
     type IntegrationStatus,
     type Workout,
     getCompetition,
+    getIntegration,
     getStreak,
     getStreakHistory,
     listCompetitions,
@@ -49,6 +50,33 @@ export function useDashboardData(): {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [tick, setTick] = useState(0)
+
+    // On login (first mount of the authenticated shell) force a fresh upstream
+    // pull for every connected integration — GitHub, LeetCode, … — then reload
+    // so the dashboard reflects it. Kept in its own effect, guarded by a ref so
+    // neither StrictMode's double-invoke nor a later reload() re-triggers it,
+    // and the reload fires unconditionally once the pulls settle.
+    const loginRefreshStarted = useRef(false)
+    useEffect(() => {
+        if (loginRefreshStarted.current) return
+        loginRefreshStarted.current = true
+        ;(async () => {
+            try {
+                const enabled = (await listIntegrations(api)).filter(
+                    (it) => it.enabled
+                )
+                if (enabled.length === 0) return
+                await Promise.allSettled(
+                    enabled.map((it) =>
+                        getIntegration(api, it.name, Date.now(), true)
+                    )
+                )
+                setTick((n) => n + 1)
+            } catch {
+                // Best-effort; the per-integration refresh button still works.
+            }
+        })()
+    }, [api])
 
     useEffect(() => {
         let cancelled = false
