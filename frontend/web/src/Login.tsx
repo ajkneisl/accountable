@@ -2,7 +2,7 @@ import { useState, type SubmitEvent } from "react"
 import { useSetAtom } from "jotai"
 import { Link, useNavigate } from "react-router-dom"
 import { ApiError, getSelf, login, useApi } from "@shared/api"
-import { tokenStore, userAtom } from "./auth"
+import { refreshOnLoadAtom, tokenStore, userAtom } from "./auth"
 import { LogoLink } from "./features/common/primitives"
 
 const labelClass = "block text-xs font-medium text-ink-2 mb-1.5"
@@ -17,6 +17,7 @@ function Login() {
     const api = useApi()
     const navigate = useNavigate()
     const setUser = useSetAtom(userAtom)
+    const setRefreshOnLoad = useSetAtom(refreshOnLoadAtom)
     const [username, setUsername] = useState("")
     const [password, setPassword] = useState("")
     const [submitting, setSubmitting] = useState(false)
@@ -30,6 +31,8 @@ function Login() {
             const tokens = await login(api, username, password)
             tokenStore.set(tokens)
             setUser(await getSelf(api))
+
+            setRefreshOnLoad(true)
             navigate("/dashboard")
         } catch (err) {
             if (err instanceof ApiError) setErrors(err.messages)

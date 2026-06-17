@@ -68,20 +68,17 @@ export function listIntegrations(
 /**
  * GET /api/integrations/{name}?date={ms} — fetch a day's data. When {date} is today
  * (the default) and the stored row is missing or stale, the backend refreshes it from
- * upstream before responding. Pass {force} to refresh today regardless of the cooldown
- * (used by the on-login refresh).
+ * upstream before responding.
  */
 export function getIntegration(
     config: ApiConfig,
     name: string,
-    date: number = Date.now(),
-    force = false
+    date: number = Date.now()
 ): Promise<IntegrationDayResponse> {
-    const forceParam = force ? "&force=true" : ""
     return request(
         config,
         "GET",
-        `/integrations/${encodeURIComponent(name)}?date=${date}${forceParam}`,
+        `/integrations/${encodeURIComponent(name)}?date=${date}`,
         undefined,
         { auth: true }
     )
