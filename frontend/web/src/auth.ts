@@ -63,6 +63,14 @@ export const userAtom = atom<SelfResponse | null>(null)
 
 export const isAuthenticatedAtom = atom((get) => get(userAtom) !== null)
 
+/**
+ * Set to `true` by the login flow to tell the dashboard to pull fresh
+ * integration data once, right after it loads. Because it lives only in memory,
+ * it resets on a plain page reload — so a refresh fires on an actual login, not
+ * on every page view.
+ */
+export const refreshOnLoadAtom = atom(false)
+
 /** Returns a handler that revokes the session, clears tokens, and returns home. */
 export function useSignOut() {
     const api = useApi()

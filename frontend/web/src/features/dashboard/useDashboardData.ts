@@ -1,6 +1,7 @@
 // Fetches every piece of backend state the dashboard renders, in parallel.
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
+import { useAtom } from "jotai"
 import {
     type CompetitionDetail,
     type CompetitionSummary,
@@ -9,6 +10,7 @@ import {
     type IntegrationStatus,
     type Workout,
     getCompetition,
+    getIntegration,
     getStreak,
     getStreakHistory,
     listCompetitions,
@@ -17,6 +19,7 @@ import {
     listWorkouts,
     useApi
 } from "@shared/index"
+import { refreshOnLoadAtom } from "../../auth"
 
 export interface DashboardData {
     goals: Goal[]
@@ -49,6 +52,33 @@ export function useDashboardData(): {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [tick, setTick] = useState(0)
+    const [refreshOnLoad, setRefreshOnLoad] = useAtom(refreshOnLoadAtom)
+    // Set the instant the refresh starts so React's StrictMode (which runs
+    // effects twice in dev) can't kick off a second one.
+    const refreshStarted = useRef(false)
+
+    // When login asked for it, pull fresh data for every connected integration
+    // in the background, then reload so the dashboard shows the new numbers.
+    // Runs once; clearing the flag means a later page reload won't repeat it.
+    useEffect(() => {
+        if (!refreshOnLoad || refreshStarted.current) return
+        refreshStarted.current = true
+        setRefreshOnLoad(false)
+        ;(async () => {
+            try {
+                const enabled = (await listIntegrations(api)).filter(
+                    (it) => it.enabled
+                )
+                if (enabled.length === 0) return
+                await Promise.allSettled(
+                    enabled.map((it) => getIntegration(api, it.name))
+                )
+                setTick((n) => n + 1)
+            } catch {
+                // Best-effort; the per-integration refresh button still works.
+            }
+        })()
+    }, [refreshOnLoad, api, setRefreshOnLoad])
 
     useEffect(() => {
         let cancelled = false
