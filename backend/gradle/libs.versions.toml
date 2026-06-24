@@ -7,6 +7,7 @@ h2 = "2.2.224"
 khealth = "3.0.2"
 hikaricp = "6.2.1"
 bcrypt = "0.10.2"
+jedis = "5.2.0"
 
 [libraries]
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
@@ -24,6 +25,8 @@ hikaricp = { module = "com.zaxxer:HikariCP", version.ref = "hikaricp" }
 khealth = { module = "dev.hayden:khealth", version.ref = "khealth" }
 
 bcrypt = { module = "at.favre.lib:bcrypt", version.ref = "bcrypt" }
+
+jedis = { module = "redis.clients:jedis", version.ref = "jedis" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

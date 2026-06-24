@@ -6,6 +6,7 @@ import { userAtom } from "../../auth"
 import { useAppData } from "../common/AppShell"
 import { DashboardHeader } from "./components/DashboardHeader"
 import { GoalsSection } from "./components/GoalsSection"
+import { IntegrationsSyncCard } from "./components/IntegrationsSyncCard"
 import { StreaksCard } from "./components/StreaksCard"
 import { TodayCard } from "./components/TodayCard"
 
@@ -28,6 +29,8 @@ export default function Dashboard() {
                 goals={data.goals}
                 onNewGoal={openNewGoal}
             />
+
+            <IntegrationsSyncCard />
 
             <div className="mb-7 grid grid-cols-2 gap-4">
                 <TodayCard goals={data.goals} />

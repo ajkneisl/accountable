@@ -55,7 +55,6 @@ export function AppShell() {
                     goals={data.goals}
                     streak={data.streak}
                     competitions={data.competitions}
-                    integrations={data.integrations}
                     loading={loading}
                 />
                 <Outlet />

@@ -34,6 +34,24 @@ export function unitLabel(integration: string, metric: string): string {
     return metric
 }
 
+/** Stable identity for a goal, used for React keys and hash navigation. */
+export function goalKey(goal: {
+    integration: string
+    metric: string
+    period: string
+}): string {
+    return `${goal.integration}:${goal.metric}:${goal.period}`
+}
+
+/** DOM id / URL hash anchor for a goal's card on the dashboard (no colons). */
+export function goalAnchorId(goal: {
+    integration: string
+    metric: string
+    period: string
+}): string {
+    return `goal-${goal.integration}-${goal.metric}-${goal.period}`
+}
+
 /** "Ship 5 commits / week" style label. */
 export function goalTitle(goal: Goal): string {
     const unit = unitLabel(goal.integration, goal.metric)
@@ -66,6 +84,16 @@ export function formatWeekRange(weekStart: number): string {
             : { month: "short", day: "numeric" }
     )
     return `${startStr} – ${endStr}`
+}
+
+/** ISO-8601 week number (1–53) for the given date. */
+export function isoWeekNumber(d: Date): number {
+    const utc = new Date(
+        Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
+    )
+    utc.setUTCDate(utc.getUTCDate() + 4 - (utc.getUTCDay() || 7))
+    const yearStart = new Date(Date.UTC(utc.getUTCFullYear(), 0, 1))
+    return Math.ceil(((+utc - +yearStart) / 86400000 + 1) / 7)
 }
 
 /** Day-of-ISO-week (Mon=1..Sun=7) for the current UTC instant. */

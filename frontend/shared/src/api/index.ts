@@ -1,5 +1,6 @@
 export * from "./auth/requests"
 export * from "./competition/requests"
+export * from "./dashboard/requests"
 export * from "./errors"
 export * from "./goals/requests"
 export * from "./http"

@@ -31,9 +31,9 @@ class IntegrationRefreshWorkerTest {
     private fun chicago(y: Int, mo: Int, d: Int, h: Int) =
         LocalDateTime.of(y, mo, d, h, 0).atZone(zone).toInstant().toEpochMilli()
 
-    private val localMidnight = chicago(2026, 6, 24, 0)
-    private val localNoon = chicago(2026, 6, 24, 12)
-    private val workoutTime = chicago(2026, 6, 23, 22) // the day that just ended at localMidnight
+    private val local11pm = chicago(2026, 6, 23, 23)
+    private val localNoon = chicago(2026, 6, 23, 12)
+    private val workoutTime = chicago(2026, 6, 23, 22) // earlier the same day as local11pm
 
     @BeforeTest
     fun setup() {
@@ -68,22 +68,22 @@ class IntegrationRefreshWorkerTest {
     }
 
     @Test
-    fun `refreshes users whose local clock just crossed midnight`() = runBlocking {
+    fun `refreshes users whose local clock is at 11pm`() = runBlocking {
         addWorkout(testUserID, WorkoutType.RUN, 30, 150, workoutTime) // auto-enables apple_fitness
         transaction { AppleFitnessTable.deleteAll() } // drop the rollup the add wrote
 
-        IntegrationRefreshWorker.refreshUsersAtLocalMidnight(now = localMidnight)
+        IntegrationRefreshWorker.refreshUsersAtRefreshHour(now = local11pm)
 
-        // The worker finalized the day that just ended, rebuilding its rollup row.
+        // The worker refreshed today, rebuilding its rollup row from the day's workouts.
         assertEquals(150L, AppleFitness.getDay(testUserID, workoutTime)?.data?.calories)
     }
 
     @Test
-    fun `skips users not at their local midnight`() = runBlocking {
+    fun `skips users not at their refresh hour`() = runBlocking {
         addWorkout(testUserID, WorkoutType.RUN, 30, 150, workoutTime)
         transaction { AppleFitnessTable.deleteAll() }
 
-        IntegrationRefreshWorker.refreshUsersAtLocalMidnight(now = localNoon)
+        IntegrationRefreshWorker.refreshUsersAtRefreshHour(now = localNoon)
 
         assertNull(AppleFitness.getDay(testUserID, workoutTime))
     }

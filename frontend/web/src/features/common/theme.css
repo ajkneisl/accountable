@@ -244,6 +244,12 @@ body {
         background: var(--bg-sunken);
         color: var(--ink);
     }
+    .source-tile.is-sm {
+        width: 30px;
+        height: 30px;
+        border-radius: 9px;
+        font-size: 11px;
+    }
 
     /* Headline display */
     .display {
@@ -282,6 +288,19 @@ body {
     }
     .streak-dot.today {
         box-shadow: 0 0 0 2px var(--ink);
+    }
+
+    /* One-shot ring flash for a goal card linked-to from the sidebar. */
+    @keyframes goal-flash {
+        from {
+            box-shadow: 0 0 0 2px var(--ink);
+        }
+        to {
+            box-shadow: var(--shadow-sm);
+        }
+    }
+    .goal-flash {
+        animation: goal-flash 1.6s ease-out;
     }
 
     /* Divider */

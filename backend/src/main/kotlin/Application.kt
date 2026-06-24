@@ -5,6 +5,7 @@ import auth.JwtConfig
 import auth.authRoutes
 import dev.hayden.KHealth
 import features.competition.competitionRoutes
+import features.dashboard.dashboardRoutes
 import features.goals.goalRoutes
 import features.streak.streakRoutes
 import integrations.api.IntegrationRefreshWorker
@@ -47,7 +48,7 @@ fun main() {
 fun Application.rootModule() {
     initDb()
     configureModule()
-    // Daily per-user-midnight refresh of integrations; tied to the application lifecycle.
+    // Daily 11pm (per-user-local) refresh of integrations; tied to the application lifecycle.
     IntegrationRefreshWorker.start(this)
 }
 
@@ -142,6 +143,7 @@ fun Application.configureModule() {
             goalRoutes()
             streakRoutes()
             competitionRoutes()
+            dashboardRoutes()
         }
     }
 }

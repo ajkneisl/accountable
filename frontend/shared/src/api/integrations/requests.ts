@@ -66,6 +66,19 @@ export function listIntegrations(
 }
 
 /**
+ * POST /api/integrations/refresh — refresh every enabled integration at once. The backend skips
+ * any integration refreshed within the last 5 minutes, so calling this repeatedly is cheap.
+ * Resolves to the updated status list (with new `lastFetched` times).
+ */
+export function refreshAllIntegrations(
+    config: ApiConfig
+): Promise<IntegrationStatus[]> {
+    return request(config, "POST", "/integrations/refresh", undefined, {
+        auth: true
+    })
+}
+
+/**
  * GET /api/integrations/{name}?date={ms} — fetch a day's data. When {date} is today
  * (the default) and the stored row is missing or stale, the backend refreshes it from
  * upstream before responding.

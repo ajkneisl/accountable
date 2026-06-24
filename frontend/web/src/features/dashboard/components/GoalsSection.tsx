@@ -1,17 +1,10 @@
 // The "Your goals" section — the goal card grid backed by real data.
 
+import { useLocation } from "react-router-dom"
 import type { Goal } from "@shared/index"
 import { Spinner } from "../../common/primitives"
+import { goalAnchorId, goalKey, isOnTrack, isoWeekNumber } from "../types"
 import { GoalCard } from "./GoalCard"
-
-function isoWeekNumber(d: Date): number {
-    const utc = new Date(
-        Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
-    )
-    utc.setUTCDate(utc.getUTCDate() + 4 - (utc.getUTCDay() || 7))
-    const yearStart = new Date(Date.UTC(utc.getUTCFullYear(), 0, 1))
-    return Math.ceil(((+utc - +yearStart) / 86400000 + 1) / 7)
-}
 
 export function GoalsSection({
     goals,
@@ -23,6 +16,8 @@ export function GoalsSection({
     loading?: boolean
 }) {
     const week = isoWeekNumber(new Date())
+    // A sidebar goal links here as #goal-<…>; focus the matching card on arrival.
+    const focusedAnchor = useLocation().hash.replace(/^#/, "")
 
     if (goals.length === 0) {
         return (
@@ -53,6 +48,8 @@ export function GoalsSection({
         )
     }
 
+    const onTrack = goals.filter((g) => isOnTrack(g)).length
+
     return (
         <>
             <div className="mb-3 flex items-center justify-between">
@@ -60,13 +57,26 @@ export function GoalsSection({
                     <span>YOUR GOALS · WEEK {week}</span>
                     {loading && <Spinner />}
                 </div>
+                <div className="flex items-center gap-3">
+                    <span className="text-[12px] text-ink-3">
+                        {onTrack} of {goals.length} on track
+                    </span>
+                    <button
+                        type="button"
+                        onClick={onNewGoal}
+                        className="btn btn-line btn-sm"
+                    >
+                        + New goal
+                    </button>
+                </div>
             </div>
 
             <div className="grid grid-cols-4 gap-4">
                 {goals.map((g) => (
                     <GoalCard
-                        key={`${g.integration}:${g.metric}:${g.period}`}
+                        key={goalKey(g)}
                         goal={g}
+                        focused={goalAnchorId(g) === focusedAnchor}
                     />
                 ))}
             </div>

@@ -40,6 +40,7 @@ dependencies {
 
     implementation(libs.khealth)
     implementation(libs.bcrypt)
+    implementation(libs.jedis)
 
     implementation(kotlin("reflect"))
 
@@ -54,4 +55,10 @@ dependencies {
     testImplementation(ktorLibs.client.contentNegotiation)
     testImplementation(ktorLibs.client.mock)
     testImplementation(libs.h2)
+}
+
+// Forward REDIS_URL into tests so the live CacheTest can run against a real Redis when one is
+// provided; when unset, the cache (and CacheTest) self-disable, so the suite needs no Redis.
+tasks.test {
+    System.getenv("REDIS_URL")?.let { environment("REDIS_URL", it) }
 }

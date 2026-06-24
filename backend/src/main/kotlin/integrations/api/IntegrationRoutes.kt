@@ -1,5 +1,6 @@
 package integrations.api
 
+import api.Cache
 import api.Error
 import integrations.IntegrationData
 import integrations.appleFitnessRoutes
@@ -18,10 +19,11 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import java.util.UUID
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
 import user.zoneOf
 
-/** Minimum time between user-triggered refreshes for today's row. */
-private const val REFRESH_COOLDOWN_MS = 15L * 60 * 1000
+/** Minimum time between user-triggered upstream refreshes for today's row (per integration). */
+private const val REFRESH_COOLDOWN_MS = 5L * 60 * 1000
 
 private const val DAY_MS = 24L * 60 * 60 * 1000
 
@@ -69,20 +71,56 @@ data class IntegrationStatus(
  * and the upstream identifier they linked.
  */
 private val INTEGRATION_LIST_ROUTE: suspend RoutingContext.() -> Unit = {
-    val userID = call.userID()
+    call.respond(integrationsView(call.userID()))
+}
+
+/** The user's integration connection + last-refresh statuses, cached. Reused by the dashboard. */
+suspend fun integrationsView(userID: UUID): List<IntegrationStatus> =
+    Cache.cachedForUser(
+        userID,
+        "integrations",
+        ListSerializer(IntegrationStatus.serializer()),
+    ) {
+        integrationStatusesFor(userID)
+    }
+
+/** Build the per-integration connection + last-refresh status list for [userID]. */
+private suspend fun integrationStatusesFor(userID: UUID): List<IntegrationStatus> {
     val links = integrationLinksFor(userID)
-    val statuses =
-        Integrations.all.map { integration ->
-            val external = links[integration.name]
-            IntegrationStatus(
-                name = integration.name,
-                enabled = external != null,
-                externalID = external,
-                lastFetched =
-                    if (external != null) latestFetchedAt(userID, integration.table) else null,
-            )
-        }
-    call.respond(statuses)
+    return Integrations.all.map { integration ->
+        val external = links[integration.name]
+        IntegrationStatus(
+            name = integration.name,
+            enabled = external != null,
+            externalID = external,
+            lastFetched =
+                if (external != null) latestFetchedAt(userID, integration.table) else null,
+        )
+    }
+}
+
+/**
+ * POST /api/integrations/refresh
+ *
+ * Refresh every enabled integration for the authenticated user in one call. Each integration's
+ * today row is pulled from upstream only when it is missing or older than [REFRESH_COOLDOWN_MS],
+ * so the same 5-minute per-integration rate limit as [INTEGRATION_GET_ROUTE] applies. Per-
+ * integration failures are skipped. Responds with the updated status list.
+ */
+private val INTEGRATION_REFRESH_ALL_ROUTE: suspend RoutingContext.() -> Unit = {
+    val userID = call.userID()
+    val today = startOfDay(System.currentTimeMillis(), zoneOf(userID))
+
+    var refreshedAny = false
+    for (name in integrationLinksFor(userID).keys) {
+        val integration = Integrations.byName[name] ?: continue
+        val cached = integration.getDay(userID, today)
+        val stale = cached == null || System.currentTimeMillis() - cached.fetchedAt >= REFRESH_COOLDOWN_MS
+        if (stale) runCatching { integration.refresh(userID, today) }.onSuccess { refreshedAny = true }
+    }
+    if (refreshedAny) Cache.invalidateUser(userID)
+
+    call.respond(integrationStatusesFor(userID))
 }
 
 /**
@@ -94,6 +132,7 @@ private val INTEGRATION_DISABLE_ROUTE: suspend RoutingContext.() -> Unit = {
     val userID = call.userID()
     val name = call.integrationName()
     disableIntegration(userID, name)
+    Cache.invalidateUser(userID)
     call.respond(HttpStatusCode.NoContent)
 }
 
@@ -111,6 +150,7 @@ private val INTEGRATION_ENABLE_ROUTE: suspend RoutingContext.() -> Unit = {
     if (req.externalID.isBlank()) Error.text("externalID must not be blank")
 
     enableIntegration(userID, name, req.externalID)
+    Cache.invalidateUser(userID)
 
     call.respond(HttpStatusCode.NoContent)
 }
@@ -147,7 +187,7 @@ private val INTEGRATION_GET_ROUTE: suspend RoutingContext.() -> Unit = {
                         cached == null ||
                             System.currentTimeMillis() - cached.fetchedAt >= REFRESH_COOLDOWN_MS
                     ) {
-                        integration.refresh(userID, target)
+                        integration.refresh(userID, target).also { Cache.invalidateUser(userID) }
                     } else cached
                 record.data to record.fetchedAt
             }
@@ -195,8 +235,9 @@ fun Route.integrationRoutes() {
     authenticate("jwt") {
         route("/integrations") {
             get("", INTEGRATION_LIST_ROUTE)
-            // Per-integration sub-routes — must come before /{name} so Ktor matches the more
+            // Literal sub-routes — must come before /{name} so Ktor matches the more
             // specific path first.
+            post("/refresh", INTEGRATION_REFRESH_ALL_ROUTE)
             appleFitnessRoutes()
             get("/{name}/history", INTEGRATION_HISTORY_ROUTE)
             post("/{name}", INTEGRATION_ENABLE_ROUTE)

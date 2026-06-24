@@ -5,14 +5,11 @@ import { Link, useNavigate } from "react-router-dom"
 import {
     type CompetitionSummary,
     type Goal,
-    getIntegration,
-    type IntegrationStatus,
-    type SelfResponse,
-    useApi
+    type SelfResponse
 } from "@shared/index"
 import { CompetitionDialog } from "../competition/components/CompetitionDialog"
 import {
-    formatRefreshed,
+    goalAnchorId,
     goalTitle,
     integrationVisual,
     isOnTrack
@@ -185,7 +182,10 @@ function GoalItem({ goal }: { goal: Goal }) {
     }
 
     return (
-        <div className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2">
+        <Link
+            to={`/dashboard#${goalAnchorId(goal)}`}
+            className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-inherit no-underline hover:bg-bg-sunken"
+        >
             <SourceTile
                 label={visual.glyph}
                 variant={visual.tile}
@@ -197,83 +197,32 @@ function GoalItem({ goal }: { goal: Goal }) {
                 </div>
                 <div className={`truncate text-[11px] ${tone}`}>{sub}</div>
             </div>
-        </div>
-    )
-}
-
-function CompetitionItem({ comp }: { comp: CompetitionSummary }) {
-    return (
-        <Link
-            to={`/competition?c=${comp.id}`}
-            className="flex items-center gap-3 rounded-[10px] px-2.5 py-2 text-inherit no-underline hover:bg-bg-sunken"
-        >
-            <div
-                className="h-2 w-2 rounded-full"
-                style={{ background: "var(--ink)" }}
-            />
-            <div className="min-w-0 flex-1">
-                <div className="truncate text-[13px] font-medium">
-                    {comp.name}
-                </div>
-                <div className="truncate text-[11px] text-ink-3">
-                    code · {comp.joinCode}
-                </div>
-            </div>
         </Link>
     )
 }
 
-function IntegrationItem({
-    integration,
-    busy,
-    onRefresh
-}: {
-    integration: IntegrationStatus
-    busy: boolean
-    onRefresh: () => void
-}) {
-    const visual = integrationVisual(integration.name)
-    const sub = !integration.enabled
-        ? "not connected"
-        : integration.lastFetched
-          ? `refreshed ${formatRefreshed(integration.lastFetched)}`
-          : "never refreshed"
-
+function CompetitionItem({ comp }: { comp: CompetitionSummary }) {
+    const initial = (comp.name[0] ?? "?").toUpperCase()
     return (
-        <div className="relative">
-            <Link
-                to={`/integrations/${integration.name}`}
-                className="flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 pr-9 text-inherit no-underline hover:bg-bg-sunken"
-            >
-                <SourceTile
-                    label={visual.glyph}
-                    variant={visual.tile}
-                    icon={<IntegrationIcon name={integration.name} />}
-                />
-                <div className="min-w-0 flex-1">
-                    <div className="truncate text-[13px] font-semibold">
-                        {visual.sourceLabel}
-                    </div>
-                    <div className="truncate text-[11px] text-ink-3">{sub}</div>
+        <Link
+            to={`/competition?c=${comp.id}`}
+            className="group flex items-center gap-2.5 rounded-[10px] border border-line-2 bg-bg-card px-2.5 py-2 text-inherit no-underline transition-colors hover:border-line hover:bg-bg-sunken"
+        >
+            <div className="mono grid h-8 w-8 shrink-0 place-items-center rounded-[8px] bg-ink text-[13px] font-bold text-bg">
+                {initial}
+            </div>
+            <div className="min-w-0 flex-1">
+                <div className="truncate text-[13px] font-semibold">
+                    {comp.name}
                 </div>
-            </Link>
-            {integration.enabled && (
-                <button
-                    type="button"
-                    title="Refresh now"
-                    aria-label={`Refresh ${visual.sourceLabel}`}
-                    disabled={busy}
-                    onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        onRefresh()
-                    }}
-                    className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-[7px] border border-line bg-bg-card text-[13px] text-ink-3 hover:bg-bg-sunken disabled:opacity-50"
-                >
-                    {busy ? <Spinner size={12} /> : "↻"}
-                </button>
-            )}
-        </div>
+                <div className="mono truncate text-[10px] uppercase tracking-[0.08em] text-ink-3">
+                    #{comp.joinCode}
+                </div>
+            </div>
+            <span className="text-[14px] text-ink-3 transition-transform group-hover:translate-x-0.5">
+                ›
+            </span>
+        </Link>
     )
 }
 
@@ -285,40 +234,24 @@ export function Sidebar({
     goals,
     streak,
     competitions,
-    integrations = [],
     loading = false
 }: {
     onSignOut?: () => void
     onNewGoal?: () => void
-    /** Reload the host page's data after a sidebar-triggered refresh. */
+    /** Reload the host page's data after a sidebar-triggered action. */
     onReload?: () => void
     user: SelfResponse | null
     goals: Goal[]
     streak: number
     competitions: CompetitionSummary[]
-    integrations?: IntegrationStatus[]
     loading?: boolean
 }) {
-    const api = useApi()
     const navigate = useNavigate()
 
-    const [refreshing, setRefreshing] = useState<string | null>(null)
     const [dialogMode, setDialogMode] = useState<"create" | "join" | null>(null)
 
     const shownCompetitions = competitions.slice(0, COMPETITION_PREVIEW)
     const hasMoreCompetitions = competitions.length > COMPETITION_PREVIEW
-
-    async function refreshIntegration(name: string) {
-        setRefreshing(name)
-        try {
-            await getIntegration(api, name)
-            onReload?.()
-        } catch {
-            // best-effort; the integration page surfaces detailed errors
-        } finally {
-            setRefreshing(null)
-        }
-    }
 
     return (
         <aside className="flex w-[280px] flex-col gap-7 border-r border-line-2 bg-bg px-5 py-6">
@@ -371,9 +304,11 @@ export function Sidebar({
                             {loading ? "Loading…" : "None yet."}
                         </div>
                     ) : (
-                        shownCompetitions.map((c) => (
-                            <CompetitionItem key={c.id} comp={c} />
-                        ))
+                        <div className="flex flex-col gap-1.5">
+                            {shownCompetitions.map((c) => (
+                                <CompetitionItem key={c.id} comp={c} />
+                            ))}
+                        </div>
                     )}
 
                     {hasMoreCompetitions && (
@@ -392,26 +327,6 @@ export function Sidebar({
                     >
                         Join with code
                     </button>
-                </div>
-            </div>
-
-            <div>
-                <SectionHeader title="INTEGRATIONS" loading={loading} />
-                <div className="flex flex-col gap-1">
-                    {integrations.length === 0 ? (
-                        <div className="px-2.5 py-2 text-[12px] text-ink-3">
-                            {loading ? "Loading…" : "None available."}
-                        </div>
-                    ) : (
-                        integrations.map((it) => (
-                            <IntegrationItem
-                                key={it.name}
-                                integration={it}
-                                busy={refreshing === it.name}
-                                onRefresh={() => refreshIntegration(it.name)}
-                            />
-                        ))
-                    )}
                 </div>
             </div>
 

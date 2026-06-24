@@ -8,13 +8,7 @@ import {
     type Goal,
     type IntegrationStatus,
     type Workout,
-    getCompetition,
-    getStreak,
-    getStreakHistory,
-    listCompetitions,
-    listGoals,
-    listIntegrations,
-    listWorkouts,
+    getDashboard,
     useApi
 } from "@shared/index"
 
@@ -56,38 +50,10 @@ export function useDashboardData(): {
         setError(null)
         ;(async () => {
             try {
-                const [
-                    goals,
-                    streakResp,
-                    historyResp,
-                    competitions,
-                    workouts,
-                    integrations
-                ] = await Promise.all([
-                    listGoals(api),
-                    getStreak(api),
-                    getStreakHistory(api, 14),
-                    listCompetitions(api),
-                    listWorkouts(api),
-                    listIntegrations(api)
-                ])
-                let topCompetition: CompetitionDetail | null = null
-                if (competitions.length > 0) {
-                    topCompetition = await getCompetition(
-                        api,
-                        competitions[0].id
-                    )
-                }
+                // One request for the whole dashboard (see GET /api/dashboard).
+                const d = await getDashboard(api)
                 if (cancelled) return
-                setData({
-                    goals,
-                    streak: streakResp.streak,
-                    history: historyResp.days,
-                    competitions,
-                    topCompetition,
-                    workouts,
-                    integrations
-                })
+                setData(d)
             } catch (err) {
                 if (cancelled) return
                 setError(err instanceof Error ? err.message : "failed to load")

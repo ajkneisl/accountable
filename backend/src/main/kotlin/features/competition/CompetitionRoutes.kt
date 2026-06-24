@@ -1,5 +1,6 @@
 package features.competition
 
+import api.Cache
 import api.Error
 import features.goals.GoalPeriod
 import features.goals.weekValues
@@ -23,6 +24,7 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import java.util.UUID
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
 import user.findUserByID
 import user.zoneOf
 
@@ -120,45 +122,64 @@ private val COMPETITION_CREATE_ROUTE: suspend RoutingContext.() -> Unit = {
     if (req.name.isBlank()) Error.text("name must not be blank")
 
     val competition = createCompetition(userID, req.name.trim())
+    Cache.invalidateUser(userID)
     call.respond(competition.toSummary())
 }
 
 /** GET /api/competitions — list every competition the caller belongs to. */
 private val COMPETITION_LIST_ROUTE: suspend RoutingContext.() -> Unit = {
-    val userID = call.userID()
-    val competitions = competitionsFor(userID)
-    call.respond(competitions.map { it.toSummary() })
+    call.respond(competitionsView(call.userID()))
 }
+
+/** Summaries of the user's competitions, cached. Reused by the dashboard. */
+suspend fun competitionsView(userID: UUID): List<CompetitionSummary> =
+    Cache.cachedForUser(
+        userID,
+        "competitions",
+        ListSerializer(CompetitionSummary.serializer()),
+    ) {
+        competitionsFor(userID).map { it.toSummary() }
+    }
 
 /** GET /api/competitions/{id} — full detail with member streaks + shared goals. */
 private val COMPETITION_DETAIL_ROUTE: suspend RoutingContext.() -> Unit = {
-    val userID = call.userID()
-    val competition = call.competitionForMember(userID)
+    call.respond(competitionDetailView(call.competitionForMember(call.userID())))
+}
 
-    val goals = goalsForCompetition(competition.id)
-    val members = membersOf(competition.id)
-    val now = System.currentTimeMillis()
+/**
+ * Full competition detail with member streaks, cached per competition. The response is identical
+ * for every member (no requester-specific fields); member streaks reflect each member's own
+ * activity within the competition TTL. Reused by the dashboard's top-competition panel.
+ */
+suspend fun competitionDetailView(competition: Competition): CompetitionDetailResponse =
+    Cache.cachedForCompetition(
+        competition.id,
+        "detail",
+        CompetitionDetailResponse.serializer(),
+    ) {
+        val goals = goalsForCompetition(competition.id)
+        val members = membersOf(competition.id)
+        val now = System.currentTimeMillis()
 
-    val memberViews =
-        members.map { member ->
-            val username =
-                findUserByID(member.userID)?.username ?: member.userID.toString()
-            val streak =
-                streakFor(
-                    userID = member.userID,
-                    goals = goals,
-                    now = now,
-                    floor = startOfDay(member.joinedAt, zoneOf(member.userID)),
+        val memberViews =
+            members.map { member ->
+                val username =
+                    findUserByID(member.userID)?.username ?: member.userID.toString()
+                val streak =
+                    streakFor(
+                        userID = member.userID,
+                        goals = goals,
+                        now = now,
+                        floor = startOfDay(member.joinedAt, zoneOf(member.userID)),
+                    )
+                CompetitionMemberView(
+                    userID = member.userID.toString(),
+                    username = username,
+                    joinedAt = member.joinedAt,
+                    streak = streak,
                 )
-            CompetitionMemberView(
-                userID = member.userID.toString(),
-                username = username,
-                joinedAt = member.joinedAt,
-                streak = streak,
-            )
-        }
+            }
 
-    call.respond(
         CompetitionDetailResponse(
             id = competition.id.toString(),
             name = competition.name,
@@ -168,8 +189,7 @@ private val COMPETITION_DETAIL_ROUTE: suspend RoutingContext.() -> Unit = {
             members = memberViews,
             goals = goals.map { it.toView() },
         )
-    )
-}
+    }
 
 /**
  * GET /api/competitions/{id}/week?offset=N
@@ -185,52 +205,67 @@ private val COMPETITION_WEEK_ROUTE: suspend RoutingContext.() -> Unit = {
     val offset = call.request.queryParameters["offset"]?.toIntOrNull() ?: 0
     if (offset < 0) Error.text("offset must not be negative")
 
-    val now = System.currentTimeMillis()
-    val goals = goalsForCompetition(competition.id)
-    val members = membersOf(competition.id)
-    val usernames =
-        members.associateWith { findUserByID(it.userID)?.username ?: it.userID.toString() }
+    // The board content is requester-independent, but the weekStart/weekEnd labels are in the
+    // requester's zone — so the cache is keyed by offset + zone as well as the competition.
+    val requesterZone = zoneOf(userID)
+    val response =
+        Cache.cachedForCompetition(
+            competition.id,
+            "week:$offset:${requesterZone.id}",
+            CompetitionWeekResponse.serializer(),
+        ) {
+            val now = System.currentTimeMillis()
+            val goals = goalsForCompetition(competition.id)
+            val members = membersOf(competition.id)
+            val usernames =
+                members.associateWith {
+                    findUserByID(it.userID)?.username ?: it.userID.toString()
+                }
 
-    val boards =
-        goals.map { goal ->
-            val memberWeeks =
-                members.map { member ->
-                    val zone = zoneOf(member.userID)
-                    val (weekStart, _) = weekWindow(now, zone, offset)
-                    val vals = weekValues(member.userID, goal, weekStart, zone)
-                    CompetitionMemberWeek(
-                        userID = member.userID.toString(),
-                        username = usernames.getValue(member),
-                        vals = vals,
-                        total = vals.sum(),
+            val boards =
+                goals.map { goal ->
+                    val memberWeeks =
+                        members.map { member ->
+                            val zone = zoneOf(member.userID)
+                            val (weekStart, _) = weekWindow(now, zone, offset)
+                            val vals = weekValues(member.userID, goal, weekStart, zone)
+                            CompetitionMemberWeek(
+                                userID = member.userID.toString(),
+                                username = usernames.getValue(member),
+                                vals = vals,
+                                total = vals.sum(),
+                            )
+                        }
+                    CompetitionGoalBoard(
+                        integration = goal.integration,
+                        metric = goal.metric,
+                        period = goal.period,
+                        target = goal.target,
+                        members = memberWeeks,
                     )
                 }
-            CompetitionGoalBoard(
-                integration = goal.integration,
-                metric = goal.metric,
-                period = goal.period,
-                target = goal.target,
-                members = memberWeeks,
+
+            val (weekStart, weekEnd) = weekWindow(now, requesterZone, offset)
+            CompetitionWeekResponse(
+                weekStart = weekStart,
+                weekEnd = weekEnd,
+                offset = offset,
+                goals = boards,
             )
         }
 
-    // Label the week in the requester's own zone.
-    val (weekStart, weekEnd) = weekWindow(now, zoneOf(userID), offset)
-    call.respond(
-        CompetitionWeekResponse(
-            weekStart = weekStart,
-            weekEnd = weekEnd,
-            offset = offset,
-            goals = boards,
-        )
-    )
+    call.respond(response)
 }
 
 /** DELETE /api/competitions/{id} — owner deletes the competition. Cascades to members and goals. */
 private val COMPETITION_DELETE_ROUTE: suspend RoutingContext.() -> Unit = {
     val userID = call.userID()
     val competition = call.competitionForOwner(userID)
+    // Every member's competitions list changes, so invalidate each before the rows disappear.
+    val members = membersOf(competition.id)
     deleteCompetition(competition.id)
+    members.forEach { Cache.invalidateUser(it.userID) }
+    Cache.invalidateCompetition(competition.id)
     call.respond(HttpStatusCode.NoContent)
 }
 
@@ -242,6 +277,8 @@ private val COMPETITION_JOIN_ROUTE: suspend RoutingContext.() -> Unit = {
         findCompetitionByJoinCode(req.joinCode.trim().uppercase())
             ?: Error.notFound("competition")
     joinCompetition(userID, competition.id)
+    Cache.invalidateUser(userID) // joiner's competitions list
+    Cache.invalidateCompetition(competition.id) // detail gains a member
     call.respond(competition.toSummary())
 }
 
@@ -253,6 +290,8 @@ private val COMPETITION_LEAVE_ROUTE: suspend RoutingContext.() -> Unit = {
         Error.text("owner cannot leave; delete the competition instead")
     }
     leaveCompetition(userID, competition.id)
+    Cache.invalidateUser(userID) // leaver's competitions list
+    Cache.invalidateCompetition(competition.id) // detail loses a member
     call.respond(HttpStatusCode.NoContent)
 }
 
@@ -276,6 +315,7 @@ private val COMPETITION_GOAL_CREATE_ROUTE: suspend RoutingContext.() -> Unit = {
             period = req.period,
             target = req.target,
         )
+    Cache.invalidateCompetition(competition.id)
     call.respond(goal.toView())
 }
 
@@ -293,6 +333,7 @@ private val COMPETITION_GOAL_DELETE_ROUTE: suspend RoutingContext.() -> Unit = {
 
     val removed = deleteCompetitionGoal(competition.id, integration, metric, period)
     if (!removed) Error.notFound("goal")
+    Cache.invalidateCompetition(competition.id)
     call.respond(HttpStatusCode.NoContent)
 }
 

@@ -1,5 +1,6 @@
 package integrations.api
 
+import api.Cache
 import io.ktor.util.logging.KtorSimpleLogger
 import java.time.Instant
 import kotlinx.coroutines.CoroutineScope
@@ -11,16 +12,18 @@ import user.zoneOf
 private val log = KtorSimpleLogger("IntegrationRefreshWorker")
 
 private const val HOUR_MS = 60L * 60 * 1000
-private const val DAY_MS = 24L * HOUR_MS
+
+/** Local hour (24h) at which each user's daily refresh sweep runs — 11pm. */
+const val REFRESH_HOUR = 23
 
 /**
  * Hourly background worker that refreshes every enabled integration for the users whose local clock
- * has just crossed midnight. Refreshing at the day boundary finalizes the day that just ended and
- * seeds the new one, so historical numbers stay correct even for users who never open the app.
+ * has just reached [REFRESH_HOUR] (11pm). Refreshing late in the evening captures each day's
+ * near-final numbers, so historical totals stay correct even for users who never open the app.
  *
- * It wakes at the top of each UTC hour and acts on users currently in their local `00:xx` hour.
+ * It wakes at the top of each UTC hour and acts on users currently in their local `23:xx` hour.
  * Because zone offsets are whole- or fractional-hour, exactly one top-of-hour falls inside any
- * user's local midnight hour, so each user is refreshed once per day.
+ * user's local 11pm hour, so each user is refreshed once per day.
  */
 object IntegrationRefreshWorker {
     /** Launch the worker on [scope] (the Ktor [io.ktor.server.application.Application] scope). */
@@ -29,28 +32,28 @@ object IntegrationRefreshWorker {
             log.info("integration refresh worker started")
             while (isActive) {
                 delay(millisUntilNextHour())
-                runCatching { refreshUsersAtLocalMidnight() }
-                    .onFailure { log.error("midnight refresh sweep failed", it) }
+                runCatching { refreshUsersAtRefreshHour() }
+                    .onFailure { log.error("11pm refresh sweep failed", it) }
             }
         }
     }
 
     /**
-     * Refresh enabled integrations for every user currently in the `00:00`–`00:59` hour of their
-     * timezone. Exposed (and [now] overridable) for testing. Per-user and per-integration failures
-     * are logged and skipped so one bad upstream call can't abort the whole sweep.
+     * Refresh enabled integrations for every user currently in the `23:00`–`23:59` hour of their
+     * timezone, capturing today's near-final numbers. Exposed (and [now] overridable) for testing.
+     * Per-user and per-integration failures are logged and skipped so one bad upstream call can't
+     * abort the whole sweep.
      */
-    suspend fun refreshUsersAtLocalMidnight(now: Long = System.currentTimeMillis()) {
+    suspend fun refreshUsersAtRefreshHour(now: Long = System.currentTimeMillis()) {
         for ((userID, names) in allEnabledIntegrations()) {
-            if (Instant.ofEpochMilli(now).atZone(zoneOf(userID)).hour != 0) continue
+            if (Instant.ofEpochMilli(now).atZone(zoneOf(userID)).hour != REFRESH_HOUR) continue
             for (name in names) {
                 val integration = Integrations.byName[name] ?: continue
-                runCatching {
-                    integration.refresh(userID, now - DAY_MS) // finalize the day that just ended
-                    integration.refresh(userID, now) // seed the new day
-                }
+                runCatching { integration.refresh(userID, now) }
                     .onFailure { log.warn("refresh failed: user=$userID integration=$name", it) }
             }
+            // Fresh upstream data invalidates the user's cached goals, streak, and integrations.
+            Cache.invalidateUser(userID)
         }
     }
 }

@@ -41,16 +41,20 @@ export function SourceTile({
     label,
     variant = "",
     glyph,
-    icon
+    icon,
+    size
 }: {
     label: string
     variant?: TileVariant
     glyph?: string
     icon?: ReactNode
+    /** "sm" renders the compact 30px tile. */
+    size?: "sm"
 }) {
+    const sizeCls = size === "sm" ? " is-sm" : ""
     const cls = icon
-        ? "source-tile has-icon"
-        : `source-tile ${variant ? "tile-" + variant : ""}`
+        ? `source-tile has-icon${sizeCls}`
+        : `source-tile ${variant ? "tile-" + variant : ""}${sizeCls}`
     return (
         <div className={cls}>
             {icon ?? <span>{glyph || label.slice(0, 2).toUpperCase()}</span>}

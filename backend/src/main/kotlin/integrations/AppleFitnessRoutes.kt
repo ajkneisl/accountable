@@ -1,5 +1,6 @@
 package integrations
 
+import api.Cache
 import api.Error
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
@@ -51,6 +52,7 @@ private val WORKOUT_CREATE_ROUTE: suspend RoutingContext.() -> Unit = {
             calories = req.calories,
             happenedAt = req.happenedAt ?: System.currentTimeMillis(),
         )
+    Cache.invalidateUser(userID)
     call.respond(HttpStatusCode.Created, workout)
 }
 
@@ -63,6 +65,7 @@ private val WORKOUT_DELETE_ROUTE: suspend RoutingContext.() -> Unit = {
             ?: Error.text("invalid workout id")
     val removed = removeWorkout(userID, workoutID)
     if (!removed) Error.notFound("workout")
+    Cache.invalidateUser(userID)
     call.respond(HttpStatusCode.NoContent)
 }
 

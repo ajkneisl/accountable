@@ -1,5 +1,6 @@
 package features.goals
 
+import api.Cache
 import api.Error
 import integrations.api.Integrations
 import io.ktor.http.HttpStatusCode
@@ -17,6 +18,7 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import java.util.UUID
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
 import user.zoneOf
 
 /**
@@ -45,6 +47,10 @@ data class CreateGoalRequest(
  * @param progress Sum of [metric] for the current [period] window.
  * @param vals Per-day [metric] values for the last 7 UTC days, oldest first; today is `vals[6]`.
  * @param createdAt Ms epoch when the goal was created.
+ * @param weekStart Monday 00:00 (ms epoch) of the current week, in the user's timezone.
+ * @param weekVals The current Monday-anchored week's per-day metric values, Monday first. Lets the
+ *   goal card render its week chart without a follow-up `/week` request.
+ * @param weekTotal Sum of [weekVals].
  */
 @Serializable
 data class GoalResponse(
@@ -55,6 +61,9 @@ data class GoalResponse(
     val progress: Long,
     val vals: List<Long>,
     val createdAt: Long,
+    val weekStart: Long,
+    val weekVals: List<Long>,
+    val weekTotal: Long,
 )
 
 /**
@@ -86,28 +95,44 @@ private val GOAL_CREATE_ROUTE: suspend RoutingContext.() -> Unit = {
     if (req.target <= 0) Error.text("target must be positive")
 
     val goal = upsertGoal(userID, req.integration, req.metric, req.period, req.target)
-    val now = System.currentTimeMillis()
-    call.respond(
-        goal.toResponse(
-            progress = progressFor(userID, goal, now),
-            vals = perDayValues(userID, goal, days = 7, now = now),
-        )
-    )
+    Cache.invalidateUser(userID)
+    call.respond(buildGoalResponse(userID, goal, System.currentTimeMillis(), zoneOf(userID)))
 }
 
 /** GET /api/goals — list the authenticated user's goals with current progress. */
 private val GOAL_LIST_ROUTE: suspend RoutingContext.() -> Unit = {
-    val userID = call.userID()
-    val now = System.currentTimeMillis()
-    val goals = goalsFor(userID)
-    val response =
-        goals.map { goal ->
-            goal.toResponse(
-                progress = progressFor(userID, goal, now),
-                vals = perDayValues(userID, goal, days = 7, now = now),
-            )
-        }
-    call.respond(response)
+    call.respond(goalsView(call.userID()))
+}
+
+/** The authenticated user's goals with current progress + week, cached. Reused by the dashboard. */
+suspend fun goalsView(userID: UUID): List<GoalResponse> =
+    Cache.cachedForUser(userID, "goals", ListSerializer(GoalResponse.serializer())) {
+        val now = System.currentTimeMillis()
+        val zone = zoneOf(userID)
+        goalsFor(userID).map { buildGoalResponse(userID, it, now, zone) }
+    }
+
+/** Compose one goal's full response: current-period progress, last-7-days, and this week. */
+private suspend fun buildGoalResponse(
+    userID: UUID,
+    goal: Goal,
+    now: Long,
+    zone: java.time.ZoneId,
+): GoalResponse {
+    val (weekStart, _) = weekWindow(now, zone, 0)
+    val weekVals = weekValues(userID, goal, weekStart, zone)
+    return GoalResponse(
+        integration = goal.integration,
+        metric = goal.metric,
+        period = goal.period,
+        target = goal.target,
+        progress = progressFor(userID, goal, now),
+        vals = perDayValues(userID, goal, days = 7, now = now),
+        createdAt = goal.createdAt,
+        weekStart = weekStart,
+        weekVals = weekVals,
+        weekTotal = weekVals.sum(),
+    )
 }
 
 /**
@@ -159,6 +184,7 @@ private val GOAL_DELETE_ROUTE: suspend RoutingContext.() -> Unit = {
 
     val removed = deleteGoal(userID, integration, metric, period)
     if (!removed) Error.notFound("goal")
+    Cache.invalidateUser(userID)
     call.respond(HttpStatusCode.NoContent)
 }
 
@@ -171,17 +197,6 @@ private fun validateMetric(integration: String, metric: String) {
         Error.text("metric '$metric' is not supported for integration '$integration'")
     }
 }
-
-private fun Goal.toResponse(progress: Long, vals: List<Long>) =
-    GoalResponse(
-        integration = integration,
-        metric = metric,
-        period = period,
-        target = target,
-        progress = progress,
-        vals = vals,
-        createdAt = createdAt,
-    )
 
 fun Route.goalRoutes() {
     authenticate("jwt") {

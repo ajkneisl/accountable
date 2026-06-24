@@ -14,6 +14,12 @@ export interface Goal {
     /** Per-day raw metric values for the last 7 UTC days, oldest first. */
     vals: number[]
     createdAt: number
+    /** Monday 00:00 (ms epoch) of the current week, in the user's timezone. */
+    weekStart: number
+    /** Current Monday-anchored week's per-day values, Monday first — lets the card skip a fetch. */
+    weekVals: number[]
+    /** Sum of {@link weekVals}. */
+    weekTotal: number
 }
 
 export interface CreateGoalRequest {
