@@ -23,9 +23,43 @@ export interface CreateGoalRequest {
     target: number
 }
 
+/** One Monday-anchored week of a goal's metric, returned by {@link getGoalWeek}. */
+export interface GoalWeek {
+    /** Monday 00:00 (ms epoch) of the week, in the user's timezone. */
+    weekStart: number
+    /** The following Monday 00:00 (ms epoch), exclusive. */
+    weekEnd: number
+    /** Per-day metric values for the seven days of the week, Monday first. */
+    vals: number[]
+    /** Sum of {@link vals} — the goal's progress for that week. */
+    total: number
+    target: number
+    period: GoalPeriod
+}
+
 /** GET /api/goals — list the authenticated user's goals. */
 export function listGoals(config: ApiConfig): Promise<Goal[]> {
     return request(config, "GET", "/goals", undefined, { auth: true })
+}
+
+/**
+ * GET /api/goals/{integration}/{metric}/{period}/week?offset=N — a goal's Monday-anchored week,
+ * `offset` weeks before the current week (0 = this week, 1 = last week, …).
+ */
+export function getGoalWeek(
+    config: ApiConfig,
+    integration: string,
+    metric: string,
+    period: GoalPeriod,
+    offset = 0
+): Promise<GoalWeek> {
+    return request(
+        config,
+        "GET",
+        `/goals/${encodeURIComponent(integration)}/${encodeURIComponent(metric)}/${period}/week?offset=${offset}`,
+        undefined,
+        { auth: true }
+    )
 }
 
 /** POST /api/goals — create or replace a goal. */

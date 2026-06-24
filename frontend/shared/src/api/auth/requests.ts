@@ -1,4 +1,5 @@
 import { request, type ApiConfig } from "../http"
+import { browserTimezone } from "../user/requests"
 
 /**
  * A token creation response, happens in response to a login, register, etc.y
@@ -35,17 +36,20 @@ export function login(
  * @param username The provided username.
  * @param password The provided password.
  * @param email The provided email.
+ * @param timezone IANA timezone id for local-day bucketing; defaults to the browser's zone.
  */
 export function register(
     config: ApiConfig,
     username: string,
     password: string,
-    email: string
+    email: string,
+    timezone: string = browserTimezone()
 ): Promise<TokenResponse> {
     return request(config, "POST", "/auth/register", {
         username,
         password,
-        email
+        email,
+        timezone
     })
 }
 

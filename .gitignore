@@ -11,3 +11,5 @@ frontend/**/node_modules
 frontend/**/dist
 frontend/**/.expo
 frontend/web/node_modules/.tmp
+
+docker-compose.yml

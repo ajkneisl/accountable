@@ -15,7 +15,6 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
-import java.time.Instant
 import java.util.UUID
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -51,11 +50,21 @@ object LeetCode : Integration<LeetCode.LeetCodeData> {
         HttpClient(CIO) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
 
     override suspend fun pullData(userID: UUID, date: Long): LeetCodeData {
+        val target = startOfDay(date, zoneOf(userID))
+        return pullRecentByDay(userID)[target]
+            ?: LeetCodeData(date = target, easy = 0, medium = 0, hard = 0)
+    }
+
+    /**
+     * Fetch the recent accepted-submission window once and bucket every day it spans by difficulty,
+     * keyed by start-of-day (in [userID]'s timezone). A single call covers multiple days because
+     * `recentAcSubmissionList` returns the last [RECENT_LIMIT] submissions across all days, not just
+     * one — so callers can backfill several days from one request. Days with no accepted submission
+     * are simply absent from the map.
+     */
+    private suspend fun pullRecentByDay(userID: UUID): Map<Long, LeetCodeData> {
         val externalID = externalIDFor(userID, name)
         val zone = zoneOf(userID)
-        val dayStart = startOfDay(date, zone)
-        val day = Instant.ofEpochMilli(dayStart).atZone(zone).toLocalDate()
-        val dayEnd = day.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
 
         val recent: RecentAcResponse =
             graphql(
@@ -66,44 +75,64 @@ object LeetCode : Integration<LeetCode.LeetCodeData> {
                 },
             )
 
-        val solvedSlugs =
+        // Resolve difficulty once per unique slug to avoid redundant question lookups.
+        val difficultyBySlug =
             recent.data.recentAcSubmissionList
-                .filter {
-                    val ms = it.timestamp.toLong() * 1000
-                    ms in dayStart until dayEnd
-                }
                 .map { it.titleSlug }
                 .distinct()
+                .associateWith { questionDifficulty(it) }
 
-        var easy = 0L
-        var medium = 0L
-        var hard = 0L
-        for (slug in solvedSlugs) {
-            when (questionDifficulty(slug)) {
-                "Easy" -> easy++
-                "Medium" -> medium++
-                "Hard" -> hard++
+        val easy = mutableMapOf<Long, Long>()
+        val medium = mutableMapOf<Long, Long>()
+        val hard = mutableMapOf<Long, Long>()
+        // Count each slug at most once per day.
+        val counted = mutableSetOf<Pair<Long, String>>()
+        for (sub in recent.data.recentAcSubmissionList) {
+            val day = startOfDay(sub.timestamp.toLong() * 1000, zone)
+            if (!counted.add(day to sub.titleSlug)) continue
+            when (difficultyBySlug[sub.titleSlug]) {
+                "Easy" -> easy.merge(day, 1L, Long::plus)
+                "Medium" -> medium.merge(day, 1L, Long::plus)
+                "Hard" -> hard.merge(day, 1L, Long::plus)
             }
         }
 
-        return LeetCodeData(date = dayStart, easy = easy, medium = medium, hard = hard)
+        return (easy.keys + medium.keys + hard.keys).associateWith { day ->
+            LeetCodeData(
+                date = day,
+                easy = easy[day] ?: 0L,
+                medium = medium[day] ?: 0L,
+                hard = hard[day] ?: 0L,
+            )
+        }
     }
 
-    /** Pull and upsert. Shared by the daily cron and on-demand user-triggered refreshes. */
+    /**
+     * Pull and upsert. Backfills every recent day in the same pass — the read routes only ever
+     * refresh "today" and serve past days straight from storage, so without this a day first
+     * fetched before its solving happened (e.g. a midnight refresh) would stay frozen at 0.
+     */
     override suspend fun refresh(userID: UUID, date: Long): IntegrationRecord<LeetCodeData> {
-        val data = pullData(userID, date)
+        val target = startOfDay(date, zoneOf(userID))
+        val byDay = pullRecentByDay(userID)
+        val targetData =
+            byDay[target] ?: LeetCodeData(date = target, easy = 0, medium = 0, hard = 0)
         val now = System.currentTimeMillis()
         suspendTransaction {
-            LeetCodeTable.upsert {
-                it[LeetCodeTable.userID] = userID
-                it[LeetCodeTable.date] = data.date
-                it[LeetCodeTable.easy] = data.easy
-                it[LeetCodeTable.medium] = data.medium
-                it[LeetCodeTable.hard] = data.hard
-                it[LeetCodeTable.fetchedAt] = now
+            // Always (re)write the target day, even when empty, plus every other recent day with
+            // solves. Days that have scrolled out of the recent window are left untouched.
+            (byDay.values + targetData).distinctBy { it.date }.forEach { record ->
+                LeetCodeTable.upsert {
+                    it[LeetCodeTable.userID] = userID
+                    it[LeetCodeTable.date] = record.date
+                    it[LeetCodeTable.easy] = record.easy
+                    it[LeetCodeTable.medium] = record.medium
+                    it[LeetCodeTable.hard] = record.hard
+                    it[LeetCodeTable.fetchedAt] = now
+                }
             }
         }
-        return IntegrationRecord(data, now)
+        return IntegrationRecord(targetData, now)
     }
 
     override suspend fun getDay(userID: UUID, date: Long): IntegrationRecord<LeetCodeData>? {

@@ -267,6 +267,33 @@ class LeetCodeTest {
     }
 
     @Test
+    fun `refresh backfills past days from the recent window in one pass`() = runBlocking {
+        // A single recentAcSubmissionList call returns solves spanning several days; refreshing
+        // "today" should also write rows for the earlier days, not just the target.
+        val yesterday = inDayTimestamp - 24 * 60 * 60
+        LeetCode.client =
+            mockLeetCodeClient(
+                submissions =
+                    listOf(
+                        "two-sum" to inDayTimestamp,
+                        "trapping-rain-water" to yesterday,
+                    ),
+                difficulties =
+                    mapOf("two-sum" to "Easy", "trapping-rain-water" to "Hard"),
+            )
+
+        LeetCode.refresh(testUserID, testDate)
+
+        val today = LeetCode.getDay(testUserID, testDate)
+        assertNotNull(today)
+        assertEquals(1L, today.data.easy)
+
+        val priorDay = LeetCode.getDay(testUserID, testDate - 24 * 60 * 60 * 1000)
+        assertNotNull(priorDay)
+        assertEquals(1L, priorDay.data.hard)
+    }
+
+    @Test
     fun `getDay returns null when no row exists`() = runBlocking {
         val result = LeetCode.getDay(testUserID, testDate)
         assertNull(result)

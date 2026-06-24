@@ -92,6 +92,25 @@ suspend fun goalsFor(userID: UUID): List<Goal> = suspendTransaction {
         .map { it.toEntity<Goal>() }
 }
 
+/** A single goal by its composite key, or null if [userID] has no such goal. */
+suspend fun goalFor(
+    userID: UUID,
+    integration: String,
+    metric: String,
+    period: GoalPeriod,
+): Goal? = suspendTransaction {
+    Goals.selectAll()
+        .where {
+            (Goals.userID eq userID) and
+                (Goals.integration eq integration) and
+                (Goals.metric eq metric) and
+                (Goals.period eq period)
+        }
+        .limit(1)
+        .firstOrNull()
+        ?.toEntity<Goal>()
+}
+
 /** Delete a single goal. Returns true if a row was removed. */
 suspend fun deleteGoal(
     userID: UUID,

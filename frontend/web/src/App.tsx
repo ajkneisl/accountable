@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { useAtom } from "jotai"
 import { Navigate, Outlet, Route, Routes } from "react-router-dom"
-import { getSelf, useApi } from "@shared/index"
+import { getSelf, syncTimezone, useApi } from "@shared/index"
 import { tokenStore, userAtom } from "./auth"
 import { AppShell } from "./features/common/AppShell"
 import { Footer } from "./features/common/Footer"
@@ -53,6 +53,9 @@ function App() {
                 if (cancelled) return
                 setUser(me)
                 setHydrating(false)
+                // Correct accounts created before a timezone was captured, so data
+                // stops landing on the wrong day.
+                if (me) void syncTimezone(api, me.timezone)
             })
 
         return () => {

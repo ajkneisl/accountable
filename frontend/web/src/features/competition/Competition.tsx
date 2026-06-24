@@ -6,14 +6,18 @@ import { useNavigate, useSearchParams } from "react-router-dom"
 import {
     ApiError,
     type CompetitionDetail,
+    type CompetitionGoal,
     deleteCompetition,
     getCompetition,
     leaveCompetition,
+    removeCompetitionGoal,
     useApi
 } from "@shared/index"
 import { userAtom } from "../../auth"
 import { useAppData } from "../common/AppShell"
 import { goalTitle, integrationVisual } from "../dashboard/types"
+import { AddCompetitionGoalDialog } from "./components/AddCompetitionGoalDialog"
+import { CompetitionGoalsWeek } from "./components/CompetitionGoalsWeek"
 
 function Header({
     competition,
@@ -115,13 +119,71 @@ function MembersCard({
     )
 }
 
-function GoalsCard({ competition }: { competition: CompetitionDetail }) {
+function goalKey(g: CompetitionGoal): string {
+    return `${g.integration}:${g.metric}:${g.period}`
+}
+
+function GoalsCard({
+    competition,
+    isOwner,
+    onChanged
+}: {
+    competition: CompetitionDetail
+    isOwner: boolean
+    onChanged: () => void
+}) {
+    const api = useApi()
+    const [adding, setAdding] = useState(false)
+    const [removing, setRemoving] = useState<string | null>(null)
+    const [error, setError] = useState<string | null>(null)
+
+    async function remove(g: CompetitionGoal) {
+        if (!window.confirm(`Remove "${goalTitle(asGoal(g))}" from this competition?`))
+            return
+        setError(null)
+        setRemoving(goalKey(g))
+        try {
+            await removeCompetitionGoal(
+                api,
+                competition.id,
+                g.integration,
+                g.metric,
+                g.period
+            )
+            onChanged()
+        } catch (err) {
+            setError(messageFor(err))
+        } finally {
+            setRemoving(null)
+        }
+    }
+
     return (
         <div className="card p-6">
-            <div className="eyebrow mb-3.5">SHARED GOALS</div>
+            <div className="mb-3.5 flex items-center justify-between">
+                <div className="eyebrow">SHARED GOALS</div>
+                {isOwner && (
+                    <button
+                        type="button"
+                        onClick={() => setAdding(true)}
+                        className="btn btn-line btn-sm"
+                    >
+                        + Add goal
+                    </button>
+                )}
+            </div>
+
+            {error && (
+                <div className="mb-3 rounded-[10px] bg-coral-soft p-3 text-xs text-coral-ink">
+                    {error}
+                </div>
+            )}
+
             {competition.goals.length === 0 ? (
                 <div className="text-[13px] text-ink-3">
-                    No goals yet. The owner can add them.
+                    {isOwner
+                        ? "No goals yet. Add one to start the competition."
+                        : "No goals yet. The owner can add them."}
                 </div>
             ) : (
                 <div className="flex flex-col gap-2">
@@ -129,7 +191,7 @@ function GoalsCard({ competition }: { competition: CompetitionDetail }) {
                         const visual = integrationVisual(g.integration)
                         return (
                             <div
-                                key={`${g.integration}:${g.metric}:${g.period}`}
+                                key={goalKey(g)}
                                 className="flex items-center gap-3 border-t border-line-2 py-2.5"
                             >
                                 <div
@@ -139,27 +201,51 @@ function GoalsCard({ competition }: { competition: CompetitionDetail }) {
                                 </div>
                                 <div className="min-w-0 flex-1">
                                     <div className="text-[14px] font-semibold">
-                                        {goalTitle({
-                                            integration: g.integration,
-                                            metric: g.metric,
-                                            period: g.period,
-                                            target: g.target,
-                                            progress: 0,
-                                            vals: [],
-                                            createdAt: g.createdAt
-                                        })}
+                                        {goalTitle(asGoal(g))}
                                     </div>
                                     <div className="text-[11px] text-ink-3">
                                         {visual.sourceLabel} · {g.metric}
                                     </div>
                                 </div>
+                                {isOwner && (
+                                    <button
+                                        type="button"
+                                        aria-label="Remove goal"
+                                        onClick={() => remove(g)}
+                                        disabled={removing === goalKey(g)}
+                                        className="grid h-7 w-7 place-items-center rounded-full text-[16px] text-ink-3 hover:bg-bg-sunken disabled:opacity-40"
+                                    >
+                                        ×
+                                    </button>
+                                )}
                             </div>
                         )
                     })}
                 </div>
             )}
+
+            {adding && (
+                <AddCompetitionGoalDialog
+                    competitionId={competition.id}
+                    onClose={() => setAdding(false)}
+                    onAdded={onChanged}
+                />
+            )}
         </div>
     )
+}
+
+/** Adapt a {@link CompetitionGoal} to the shape {@link goalTitle} expects. */
+function asGoal(g: CompetitionGoal) {
+    return {
+        integration: g.integration,
+        metric: g.metric,
+        period: g.period,
+        target: g.target,
+        progress: 0,
+        vals: [],
+        createdAt: g.createdAt
+    }
 }
 
 export default function Competition() {
@@ -173,6 +259,7 @@ export default function Competition() {
     const [activeID, setActiveID] = useState<string | null>(requestedID)
     const [detail, setDetail] = useState<CompetitionDetail | null>(null)
     const [detailLoading, setDetailLoading] = useState(false)
+    const [detailTick, setDetailTick] = useState(0)
     const [actionBusy, setActionBusy] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
@@ -211,7 +298,7 @@ export default function Competition() {
         return () => {
             cancelled = true
         }
-    }, [api, activeID])
+    }, [api, activeID, detailTick])
 
     async function onLeaveOrDelete() {
         if (!detail || !user) return
@@ -265,13 +352,24 @@ export default function Competition() {
             )}
 
             {detail ? (
-                <div
-                    className="grid gap-4"
-                    style={{ gridTemplateColumns: "1.4fr 1fr" }}
-                >
-                    <MembersCard competition={detail} meID={user?.userID} />
-                    <GoalsCard competition={detail} />
-                </div>
+                <>
+                    <div
+                        className="grid gap-4"
+                        style={{ gridTemplateColumns: "1.4fr 1fr" }}
+                    >
+                        <MembersCard competition={detail} meID={user?.userID} />
+                        <GoalsCard
+                            competition={detail}
+                            isOwner={isOwner}
+                            onChanged={() => setDetailTick((t) => t + 1)}
+                        />
+                    </div>
+                    <CompetitionGoalsWeek
+                        competitionId={detail.id}
+                        meID={user?.userID}
+                        refreshKey={detailTick}
+                    />
+                </>
             ) : (
                 <div className="card p-6 text-[13px] text-ink-3">
                     {detailLoading

@@ -1,0 +1,7 @@
+**/node_modules
+**/dist
+**/.expo
+**/*.iml
+
+# Only the web app is containerised; skip the Expo app entirely.
+app

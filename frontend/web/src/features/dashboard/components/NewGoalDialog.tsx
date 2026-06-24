@@ -1,4 +1,7 @@
-// New goal dialog — modal form that creates a goal via the goals API.
+// Goal dialog — a reusable modal form for composing an integration goal.
+// `GoalDialog` owns the source/metric/cadence/target form; callers supply what
+// happens on submit. `NewGoalDialog` is the personal-goal flavor (creates a goal
+// via the goals API); competitions reuse `GoalDialog` with their own submit.
 // Sources are limited to the metrics the backend actually supports.
 
 import { useState } from "react"
@@ -55,14 +58,34 @@ const SOURCES: Source[] = [
     }
 ]
 
-export function NewGoalDialog({
-    onClose,
-    onCreated
+/** The goal a {@link GoalDialog} composes, handed to its `onSubmit`. */
+export interface GoalDraft {
+    integration: string
+    metric: string
+    period: GoalPeriod
+    target: number
+}
+
+/**
+ * Reusable goal-composition modal. The form (source, metric, cadence, target) is
+ * fixed; [onSubmit] decides what to do with the resulting {@link GoalDraft} and is
+ * responsible for closing the dialog on success. Thrown errors are surfaced inline.
+ */
+export function GoalDialog({
+    title,
+    description,
+    submitLabel,
+    submittingLabel,
+    onSubmit,
+    onClose
 }: {
+    title: string
+    description: string
+    submitLabel: string
+    submittingLabel: string
+    onSubmit: (draft: GoalDraft) => Promise<void>
     onClose: () => void
-    onCreated: () => void
 }) {
-    const api = useApi()
     const [sourceIdx, setSourceIdx] = useState(0)
     const [metric, setMetric] = useState(SOURCES[0].metrics[0].metric)
     const [period, setPeriod] = useState<GoalPeriod>("WEEKLY")
@@ -88,14 +111,12 @@ export function NewGoalDialog({
         setErrors([])
         setSubmitting(true)
         try {
-            await createGoal(api, {
+            await onSubmit({
                 integration: source.integration,
                 metric,
                 period,
                 target: targetNum
             })
-            onCreated()
-            onClose()
         } catch (err) {
             if (err instanceof ApiError) setErrors(err.messages)
             else if (err instanceof Error) setErrors([err.message])
@@ -116,7 +137,7 @@ export function NewGoalDialog({
             >
                 <div className="mb-1 flex items-center justify-between">
                     <h2 className="m-0 text-[22px] font-bold tracking-[-0.02em]">
-                        New goal
+                        {title}
                     </h2>
                     <button
                         type="button"
@@ -127,9 +148,7 @@ export function NewGoalDialog({
                         ×
                     </button>
                 </div>
-                <p className="mb-5 mt-0 text-[13px] text-ink-3">
-                    Track a metric from one of your connected sources.
-                </p>
+                <p className="mb-5 mt-0 text-[13px] text-ink-3">{description}</p>
 
                 <div className="eyebrow mb-2.5">SOURCE</div>
                 <div className="mb-5 grid grid-cols-2 gap-2">
@@ -245,10 +264,35 @@ export function NewGoalDialog({
                         disabled={submitting}
                         className="btn btn-primary"
                     >
-                        {submitting ? "Creating…" : "Create goal →"}
+                        {submitting ? submittingLabel : submitLabel}
                     </button>
                 </div>
             </div>
         </div>
+    )
+}
+
+/** Personal-goal dialog — creates a goal for the authenticated user. */
+export function NewGoalDialog({
+    onClose,
+    onCreated
+}: {
+    onClose: () => void
+    onCreated: () => void
+}) {
+    const api = useApi()
+    return (
+        <GoalDialog
+            title="New goal"
+            description="Track a metric from one of your connected sources."
+            submitLabel="Create goal →"
+            submittingLabel="Creating…"
+            onClose={onClose}
+            onSubmit={async (draft) => {
+                await createGoal(api, draft)
+                onCreated()
+                onClose()
+            }}
+        />
     )
 }

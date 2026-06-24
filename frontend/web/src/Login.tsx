@@ -1,7 +1,7 @@
 import { useState, type SubmitEvent } from "react"
 import { useSetAtom } from "jotai"
 import { Link, useNavigate } from "react-router-dom"
-import { ApiError, getSelf, login, useApi } from "@shared/api"
+import { ApiError, getSelf, login, syncTimezone, useApi } from "@shared/api"
 import { tokenStore, userAtom } from "./auth"
 import { LogoLink } from "./features/common/primitives"
 
@@ -29,7 +29,9 @@ function Login() {
         try {
             const tokens = await login(api, username, password)
             tokenStore.set(tokens)
-            setUser(await getSelf(api))
+            const me = await getSelf(api)
+            setUser(me)
+            await syncTimezone(api, me.timezone)
             navigate("/dashboard")
         } catch (err) {
             if (err instanceof ApiError) setErrors(err.messages)

@@ -19,6 +19,12 @@ export default defineConfig({
     resolve: {
         alias: {
             "@shared": path.resolve(__dirname, "../shared/src")
-        }
+        },
+        // The @shared sources import "react" and resolve it from
+        // shared/node_modules, producing a second React copy alongside
+        // web/node_modules/react. Two copies break hooks (null dispatcher,
+        // e.g. "Cannot read properties of null (reading 'useMemoCache')"),
+        // so collapse them to a single instance.
+        dedupe: ["react", "react-dom"]
     }
 })

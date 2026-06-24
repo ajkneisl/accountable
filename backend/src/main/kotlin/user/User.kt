@@ -13,6 +13,7 @@ import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.update
 
 /** Table that contains [User]. */
 object Users : Table("users") {
@@ -84,9 +85,19 @@ fun findUserByID(id: UUID): User? = transaction {
     Users.selectAll().where { Users.id eq id }.limit(1).firstOrNull()?.toEntity<User>()
 }
 
-/** Per-process cache of resolved timezones. A user's timezone is fixed at registration, so this
- *  never goes stale; if a timezone-update path is ever added, evict the entry there. */
+/** Per-process cache of resolved timezones, evicted by [updateTimezone] when a user's zone changes. */
 private val zoneCache = ConcurrentHashMap<UUID, ZoneId>()
+
+/**
+ * Set [id]'s IANA [timezone] and evict its [zoneCache] entry so subsequent day-bucketing uses the
+ * new zone. Returns false if [timezone] is not a valid zone id or the user does not exist.
+ */
+fun updateTimezone(id: UUID, timezone: String): Boolean {
+    if (runCatching { ZoneId.of(timezone) }.isFailure) return false
+    val updated = transaction { Users.update({ Users.id eq id }) { it[Users.timezone] = timezone } }
+    if (updated > 0) zoneCache.remove(id)
+    return updated > 0
+}
 
 /**
  * The [id]'s configured [ZoneId], falling back to UTC when unset or unparseable. Result is cached:

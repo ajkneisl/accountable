@@ -8,7 +8,7 @@ group = "com.accountable"
 version = "1.0.0-SNAPSHOT"
 
 application {
-    mainClass = "com.accountable.ApplicationKt"
+    mainClass = "ApplicationKt"
 }
 
 kotlin {

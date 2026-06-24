@@ -6,6 +6,8 @@ import integrations.api.IntegrationRecord
 import integrations.api.IntegrationTable
 import integrations.api.UserIntegrations
 import integrations.api.startOfDay
+import java.time.Instant
+import java.time.ZoneId
 import java.util.UUID
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -88,12 +90,17 @@ object AppleFitness : Integration<AppleFitness.AppleFitnessData> {
     override suspend fun pullData(userID: UUID, date: Long): AppleFitnessData {
         val zone = zoneOf(userID)
         val dayStart = startOfDay(date, zone)
+        val dayEnd = startOfNextDay(dayStart, zone)
+        // Bucket by when the workout actually happened, evaluated in the user's *current* zone, so a
+        // timezone change re-buckets correctly. The stored `day_start` is frozen at insert time and
+        // would strand events under a stale key if the zone later changed.
         return suspendTransaction {
             val rows =
                 AppleFitnessWorkouts.selectAll()
                     .where {
                         (AppleFitnessWorkouts.userID eq userID) and
-                            (AppleFitnessWorkouts.dayStart eq dayStart)
+                            (AppleFitnessWorkouts.happenedAt greaterEq dayStart) and
+                            (AppleFitnessWorkouts.happenedAt less dayEnd)
                     }
                     .toList()
             AppleFitnessData(
@@ -211,7 +218,7 @@ suspend fun addWorkout(
 
 /** Remove a workout owned by [userID]. Returns true if it existed. */
 suspend fun removeWorkout(userID: UUID, workoutID: UUID): Boolean {
-    val dayStart: Long? = suspendTransaction {
+    val happenedAt: Long? = suspendTransaction {
         val row =
             AppleFitnessWorkouts.selectAll()
                 .where {
@@ -220,28 +227,67 @@ suspend fun removeWorkout(userID: UUID, workoutID: UUID): Boolean {
                 }
                 .limit(1)
                 .firstOrNull() ?: return@suspendTransaction null
-        val ds = row[AppleFitnessWorkouts.dayStart]
+        val ts = row[AppleFitnessWorkouts.happenedAt]
         AppleFitnessWorkouts.deleteWhere {
             it.run {
                 (AppleFitnessWorkouts.id eq workoutID) and
                     (AppleFitnessWorkouts.userID eq userID)
             }
         }
-        ds
+        ts
     }
-    if (dayStart == null) return false
-    AppleFitness.refresh(userID, dayStart)
+    if (happenedAt == null) return false
+    // Re-bucket from happened_at in the current zone rather than the event's frozen day_start.
+    AppleFitness.refresh(userID, startOfDay(happenedAt, zoneOf(userID)))
     return true
 }
 
+/**
+ * Rebuild [userID]'s daily rollup ([AppleFitnessTable]) from their stored workout events, bucketed
+ * in their current timezone. Run after a timezone change re-buckets days, since the rollup is keyed
+ * by local midnight and old rows would otherwise linger under stale keys (and miss events).
+ */
+suspend fun rebuildAppleFitnessRollup(userID: UUID) = suspendTransaction {
+    val zone = zoneOf(userID)
+    AppleFitnessTable.deleteWhere { it.run { AppleFitnessTable.userID eq userID } }
+    val now = System.currentTimeMillis()
+    AppleFitnessWorkouts.selectAll()
+        .where { AppleFitnessWorkouts.userID eq userID }
+        .toList()
+        .groupBy { startOfDay(it[AppleFitnessWorkouts.happenedAt], zone) }
+        .forEach { (day, events) ->
+            AppleFitnessTable.insert {
+                it[AppleFitnessTable.userID] = userID
+                it[AppleFitnessTable.date] = day
+                it[AppleFitnessTable.calories] =
+                    events.sumOf { e -> e[AppleFitnessWorkouts.calories] }
+                it[AppleFitnessTable.workouts] = events.size.toLong()
+                it[AppleFitnessTable.fetchedAt] = now
+            }
+        }
+}
+
+/** Start-of-day, in [zone], of the calendar day after the one beginning at [dayStartMs]. */
+private fun startOfNextDay(dayStartMs: Long, zone: ZoneId): Long =
+    Instant.ofEpochMilli(dayStartMs)
+        .atZone(zone)
+        .toLocalDate()
+        .plusDays(1)
+        .atStartOfDay(zone)
+        .toInstant()
+        .toEpochMilli()
+
 /** [userID]'s workouts for the local-day containing [date], newest first. */
 suspend fun workoutsForDay(userID: UUID, date: Long): List<WorkoutResponse> {
-    val dayStart = startOfDay(date, zoneOf(userID))
+    val zone = zoneOf(userID)
+    val dayStart = startOfDay(date, zone)
+    val dayEnd = startOfNextDay(dayStart, zone)
     return suspendTransaction {
         AppleFitnessWorkouts.selectAll()
             .where {
                 (AppleFitnessWorkouts.userID eq userID) and
-                    (AppleFitnessWorkouts.dayStart eq dayStart)
+                    (AppleFitnessWorkouts.happenedAt greaterEq dayStart) and
+                    (AppleFitnessWorkouts.happenedAt less dayEnd)
             }
             .orderBy(AppleFitnessWorkouts.happenedAt, SortOrder.DESC)
             .map {

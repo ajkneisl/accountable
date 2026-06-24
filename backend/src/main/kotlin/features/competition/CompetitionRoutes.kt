@@ -2,6 +2,8 @@ package features.competition
 
 import api.Error
 import features.goals.GoalPeriod
+import features.goals.weekValues
+import features.goals.weekWindow
 import features.streak.streakFor
 import integrations.api.Integrations
 import integrations.api.startOfDay
@@ -80,6 +82,37 @@ data class CompetitionDetailResponse(
     val goals: List<CompetitionGoalView>,
 )
 
+/** One member's Monday-first daily values for a single competition goal over a week. */
+@Serializable
+data class CompetitionMemberWeek(
+    val userID: String,
+    val username: String,
+    /** Per-day metric values for the seven days of the week, Monday first. */
+    val vals: List<Long>,
+    val total: Long,
+)
+
+/** A competition goal with every member's week of progress against it. */
+@Serializable
+data class CompetitionGoalBoard(
+    val integration: String,
+    val metric: String,
+    val period: GoalPeriod,
+    val target: Long,
+    val members: List<CompetitionMemberWeek>,
+)
+
+/** Weekview board returned by [COMPETITION_WEEK_ROUTE]: every shared goal × every member × day. */
+@Serializable
+data class CompetitionWeekResponse(
+    /** Monday 00:00 (ms epoch) of the week, in the requester's timezone. */
+    val weekStart: Long,
+    /** The following Monday 00:00 (ms epoch), exclusive. */
+    val weekEnd: Long,
+    val offset: Int,
+    val goals: List<CompetitionGoalBoard>,
+)
+
 /** POST /api/competitions — create a competition. Caller becomes owner + first member. */
 private val COMPETITION_CREATE_ROUTE: suspend RoutingContext.() -> Unit = {
     val userID = call.userID()
@@ -134,6 +167,61 @@ private val COMPETITION_DETAIL_ROUTE: suspend RoutingContext.() -> Unit = {
             createdAt = competition.createdAt,
             members = memberViews,
             goals = goals.map { it.toView() },
+        )
+    )
+}
+
+/**
+ * GET /api/competitions/{id}/week?offset=N
+ *
+ * The competition's goals dashboard: for each shared goal, every member's Monday-anchored week of
+ * daily progress `offset` weeks before the current week (0 = this week). Each member's days are
+ * bucketed in their own timezone, so the columns line up by local weekday.
+ */
+private val COMPETITION_WEEK_ROUTE: suspend RoutingContext.() -> Unit = {
+    val userID = call.userID()
+    val competition = call.competitionForMember(userID)
+
+    val offset = call.request.queryParameters["offset"]?.toIntOrNull() ?: 0
+    if (offset < 0) Error.text("offset must not be negative")
+
+    val now = System.currentTimeMillis()
+    val goals = goalsForCompetition(competition.id)
+    val members = membersOf(competition.id)
+    val usernames =
+        members.associateWith { findUserByID(it.userID)?.username ?: it.userID.toString() }
+
+    val boards =
+        goals.map { goal ->
+            val memberWeeks =
+                members.map { member ->
+                    val zone = zoneOf(member.userID)
+                    val (weekStart, _) = weekWindow(now, zone, offset)
+                    val vals = weekValues(member.userID, goal, weekStart, zone)
+                    CompetitionMemberWeek(
+                        userID = member.userID.toString(),
+                        username = usernames.getValue(member),
+                        vals = vals,
+                        total = vals.sum(),
+                    )
+                }
+            CompetitionGoalBoard(
+                integration = goal.integration,
+                metric = goal.metric,
+                period = goal.period,
+                target = goal.target,
+                members = memberWeeks,
+            )
+        }
+
+    // Label the week in the requester's own zone.
+    val (weekStart, weekEnd) = weekWindow(now, zoneOf(userID), offset)
+    call.respond(
+        CompetitionWeekResponse(
+            weekStart = weekStart,
+            weekEnd = weekEnd,
+            offset = offset,
+            goals = boards,
         )
     )
 }
@@ -253,6 +341,7 @@ fun Route.competitionRoutes() {
             post("", COMPETITION_CREATE_ROUTE)
             get("", COMPETITION_LIST_ROUTE)
             post("/join", COMPETITION_JOIN_ROUTE)
+            get("/{id}/week", COMPETITION_WEEK_ROUTE)
             get("/{id}", COMPETITION_DETAIL_ROUTE)
             delete("/{id}", COMPETITION_DELETE_ROUTE)
             post("/{id}/leave", COMPETITION_LEAVE_ROUTE)

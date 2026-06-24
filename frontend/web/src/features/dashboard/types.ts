@@ -51,6 +51,23 @@ export function formatRefreshed(ms: number): string {
     })
 }
 
+/** "Jun 16 – 22" / "Jun 30 – Jul 6" label for the Monday-anchored week starting at [weekStart]. */
+export function formatWeekRange(weekStart: number): string {
+    const start = new Date(weekStart)
+    const end = new Date(weekStart + 6 * 86_400_000)
+    const startStr = start.toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric"
+    })
+    const endStr = end.toLocaleDateString(
+        undefined,
+        start.getMonth() === end.getMonth()
+            ? { day: "numeric" }
+            : { month: "short", day: "numeric" }
+    )
+    return `${startStr} – ${endStr}`
+}
+
 /** Day-of-ISO-week (Mon=1..Sun=7) for the current UTC instant. */
 export function dayOfIsoWeek(now = Date.now()): number {
     const d = new Date(now)

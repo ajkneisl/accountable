@@ -80,6 +80,34 @@ fun currentWindow(period: GoalPeriod, now: Long, zone: ZoneId): Pair<Long, Long>
 }
 
 /**
+ * Monday-anchored start (inclusive) and end (exclusive) ms-epoch bounds of the ISO week containing
+ * [now], shifted back [weeksAgo] weeks (0 = the current week). Evaluated in [zone] via calendar
+ * arithmetic so DST transitions stay correct. With [weeksAgo] = 0 this matches
+ * [currentWindow] for [GoalPeriod.WEEKLY].
+ */
+fun weekWindow(now: Long, zone: ZoneId, weeksAgo: Int): Pair<Long, Long> {
+    val date = localDate(now, zone)
+    val daysFromMonday = (date.dayOfWeek.value - DayOfWeek.MONDAY.value).toLong()
+    val monday = date.minusDays(daysFromMonday).minusWeeks(weeksAgo.toLong())
+    return monday.startMs(zone) to monday.plusWeeks(1).startMs(zone)
+}
+
+/**
+ * The seven per-day values of [goal]'s metric for the week beginning at [weekStart] (a Monday
+ * start-of-day ms epoch, as returned by [weekWindow]), Monday first. Missing days are 0. One query.
+ */
+suspend fun weekValues(
+    userID: UUID,
+    goal: GoalDefinition,
+    weekStart: Long,
+    zone: ZoneId,
+): List<Long> {
+    val monday = localDate(weekStart, zone)
+    val byDay = metricByDay(userID, goal, weekStart, monday.plusWeeks(1).startMs(zone))
+    return (0 until 7).map { byDay[monday.plusDays(it.toLong()).startMs(zone)] ?: 0L }
+}
+
+/**
  * Sum [goal]'s metric column over [start, end). Returns 0 if the metric is not registered or no
  * rows fall in the window.
  */

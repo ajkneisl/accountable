@@ -2,9 +2,8 @@
 
 import type { TileVariant } from "../../common/primitives"
 
-// Date.getUTCDay(): 0=Sun … 6=Sat. vals are UTC-day buckets, so label in UTC.
-const WEEKDAY = ["S", "M", "T", "W", "T", "F", "S"]
-const DAY_MS = 86_400_000
+// vals is a fixed Monday–Sunday week (Monday first), so labels are static.
+const WEEKDAY = ["M", "T", "W", "T", "F", "S", "S"]
 
 export function WeekChart({
     vals,
@@ -15,12 +14,7 @@ export function WeekChart({
     target: number
     tone?: TileVariant
 }) {
-    // vals is a rolling window ending today (oldest first), not a fixed Mon–Sun
-    // week — so derive each bar's weekday from its actual date.
-    const days = vals.map((_, i) => {
-        const daysAgo = vals.length - 1 - i
-        return WEEKDAY[new Date(Date.now() - daysAgo * DAY_MS).getUTCDay()]
-    })
+    const days = WEEKDAY
     const max = Math.max(target, ...vals) * 1.2
     const color =
         tone === "lime"

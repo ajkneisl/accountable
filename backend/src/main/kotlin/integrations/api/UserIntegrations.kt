@@ -54,6 +54,13 @@ suspend fun integrationsFor(userID: UUID): List<String> = suspendTransaction {
         .map { it[UserIntegrations.integration] }
 }
 
+/** Every user's enabled integration names, keyed by user. Backs the midnight refresh worker. */
+suspend fun allEnabledIntegrations(): Map<UUID, List<String>> = suspendTransaction {
+    UserIntegrations.selectAll()
+        .map { it[UserIntegrations.userID] to it[UserIntegrations.integration] }
+        .groupBy({ it.first }, { it.second })
+}
+
 /** Map of integration name → upstream externalID for every integration [userID] has enabled. */
 suspend fun integrationLinksFor(userID: UUID): Map<String, String> = suspendTransaction {
     UserIntegrations.selectAll()

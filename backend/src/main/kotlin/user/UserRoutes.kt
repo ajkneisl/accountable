@@ -1,12 +1,16 @@
 package user
 
 import api.Error
+import integrations.api.realignDayBuckets
+import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.principal
+import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
+import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 import java.util.UUID
 import kotlinx.serialization.Serializable
@@ -25,7 +29,11 @@ data class SelfResponse(
     val username: String,
     val email: String,
     val createdAt: Long,
+    val timezone: String,
 )
+
+/** Request body for [PUT /user/timezone]. */
+@Serializable data class UpdateTimezoneRequest(val timezone: String)
 
 /**
  * Response when retrieving another user.
@@ -52,8 +60,23 @@ fun Route.userRoutes() {
                         username = user.username,
                         email = user.email,
                         createdAt = user.createdAt,
+                        timezone = user.timezone,
                     )
                 )
+            }
+
+            put("/timezone") {
+                val principal = call.principal<JWTPrincipal>()!!
+                val userID =
+                    principal.subject?.let(UUID::fromString) ?: Error.text("invalid token")
+
+                val req = call.receive<UpdateTimezoneRequest>()
+                if (!updateTimezone(userID, req.timezone)) {
+                    Error.text("invalid timezone '${req.timezone}'")
+                }
+                // The zone defines day boundaries, so re-bucket existing per-day data to it.
+                realignDayBuckets(userID)
+                call.respond(HttpStatusCode.NoContent)
             }
 
             get("/{name}") {

@@ -7,6 +7,7 @@ import dev.hayden.KHealth
 import features.competition.competitionRoutes
 import features.goals.goalRoutes
 import features.streak.streakRoutes
+import integrations.api.IntegrationRefreshWorker
 import integrations.api.integrationRoutes
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
@@ -46,6 +47,8 @@ fun main() {
 fun Application.rootModule() {
     initDb()
     configureModule()
+    // Daily per-user-midnight refresh of integrations; tied to the application lifecycle.
+    IntegrationRefreshWorker.start(this)
 }
 
 fun Application.configureModule() {

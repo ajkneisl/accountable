@@ -36,6 +36,34 @@ export interface CompetitionDetail {
     goals: CompetitionGoal[]
 }
 
+/** One member's Monday-first daily values for a single competition goal over a week. */
+export interface CompetitionMemberWeek {
+    userID: string
+    username: string
+    /** Per-day metric values for the seven days of the week, Monday first. */
+    vals: number[]
+    total: number
+}
+
+/** A competition goal with every member's week of progress against it. */
+export interface CompetitionGoalBoard {
+    integration: string
+    metric: string
+    period: GoalPeriod
+    target: number
+    members: CompetitionMemberWeek[]
+}
+
+/** The competition goals dashboard for one Monday-anchored week. */
+export interface CompetitionWeek {
+    /** Monday 00:00 (ms epoch) of the week, in the requester's timezone. */
+    weekStart: number
+    /** The following Monday 00:00 (ms epoch), exclusive. */
+    weekEnd: number
+    offset: number
+    goals: CompetitionGoalBoard[]
+}
+
 export interface CreateCompetitionRequest {
     name: string
 }
@@ -66,6 +94,21 @@ export function getCompetition(
     id: string
 ): Promise<CompetitionDetail> {
     return request(config, "GET", `/competitions/${id}`, undefined, { auth: true })
+}
+
+/** GET /api/competitions/{id}/week?offset=N — goals dashboard for one Monday-anchored week. */
+export function getCompetitionWeek(
+    config: ApiConfig,
+    id: string,
+    offset = 0
+): Promise<CompetitionWeek> {
+    return request(
+        config,
+        "GET",
+        `/competitions/${id}/week?offset=${offset}`,
+        undefined,
+        { auth: true }
+    )
 }
 
 /** DELETE /api/competitions/{id} — owner deletes the competition. */

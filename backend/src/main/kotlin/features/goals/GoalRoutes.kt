@@ -17,6 +17,7 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import java.util.UUID
 import kotlinx.serialization.Serializable
+import user.zoneOf
 
 /**
  * Request body for creating or replacing a goal.
@@ -56,6 +57,26 @@ data class GoalResponse(
     val createdAt: Long,
 )
 
+/**
+ * One Monday-anchored week of a goal's metric, returned by [GOAL_WEEK_ROUTE].
+ *
+ * @param weekStart Monday 00:00 (ms epoch) of the week, in the user's timezone.
+ * @param weekEnd The following Monday 00:00 (ms epoch), exclusive.
+ * @param vals Per-day metric values for the seven days of the week, Monday first.
+ * @param total Sum of [vals] — the goal's progress for that week.
+ * @param target The goal's target (interpreted per [period]).
+ * @param period The goal's reset cadence.
+ */
+@Serializable
+data class GoalWeekResponse(
+    val weekStart: Long,
+    val weekEnd: Long,
+    val vals: List<Long>,
+    val total: Long,
+    val target: Long,
+    val period: GoalPeriod,
+)
+
 /** POST /api/goals — create or replace a goal for the authenticated user. */
 private val GOAL_CREATE_ROUTE: suspend RoutingContext.() -> Unit = {
     val userID = call.userID()
@@ -87,6 +108,43 @@ private val GOAL_LIST_ROUTE: suspend RoutingContext.() -> Unit = {
             )
         }
     call.respond(response)
+}
+
+/**
+ * GET /api/goals/{integration}/{metric}/{period}/week?offset=N
+ *
+ * Returns the Monday-anchored week of the goal's metric `offset` weeks before the current week
+ * (offset 0 = this week, 1 = last week, …). Lets the UI page back through past weeks per goal.
+ * Weeks are fixed Monday→Monday windows in the user's timezone.
+ */
+private val GOAL_WEEK_ROUTE: suspend RoutingContext.() -> Unit = {
+    val userID = call.userID()
+    val integration = call.parameters["integration"] ?: Error.text("missing integration")
+    val metric = call.parameters["metric"] ?: Error.text("missing metric")
+    val periodRaw = call.parameters["period"] ?: Error.text("missing period")
+    val period =
+        runCatching { GoalPeriod.valueOf(periodRaw.uppercase()) }.getOrNull()
+            ?: Error.text("period must be DAILY or WEEKLY")
+
+    val offset = call.request.queryParameters["offset"]?.toIntOrNull() ?: 0
+    if (offset < 0) Error.text("offset must not be negative")
+
+    val goal = goalFor(userID, integration, metric, period) ?: Error.notFound("goal")
+
+    val zone = zoneOf(userID)
+    val (weekStart, weekEnd) = weekWindow(System.currentTimeMillis(), zone, offset)
+    val vals = weekValues(userID, goal, weekStart, zone)
+
+    call.respond(
+        GoalWeekResponse(
+            weekStart = weekStart,
+            weekEnd = weekEnd,
+            vals = vals,
+            total = vals.sum(),
+            target = goal.target,
+            period = goal.period,
+        )
+    )
 }
 
 /** DELETE /api/goals/{integration}/{metric}/{period} — remove one goal. */
@@ -130,6 +188,7 @@ fun Route.goalRoutes() {
         route("/goals") {
             post("", GOAL_CREATE_ROUTE)
             get("", GOAL_LIST_ROUTE)
+            get("/{integration}/{metric}/{period}/week", GOAL_WEEK_ROUTE)
             delete("/{integration}/{metric}/{period}", GOAL_DELETE_ROUTE)
         }
     }
