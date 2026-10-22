@@ -134,7 +134,7 @@ export type WorkoutType =
     | "PICKLEBALL"
     | "OTHER"
 
-/** Where a workout row came from. `APPLE` is reserved for a future iOS companion app. */
+/** Where a workout row came from. `APPLE` rows are imported from Apple Health. */
 export type WorkoutSource = "MANUAL" | "APPLE"
 
 /** A single Apple Fitness workout as stored on the backend. */
@@ -191,5 +191,32 @@ export function deleteWorkout(config: ApiConfig, id: string): Promise<void> {
         `/integrations/apple_fitness/workouts/${encodeURIComponent(id)}`,
         undefined,
         { auth: true, expectJson: false }
+    )
+}
+
+/** One Apple Health workout to import. `externalID` is the HealthKit UUID. */
+export interface ImportedWorkout {
+    externalID: string
+    type: WorkoutType
+    durationMin: number
+    calories: number
+    happenedAt: number
+}
+
+/**
+ * POST /api/integrations/apple_fitness/workouts/import — import Apple Health
+ * workouts (at most 500 per call). Already-imported UUIDs are skipped, so this
+ * is safe to repeat. Resolves to how many were new.
+ */
+export function importWorkouts(
+    config: ApiConfig,
+    workouts: ImportedWorkout[]
+): Promise<{ imported: number }> {
+    return request(
+        config,
+        "POST",
+        "/integrations/apple_fitness/workouts/import",
+        { workouts },
+        { auth: true }
     )
 }

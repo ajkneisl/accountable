@@ -4,7 +4,10 @@ import features.competition.CompetitionGoals
 import features.competition.CompetitionMembers
 import features.competition.Competitions
 import features.goals.Goals
+import features.habits.HabitCheckins
+import features.habits.Habits
 import integrations.AppleFitnessWorkouts
+import integrations.AppleHealthImports
 import integrations.api.IntegrationTables
 import integrations.api.UserIntegrations
 import user.RefreshTokens
@@ -41,8 +44,10 @@ fun initDb() {
         HikariConfig().apply {
             jdbcUrl =
                 System.getenv("DATABASE_URL") ?: "jdbc:postgresql://localhost:5432/accountable"
-            username = System.getenv("DATABASE_USER") ?: "postgres"
-            password = System.getenv("DATABASE_PASSWORD") ?: "postgres"
+            // Homebrew's Postgres creates a superuser named after the OS user and trusts local
+            // connections, so no password is needed by default.
+            username = System.getenv("DATABASE_USER") ?: System.getProperty("user.name")
+            password = System.getenv("DATABASE_PASSWORD") ?: ""
 
             driverClassName = "org.postgresql.Driver"
             maximumPoolSize = 10
@@ -59,10 +64,13 @@ fun initDb() {
             RefreshTokens,
             UserIntegrations,
             Goals,
+            Habits,
+            HabitCheckins,
             Competitions,
             CompetitionMembers,
             CompetitionGoals,
             AppleFitnessWorkouts,
+            AppleHealthImports,
             *IntegrationTables.all.toTypedArray(),
         )
     }

@@ -2,7 +2,6 @@
     "extends": "expo/tsconfig.base",
     "compilerOptions": {
         "strict": true,
-        "baseUrl": ".",
         "paths": {
             "@shared/*": ["../shared/src/*"]
         }
@@ -11,6 +10,9 @@
         "**/*.ts",
         "**/*.tsx",
         "nativewind-env.d.ts",
+        ".expo/types/**/*.ts",
+        "expo-env.d.ts",
         "../shared/src/**/*.ts"
-    ]
+    ],
+    "exclude": ["node_modules"]
 }

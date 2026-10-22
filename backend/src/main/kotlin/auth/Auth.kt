@@ -6,10 +6,15 @@ import at.favre.lib.crypto.bcrypt.BCrypt
 import user.User
 import user.createToken
 import user.createUser
+import user.deleteAllTokensForUser
+import user.deleteUser
 import user.deleteToken
 import user.findActiveTokens
+import user.findUserByEmail
 import user.findUserByID
 import user.findUserByUsername
+import user.updateEmail
+import user.updatePassword
 import api.verify.verify
 import java.security.SecureRandom
 import java.time.ZoneId
@@ -55,10 +60,7 @@ object Auth {
         if (findUserByUsername(username) != null) Error.unauthorized("username already taken")
 
         val errors = User(UUID.randomUUID(), username, "", email, 0).verify().toMutableList()
-        if (plainPassword.length < 8) errors += "password must be at least 8 characters"
-        if (plainPassword.length > 128) errors += "password must be at most 128 characters"
-        if (plainPassword.none(Char::isLetter)) errors += "password must contain a letter"
-        if (plainPassword.none(Char::isDigit)) errors += "password must contain a digit"
+        errors += passwordErrors(plainPassword)
         if (errors.isNotEmpty()) MultiError.texts(errors)
 
         val tz = timezone.takeIf { runCatching { ZoneId.of(it) }.isSuccess } ?: "UTC"
@@ -79,6 +81,56 @@ object Auth {
         val ok = BCrypt.verifyer().verify(plainPassword.toCharArray(), user.password).verified
         if (!ok) Error.unauthorized("invalid credentials")
         return issueTokens(user)
+    }
+
+    /**
+     * Change [userID]'s password after checking [currentPassword]. Every existing session is
+     * revoked, and a fresh token pair is returned so the caller stays signed in.
+     */
+    fun changePassword(userID: UUID, currentPassword: String, newPassword: String): TokenResponse {
+        val user = requirePassword(userID, currentPassword)
+        val errors = passwordErrors(newPassword)
+        if (errors.isNotEmpty()) MultiError.texts(errors)
+
+        updatePassword(userID, BCrypt.withDefaults().hashToString(12, newPassword.toCharArray()))
+        deleteAllTokensForUser(userID)
+        return issueTokens(user)
+    }
+
+    /** Change [userID]'s email after checking [currentPassword]. */
+    fun changeEmail(userID: UUID, currentPassword: String, email: String) {
+        val user = requirePassword(userID, currentPassword)
+        val trimmed = email.trim()
+        if (trimmed.isBlank()) Error.text("email must not be blank")
+        if (trimmed.length > 320) Error.text("email must be at most 320 characters")
+        if (trimmed == user.email) return
+        if (findUserByEmail(trimmed) != null) Error.text("email is already taken")
+        updateEmail(userID, trimmed)
+    }
+
+    /** Permanently delete [userID] and all of its data after checking [currentPassword]. */
+    fun deleteAccount(userID: UUID, currentPassword: String) {
+        requirePassword(userID, currentPassword)
+        deleteUser(userID)
+    }
+
+    /**
+     * Load [userID] and check [password] against it. A wrong password is a 400 rather than a 401 so
+     * clients don't mistake it for an expired session.
+     */
+    private fun requirePassword(userID: UUID, password: String): User {
+        val user = findUserByID(userID) ?: Error.notFound("user")
+        val ok = BCrypt.verifyer().verify(password.toCharArray(), user.password).verified
+        if (!ok) Error.text("current password is incorrect")
+        return user
+    }
+
+    /** Strength rules shared by registration and password changes. */
+    private fun passwordErrors(password: String): List<String> = buildList {
+        if (password.length < 8) add("password must be at least 8 characters")
+        if (password.length > 128) add("password must be at most 128 characters")
+        if (password.none(Char::isLetter)) add("password must contain a letter")
+        if (password.none(Char::isDigit)) add("password must contain a digit")
     }
 
     /** Create an access token from a [refreshToken]. */

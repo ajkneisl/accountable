@@ -7,6 +7,7 @@ import dev.hayden.KHealth
 import features.competition.competitionRoutes
 import features.dashboard.dashboardRoutes
 import features.goals.goalRoutes
+import features.habits.habitRoutes
 import features.streak.streakRoutes
 import integrations.api.IntegrationRefreshWorker
 import integrations.api.integrationRoutes
@@ -141,6 +142,7 @@ fun Application.configureModule() {
             userRoutes()
             integrationRoutes()
             goalRoutes()
+            habitRoutes()
             streakRoutes()
             competitionRoutes()
             dashboardRoutes()

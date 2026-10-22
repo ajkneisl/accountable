@@ -62,6 +62,24 @@ object AppleFitnessWorkouts : Table("apple_fitness_workouts") {
     override val primaryKey = PrimaryKey(id)
 }
 
+/**
+ * HealthKit workout UUIDs already imported for a user, so re-syncing never duplicates a workout.
+ *
+ * Kept separate from [AppleFitnessWorkouts] (rather than an extra column there) so it's created by
+ * `SchemaUtils.create` on existing databases. [workoutID] is nulled, not cascaded, when the workout
+ * is deleted: the marker stays, so a workout the user removed doesn't come back on the next sync.
+ */
+object AppleHealthImports : Table("apple_health_imports") {
+    val userID = uuid("user_id").references(Users.id, onDelete = ReferenceOption.CASCADE)
+    val externalID = varchar("external_id", 64)
+    val workoutID =
+        uuid("workout_id")
+            .references(AppleFitnessWorkouts.id, onDelete = ReferenceOption.SET_NULL)
+            .nullable()
+
+    override val primaryKey = PrimaryKey(userID, externalID)
+}
+
 /** Per-day rollup that [GoalMetric]s sum over. Rebuilt by [AppleFitness.refresh]. */
 object AppleFitnessTable : IntegrationTable("integrations_apple_fitness") {
     val calories = long("calories")
@@ -214,6 +232,62 @@ suspend fun addWorkout(
     }
     AppleFitness.refresh(userID, dayStart)
     return WorkoutResponse(id.toString(), type, durationMin, calories, happenedAt, source)
+}
+
+/** One HealthKit workout handed to [importWorkouts]. */
+@Serializable
+data class ImportedWorkout(
+    /** HealthKit sample UUID; the dedupe key. */
+    val externalID: String,
+    val type: WorkoutType,
+    val durationMin: Long,
+    val calories: Long,
+    val happenedAt: Long,
+)
+
+/**
+ * Import Apple Health workouts for [userID], skipping any whose [ImportedWorkout.externalID] was
+ * imported before. Refreshes the day-rollup once per affected day. Returns how many were new.
+ */
+suspend fun importWorkouts(userID: UUID, workouts: List<ImportedWorkout>): Int {
+    if (workouts.isEmpty()) return 0
+    ensureAppleFitnessEnabled(userID)
+    val zone = zoneOf(userID)
+
+    val fresh = suspendTransaction {
+        val seen =
+            AppleHealthImports.selectAll()
+                .where {
+                    (AppleHealthImports.userID eq userID) and
+                        (AppleHealthImports.externalID inList workouts.map { it.externalID })
+                }
+                .map { it[AppleHealthImports.externalID] }
+                .toSet()
+        val fresh = workouts.distinctBy { it.externalID }.filter { it.externalID !in seen }
+
+        fresh.forEach { w ->
+            val id = UUID.randomUUID()
+            AppleFitnessWorkouts.insert {
+                it[AppleFitnessWorkouts.id] = id
+                it[AppleFitnessWorkouts.userID] = userID
+                it[AppleFitnessWorkouts.dayStart] = startOfDay(w.happenedAt, zone)
+                it[AppleFitnessWorkouts.happenedAt] = w.happenedAt
+                it[AppleFitnessWorkouts.type] = w.type
+                it[AppleFitnessWorkouts.durationMin] = w.durationMin
+                it[AppleFitnessWorkouts.calories] = w.calories
+                it[AppleFitnessWorkouts.entrySource] = WorkoutSource.APPLE
+            }
+            AppleHealthImports.insert {
+                it[AppleHealthImports.userID] = userID
+                it[AppleHealthImports.externalID] = w.externalID
+                it[AppleHealthImports.workoutID] = id
+            }
+        }
+        fresh
+    }
+
+    fresh.map { startOfDay(it.happenedAt, zone) }.distinct().forEach { AppleFitness.refresh(userID, it) }
+    return fresh.size
 }
 
 /** Remove a workout owned by [userID]. Returns true if it existed. */

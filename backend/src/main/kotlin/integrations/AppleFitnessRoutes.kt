@@ -30,6 +30,15 @@ data class LogWorkoutRequest(
     val happenedAt: Long? = null,
 )
 
+/** Most workouts accepted by a single import call; the app pages larger backfills. */
+private const val MAX_IMPORT = 500
+
+/** Request body for importing workouts from Apple Health. */
+@Serializable data class ImportWorkoutsRequest(val workouts: List<ImportedWorkout>)
+
+/** How many of the posted workouts were new. */
+@Serializable data class ImportWorkoutsResponse(val imported: Int)
+
 /** GET /api/integrations/apple_fitness/workouts?date={ms} — workouts for the day containing date. */
 private val WORKOUT_LIST_ROUTE: suspend RoutingContext.() -> Unit = {
     val userID = call.userID()
@@ -56,6 +65,24 @@ private val WORKOUT_CREATE_ROUTE: suspend RoutingContext.() -> Unit = {
     call.respond(HttpStatusCode.Created, workout)
 }
 
+/**
+ * POST /api/integrations/apple_fitness/workouts/import — import Apple Health workouts. Idempotent:
+ * workouts already imported (by HealthKit UUID) are skipped.
+ */
+private val WORKOUT_IMPORT_ROUTE: suspend RoutingContext.() -> Unit = {
+    val userID = call.userID()
+    val req = call.receive<ImportWorkoutsRequest>()
+    if (req.workouts.size > MAX_IMPORT) Error.text("at most $MAX_IMPORT workouts per import")
+    req.workouts.forEach {
+        if (it.externalID.isBlank() || it.externalID.length > 64) Error.text("invalid externalID")
+        if (it.durationMin < 0) Error.text("durationMin must be non-negative")
+        if (it.calories < 0) Error.text("calories must be non-negative")
+    }
+    val imported = importWorkouts(userID, req.workouts)
+    if (imported > 0) Cache.invalidateUser(userID)
+    call.respond(ImportWorkoutsResponse(imported))
+}
+
 /** DELETE /api/integrations/apple_fitness/workouts/{id} — remove a workout. */
 private val WORKOUT_DELETE_ROUTE: suspend RoutingContext.() -> Unit = {
     val userID = call.userID()
@@ -80,6 +107,7 @@ fun Route.appleFitnessRoutes() {
     route("/apple_fitness/workouts") {
         get("", WORKOUT_LIST_ROUTE)
         post("", WORKOUT_CREATE_ROUTE)
+        post("/import", WORKOUT_IMPORT_ROUTE)
         delete("/{id}", WORKOUT_DELETE_ROUTE)
     }
 }

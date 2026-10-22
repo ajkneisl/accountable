@@ -1,6 +1,7 @@
 package user
 
 import api.Error
+import auth.Auth
 import integrations.api.realignDayBuckets
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate
@@ -9,6 +10,7 @@ import io.ktor.server.auth.principal
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
+import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.put
 import io.ktor.server.routing.route
@@ -34,6 +36,15 @@ data class SelfResponse(
 
 /** Request body for [PUT /user/timezone]. */
 @Serializable data class UpdateTimezoneRequest(val timezone: String)
+
+/** Request body for [PUT /user/password]. */
+@Serializable data class ChangePasswordRequest(val currentPassword: String, val newPassword: String)
+
+/** Request body for [PUT /user/email]. */
+@Serializable data class ChangeEmailRequest(val currentPassword: String, val email: String)
+
+/** Request body for [DELETE /user]. */
+@Serializable data class DeleteAccountRequest(val currentPassword: String)
 
 /**
  * Response when retrieving another user.
@@ -63,6 +74,35 @@ fun Route.userRoutes() {
                         timezone = user.timezone,
                     )
                 )
+            }
+
+            delete {
+                val principal = call.principal<JWTPrincipal>()!!
+                val userID =
+                    principal.subject?.let(UUID::fromString) ?: Error.text("invalid token")
+
+                val req = call.receive<DeleteAccountRequest>()
+                Auth.deleteAccount(userID, req.currentPassword)
+                call.respond(HttpStatusCode.NoContent)
+            }
+
+            put("/password") {
+                val principal = call.principal<JWTPrincipal>()!!
+                val userID =
+                    principal.subject?.let(UUID::fromString) ?: Error.text("invalid token")
+
+                val req = call.receive<ChangePasswordRequest>()
+                call.respond(Auth.changePassword(userID, req.currentPassword, req.newPassword))
+            }
+
+            put("/email") {
+                val principal = call.principal<JWTPrincipal>()!!
+                val userID =
+                    principal.subject?.let(UUID::fromString) ?: Error.text("invalid token")
+
+                val req = call.receive<ChangeEmailRequest>()
+                Auth.changeEmail(userID, req.currentPassword, req.email)
+                call.respond(HttpStatusCode.NoContent)
             }
 
             put("/timezone") {

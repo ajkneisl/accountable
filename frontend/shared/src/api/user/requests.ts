@@ -1,5 +1,6 @@
 import { request, type ApiConfig } from "../http"
 import type { User } from "../model/user"
+import type { TokenResponse } from "../auth/requests"
 
 /**
  * A response to retrieving yourself.
@@ -75,5 +76,52 @@ export function getUser(config: ApiConfig, username: string): Promise<User> {
         `/user/${encodeURIComponent(username)}`,
         undefined,
         { auth: true }
+    )
+}
+
+/**
+ * PUT /api/user/password — change the authenticated user's password. Every other session is signed
+ * out; the returned tokens replace this device's.
+ */
+export function changePassword(
+    config: ApiConfig,
+    currentPassword: string,
+    newPassword: string
+): Promise<TokenResponse> {
+    return request(
+        config,
+        "PUT",
+        "/user/password",
+        { currentPassword, newPassword },
+        { auth: true }
+    )
+}
+
+/** PUT /api/user/email — change the authenticated user's email. */
+export function changeEmail(
+    config: ApiConfig,
+    currentPassword: string,
+    email: string
+): Promise<void> {
+    return request(
+        config,
+        "PUT",
+        "/user/email",
+        { currentPassword, email },
+        { auth: true, expectJson: false }
+    )
+}
+
+/** DELETE /api/user — permanently delete the authenticated user and all of their data. */
+export function deleteAccount(
+    config: ApiConfig,
+    currentPassword: string
+): Promise<void> {
+    return request(
+        config,
+        "DELETE",
+        "/user",
+        { currentPassword },
+        { auth: true, expectJson: false }
     )
 }

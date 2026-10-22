@@ -25,7 +25,10 @@ RUN npm run build
 
 # ---- Runtime stage: serve the bundle with nginx ----
 FROM nginx:alpine AS runtime
-COPY web/nginx.conf /etc/nginx/conf.d/default.conf
+# The nginx image renders /etc/nginx/templates/*.template into conf.d at startup,
+# substituting only variables that are set, so nginx's own $uri etc. survive.
+ENV API_UPSTREAM=backend:8080
+COPY web/nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/web/dist /usr/share/nginx/html
 
 EXPOSE 80

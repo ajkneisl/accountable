@@ -10,6 +10,7 @@ import java.time.ZoneOffset
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -108,6 +109,27 @@ fun zoneOf(id: UUID): ZoneId =
     zoneCache.getOrPut(id) {
         findUserByID(id)?.timezone?.let { runCatching { ZoneId.of(it) }.getOrNull() } ?: ZoneOffset.UTC
     }
+
+/** Set [id]'s [email]. Returns false if the user does not exist. */
+fun updateEmail(id: UUID, email: String): Boolean = transaction {
+    Users.update({ Users.id eq id }) { it[Users.email] = email } > 0
+}
+
+/** Set [id]'s bcrypt [passwordHash]. Returns false if the user does not exist. */
+fun updatePassword(id: UUID, passwordHash: String): Boolean = transaction {
+    Users.update({ Users.id eq id }) { it[Users.password] = passwordHash } > 0
+}
+
+/**
+ * Delete [id] and everything it owns. Refresh tokens are removed explicitly since their foreign key
+ * has no cascade; every other user-owned table cascades from [Users].
+ */
+fun deleteUser(id: UUID): Boolean = transaction {
+    deleteAllTokensForUser(id)
+    val deleted = Users.deleteWhere { sql -> sql.run { Users.id eq id } } > 0
+    if (deleted) zoneCache.remove(id)
+    deleted
+}
 
 /** Find a user by [username]. */
 fun findUserByUsername(username: String): User? = transaction {

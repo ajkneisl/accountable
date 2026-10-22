@@ -3,8 +3,12 @@ package com.accountable.integrations
 import integrations.AppleFitness
 import integrations.AppleFitnessTable
 import integrations.AppleFitnessWorkouts
+import integrations.AppleHealthImports
+import integrations.ImportedWorkout
 import integrations.WorkoutType
 import integrations.addWorkout
+import integrations.importWorkouts
+import integrations.removeWorkout
 import integrations.api.UserIntegrations
 import integrations.api.startOfDay
 import integrations.rebuildAppleFitnessRollup
@@ -46,8 +50,10 @@ class AppleFitnessTest {
                 RefreshTokens,
                 UserIntegrations,
                 AppleFitnessWorkouts,
+                AppleHealthImports,
                 AppleFitnessTable,
             )
+            AppleHealthImports.deleteAll()
             AppleFitnessTable.deleteAll()
             AppleFitnessWorkouts.deleteAll()
             UserIntegrations.deleteAll()
@@ -101,5 +107,28 @@ class AppleFitnessTest {
 
         assertEquals(200L, AppleFitness.getDay(testUserID, lateEveningLocal)?.data?.calories)
         assertEquals(120L, AppleFitness.getDay(testUserID, nextDay)?.data?.calories)
+    }
+
+    @Test
+    fun `importing the same Apple Health workout twice adds it once`() = runBlocking {
+        val run = ImportedWorkout("hk-1", WorkoutType.RUN, 30, 250, lateEveningLocal)
+        assertEquals(1, importWorkouts(testUserID, listOf(run)))
+        assertEquals(0, importWorkouts(testUserID, listOf(run, run)))
+
+        val day = AppleFitness.getDay(testUserID, lateEveningLocal)
+        assertEquals(1L, day?.data?.workouts)
+        assertEquals(250L, day?.data?.calories)
+        assertEquals(integrations.WorkoutSource.APPLE, workoutsForDay(testUserID, lateEveningLocal).single().source)
+    }
+
+    @Test
+    fun `a deleted imported workout does not come back on resync`() = runBlocking {
+        val run = ImportedWorkout("hk-2", WorkoutType.RUN, 30, 250, lateEveningLocal)
+        importWorkouts(testUserID, listOf(run))
+        val id = UUID.fromString(workoutsForDay(testUserID, lateEveningLocal).single().id)
+        removeWorkout(testUserID, id)
+
+        assertEquals(0, importWorkouts(testUserID, listOf(run)))
+        assertEquals(0, workoutsForDay(testUserID, lateEveningLocal).size)
     }
 }
