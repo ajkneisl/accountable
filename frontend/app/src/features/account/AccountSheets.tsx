@@ -1,8 +1,7 @@
 // Sheets for the account actions in Settings: change email, change password,
 // and delete account. Each one asks for the current password.
 
-import { type ReactNode, useState } from "react"
-import { Text, View } from "react-native"
+import { useState } from "react"
 import { useSetAtom } from "jotai"
 import {
     ApiError,
@@ -13,8 +12,8 @@ import {
     useApi
 } from "@shared/index"
 import { tokenStore, useSignOut, userAtom } from "../../auth"
-import { Sheet } from "../../ui/Sheet"
-import { Button, ErrorList, Input, Label } from "../../ui/primitives"
+import { Sheet, SheetField } from "../../ui/Sheet"
+import { ErrorList, Input } from "../../ui/primitives"
 
 function messages(err: unknown): string[] {
     if (err instanceof ApiError) return err.messages
@@ -42,41 +41,6 @@ function useSubmit(action: () => Promise<void>) {
     return { busy, errors, submit }
 }
 
-function Footer({
-    label,
-    busy,
-    destructive = false,
-    onCancel,
-    onSubmit
-}: {
-    label: string
-    busy: boolean
-    destructive?: boolean
-    onCancel: () => void
-    onSubmit: () => void
-}) {
-    return (
-        <View className="flex-row justify-end gap-2.5">
-            <Button label="Cancel" variant="line" onPress={onCancel} />
-            <Button
-                label={label}
-                variant={destructive ? "danger" : "primary"}
-                onPress={onSubmit}
-                busy={busy}
-            />
-        </View>
-    )
-}
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-    return (
-        <View className="mb-4">
-            <Label>{label}</Label>
-            {children}
-        </View>
-    )
-}
-
 function CurrentPassword({
     value,
     onChange,
@@ -89,7 +53,7 @@ function CurrentPassword({
     autoFocus?: boolean
 }) {
     return (
-        <Field label="Current password">
+        <SheetField label="Current password">
             <Input
                 secureTextEntry
                 autoCapitalize="none"
@@ -101,7 +65,7 @@ function CurrentPassword({
                 onSubmitEditing={onSubmit}
                 returnKeyType={onSubmit ? "go" : "next"}
             />
-        </Field>
+        </SheetField>
     )
 }
 
@@ -126,16 +90,13 @@ export function ChangeEmailSheet({
         <Sheet
             title="Change email"
             onClose={onClose}
-            footer={
-                <Footer
-                    label="Save"
-                    busy={busy}
-                    onCancel={onClose}
-                    onSubmit={submit}
-                />
-            }
+            action={{
+                label: "Save",
+                onPress: submit,
+                busy
+            }}
         >
-            <Field label="New email">
+            <SheetField label="New email">
                 <Input
                     autoFocus
                     autoCapitalize="none"
@@ -146,7 +107,7 @@ export function ChangeEmailSheet({
                     value={email}
                     onChangeText={setEmail}
                 />
-            </Field>
+            </SheetField>
             <CurrentPassword
                 value={password}
                 onChange={setPassword}
@@ -173,17 +134,17 @@ export function ChangePasswordSheet({ onClose }: { onClose: () => void }) {
             title="Change password"
             description="You'll be signed out on your other devices."
             onClose={onClose}
-            footer={
-                <Footer
-                    label="Save"
-                    busy={busy}
-                    onCancel={onClose}
-                    onSubmit={submit}
-                />
-            }
+            action={{
+                label: "Save",
+                onPress: submit,
+                busy
+            }}
         >
             <CurrentPassword value={current} onChange={setCurrent} autoFocus />
-            <Field label="New password">
+            <SheetField
+                label="New password"
+                hint="At least 8 characters, with a letter and a number."
+            >
                 <Input
                     secureTextEntry
                     autoCapitalize="none"
@@ -193,11 +154,8 @@ export function ChangePasswordSheet({ onClose }: { onClose: () => void }) {
                     onChangeText={setNext}
                     returnKeyType="next"
                 />
-                <Text className="mt-1.5 text-[12px] text-ink-3">
-                    At least 8 characters, with a letter and a number.
-                </Text>
-            </Field>
-            <Field label="Confirm new password">
+            </SheetField>
+            <SheetField label="Confirm new password">
                 <Input
                     secureTextEntry
                     autoCapitalize="none"
@@ -208,7 +166,7 @@ export function ChangePasswordSheet({ onClose }: { onClose: () => void }) {
                     onSubmitEditing={submit}
                     returnKeyType="go"
                 />
-            </Field>
+            </SheetField>
             <ErrorList errors={errors} />
         </Sheet>
     )
@@ -228,15 +186,12 @@ export function DeleteAccountSheet({ onClose }: { onClose: () => void }) {
             title="Delete account"
             description="This permanently deletes your account, goals, habits, competitions, and connected integrations. It can't be undone."
             onClose={onClose}
-            footer={
-                <Footer
-                    label="Delete"
-                    busy={busy}
-                    destructive
-                    onCancel={onClose}
-                    onSubmit={submit}
-                />
-            }
+            action={{
+                label: "Delete",
+                onPress: submit,
+                busy,
+                variant: "danger"
+            }}
         >
             <CurrentPassword
                 value={password}

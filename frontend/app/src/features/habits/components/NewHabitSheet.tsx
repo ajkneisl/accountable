@@ -4,15 +4,8 @@
 import { useState } from "react"
 import { Text, View } from "react-native"
 import { ApiError, type HabitColor } from "@shared/index"
-import { Sheet } from "../../../ui/Sheet"
-import {
-    Button,
-    ChoiceButton,
-    Dot,
-    ErrorList,
-    Eyebrow,
-    Input
-} from "../../../ui/primitives"
+import { Sheet, SheetField } from "../../../ui/Sheet"
+import { ChoiceButton, Dot, ErrorList, Input } from "../../../ui/primitives"
 import { HABIT_COLORS, HABIT_PALETTE } from "../grid"
 
 /** Mirrors HABIT_NAME_MAX on the backend. */
@@ -55,47 +48,43 @@ export function NewHabitSheet({
             title="New habit"
             description="Something you want to do every day. Check it off and watch the heatmap fill in."
             onClose={onClose}
-            footer={
-                <View className="flex-row justify-end gap-2.5">
-                    <Button label="Cancel" variant="line" onPress={onClose} />
-                    <Button
-                        label={submitting ? "Adding…" : "Add habit"}
-                        onPress={submit}
-                        busy={submitting}
-                    />
-                </View>
-            }
+            action={{
+                label: submitting ? "Adding…" : "Add habit",
+                onPress: submit,
+                busy: submitting
+            }}
         >
-            <Eyebrow className="mb-2.5">Name</Eyebrow>
-            <Input
-                value={name}
-                onChangeText={setName}
-                placeholder="Read 20 pages"
-                maxLength={NAME_MAX}
-                autoFocus
-                returnKeyType="done"
-                onSubmitEditing={submit}
-                className="mb-5"
-            />
+            <SheetField label="Name">
+                <Input
+                    value={name}
+                    onChangeText={setName}
+                    placeholder="Read 20 pages"
+                    maxLength={NAME_MAX}
+                    autoFocus
+                    returnKeyType="done"
+                    onSubmitEditing={submit}
+                />
+            </SheetField>
 
-            <Eyebrow className="mb-2.5">Color</Eyebrow>
-            <View className="mb-5 flex-row gap-2">
-                {HABIT_COLORS.map((c) => (
-                    <ChoiceButton
-                        key={c}
-                        selected={color === c}
-                        onPress={() => setColor(c)}
-                        className="flex-1"
-                    >
-                        <View className="items-center gap-1.5">
-                            <Dot color={HABIT_PALETTE[c].fill} size={14} />
-                            <Text className="text-[12px] font-medium text-ink">
-                                {HABIT_PALETTE[c].label}
-                            </Text>
-                        </View>
-                    </ChoiceButton>
-                ))}
-            </View>
+            <SheetField label="Color">
+                <View className="flex-row gap-2.5">
+                    {HABIT_COLORS.map((c) => (
+                        <ChoiceButton
+                            key={c}
+                            selected={color === c}
+                            onPress={() => setColor(c)}
+                            className="flex-1"
+                        >
+                            <View className="items-center gap-2">
+                                <Dot color={HABIT_PALETTE[c].fill} size={22} />
+                                <Text className="text-[14px] font-medium text-ink">
+                                    {HABIT_PALETTE[c].label}
+                                </Text>
+                            </View>
+                        </ChoiceButton>
+                    ))}
+                </View>
+            </SheetField>
 
             <ErrorList errors={errors} />
         </Sheet>

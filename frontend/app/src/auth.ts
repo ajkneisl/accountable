@@ -20,6 +20,8 @@ import {
 } from "@shared/index"
 import { router } from "expo-router"
 import { forgetAppleHealth } from "./features/health/AppleHealthData"
+import { clearCompetitionsWidget } from "./features/competition/widget/sync"
+import { clearGoalsWidget } from "./features/dashboard/widget/sync"
 import { clearHabitsWidget } from "./features/habits/widget/sync"
 
 const ACCESS_KEY = "accountable_access"
@@ -154,6 +156,8 @@ export function useSignOut() {
         if (refresh) await logout(api, refresh).catch(() => {})
         await tokenStore.clear()
         clearHabitsWidget()
+        clearCompetitionsWidget()
+        clearGoalsWidget()
         await forgetAppleHealth()
         setUser(null)
         router.replace("/welcome")

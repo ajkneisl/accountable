@@ -7,12 +7,10 @@
 import { useState } from "react"
 import { Text, View } from "react-native"
 import { ApiError, createGoal, type GoalPeriod, useApi } from "@shared/index"
-import { Sheet } from "../../../ui/Sheet"
+import { Sheet, SheetField } from "../../../ui/Sheet"
 import {
-    Button,
     ChoiceButton,
     ErrorList,
-    Eyebrow,
     Input,
     IntegrationIcon,
     SourceTile,
@@ -137,50 +135,47 @@ export function GoalSheet({
             title={title}
             description={description}
             onClose={onClose}
-            footer={
-                <View className="flex-row justify-end gap-2.5">
-                    <Button label="Cancel" variant="line" onPress={onClose} />
-                    <Button
-                        label={submitting ? submittingLabel : submitLabel}
-                        onPress={submit}
-                        busy={submitting}
-                    />
-                </View>
-            }
+            action={{
+                label: submitting ? submittingLabel : submitLabel,
+                onPress: submit,
+                busy: submitting
+            }}
         >
-            <Eyebrow className="mb-2.5">Source</Eyebrow>
-            <View className="mb-5 gap-2">
-                {SOURCES.map((s, i) => (
-                    <ChoiceButton
-                        key={s.integration}
-                        selected={sourceIdx === i}
-                        onPress={() => pickSource(i)}
-                    >
-                        <View className="flex-row items-center gap-2.5">
-                            <SourceTile
-                                label={s.glyph}
-                                variant={s.tile}
-                                icon={<IntegrationIcon name={s.integration} />}
-                            />
-                            <View className="flex-1">
-                                <Text className="text-[13px] font-semibold text-ink">
-                                    {s.label}
-                                </Text>
-                                <Text className="text-[11px] text-ink-3">
-                                    {s.metrics.length === 1
-                                        ? s.metrics[0].label.toLowerCase()
-                                        : `${s.metrics.length} options`}
-                                </Text>
+            <SheetField label="Source">
+                <View className="gap-2.5">
+                    {SOURCES.map((s, i) => (
+                        <ChoiceButton
+                            key={s.integration}
+                            selected={sourceIdx === i}
+                            onPress={() => pickSource(i)}
+                        >
+                            <View className="flex-row items-center gap-3.5">
+                                <SourceTile
+                                    label={s.glyph}
+                                    variant={s.tile}
+                                    icon={
+                                        <IntegrationIcon name={s.integration} />
+                                    }
+                                />
+                                <View className="flex-1">
+                                    <Text className="text-[17px] font-semibold text-ink">
+                                        {s.label}
+                                    </Text>
+                                    <Text className="text-[14px] text-ink-3">
+                                        {s.metrics.length === 1
+                                            ? s.metrics[0].label.toLowerCase()
+                                            : `${s.metrics.length} options`}
+                                    </Text>
+                                </View>
                             </View>
-                        </View>
-                    </ChoiceButton>
-                ))}
-            </View>
+                        </ChoiceButton>
+                    ))}
+                </View>
+            </SheetField>
 
             {source.metrics.length > 1 && (
-                <>
-                    <Eyebrow className="mb-2.5">{source.optionLabel}</Eyebrow>
-                    <View className="mb-5 flex-row gap-2">
+                <SheetField label={source.optionLabel}>
+                    <View className="flex-row gap-2.5">
                         {source.metrics.map((m) => (
                             <ChoiceButton
                                 key={m.metric}
@@ -188,49 +183,47 @@ export function GoalSheet({
                                 onPress={() => setMetric(m.metric)}
                                 className="flex-1"
                             >
-                                <Text className="text-center text-[13px] font-semibold text-ink">
+                                <Text className="text-center text-[16px] font-semibold text-ink">
                                     {m.label}
                                 </Text>
                             </ChoiceButton>
                         ))}
                     </View>
-                </>
+                </SheetField>
             )}
 
-            <Eyebrow className="mb-2.5">Cadence</Eyebrow>
-            <View className="mb-5 flex-row gap-2">
-                {(["DAILY", "WEEKLY"] as GoalPeriod[]).map((p) => (
-                    <ChoiceButton
-                        key={p}
-                        selected={period === p}
-                        onPress={() => setPeriod(p)}
-                        className="flex-1"
-                    >
-                        <Text className="text-center text-[13px] font-semibold text-ink">
-                            {p === "DAILY" ? "Daily" : "Weekly"}
-                        </Text>
-                    </ChoiceButton>
-                ))}
-            </View>
-
-            <Eyebrow className="mb-2.5">Target</Eyebrow>
-            <View className="flex-row items-center gap-2.5">
-                <Input
-                    keyboardType="number-pad"
-                    value={target}
-                    onChangeText={setTarget}
-                    className="w-24"
-                />
-                <Text className="text-[13px] text-ink-3">
-                    {unit} / {cadence}
-                </Text>
-            </View>
-
-            {errors.length > 0 && (
-                <View className="mt-4">
-                    <ErrorList errors={errors} />
+            <SheetField label="Cadence">
+                <View className="flex-row gap-2.5">
+                    {(["DAILY", "WEEKLY"] as GoalPeriod[]).map((p) => (
+                        <ChoiceButton
+                            key={p}
+                            selected={period === p}
+                            onPress={() => setPeriod(p)}
+                            className="flex-1"
+                        >
+                            <Text className="text-center text-[16px] font-semibold text-ink">
+                                {p === "DAILY" ? "Daily" : "Weekly"}
+                            </Text>
+                        </ChoiceButton>
+                    ))}
                 </View>
-            )}
+            </SheetField>
+
+            <SheetField label="Target">
+                <View className="flex-row items-center gap-3">
+                    <Input
+                        keyboardType="number-pad"
+                        value={target}
+                        onChangeText={setTarget}
+                        className="w-28"
+                    />
+                    <Text className="text-[17px] text-ink-3">
+                        {unit} / {cadence}
+                    </Text>
+                </View>
+            </SheetField>
+
+            <ErrorList errors={errors} />
         </Sheet>
     )
 }
@@ -248,7 +241,7 @@ export function NewGoalSheet({
         <GoalSheet
             title="New goal"
             description="Track a metric from one of your connected sources."
-            submitLabel="Create goal →"
+            submitLabel="Create goal"
             submittingLabel="Creating…"
             onClose={onClose}
             onSubmit={async (draft) => {

@@ -1,9 +1,12 @@
-// iOS home screen widget: a heatmap of every habit, fed by `syncHabitsWidget`.
+// iOS home screen widget: one card per habit (name, streak, heatmap), fed by
+// `syncHabitsWidget`. Small shows one habit, medium two side by side, large a
+// 2×2 grid under a day summary. Which habits is picked per widget in Edit Widget
+// (see plugins/withHabitsWidgetPicker.js); unpicked widgets show the first ones.
 //
 // The component body is serialized into the widget extension and run in an
 // isolated runtime, so it can't touch anything outside its own body: no imports
 // beyond @expo/ui, no module-level constants or helpers, no hooks. Everything it
-// needs (including precomputed levels) arrives through props.
+// needs (including precomputed cells) arrives through props.
 
 import {
     HStack,
@@ -13,38 +16,50 @@ import {
     VStack
 } from "@expo/ui/swift-ui"
 import {
+    background,
     containerBackground,
     font,
     foregroundStyle,
     frame,
     lineLimit,
+    multilineTextAlignment,
     padding,
+    shapes,
     widgetURL
 } from "@expo/ui/swift-ui/modifiers"
 import { createWidget, type WidgetEnvironment } from "expo-widgets"
 
-export interface HabitsWidgetRow {
+export interface HabitsWidgetHabit {
+    id: string
     name: string
-    /** Accent hex for this habit's strip. */
+    /** Accent hex for this habit's cells. */
     color: string
     streak: number
-    /** Last 14 days, oldest first: 1 done, 0 not. */
-    recent: number[]
+    doneToday: boolean
+    /**
+     * Week columns, oldest first, each Mon→Sun: 1 done, 0 not, -1 a day after
+     * today.
+     */
+    weeks: number[][]
 }
 
 export interface HabitsWidgetProps {
-    /**
-     * Week columns, oldest first, each Mon→Sun. 0–4 is the share of habits done
-     * that day (0 none, 4 all); -1 is a day after today.
-     */
-    weeks: number[][]
+    /** Every habit, in app order; also the options offered in Edit Widget. */
+    habits: HabitsWidgetHabit[]
     doneToday: number
     habitCount: number
-    rows: HabitsWidgetRow[]
     signedOut: boolean
 }
 
-const HabitsWidget = (props: HabitsWidgetProps, env: WidgetEnvironment) => {
+export interface HabitsWidgetConfiguration {
+    /** IDs of the habits picked in Edit Widget; empty until someone picks. */
+    habits?: string[]
+}
+
+const HabitsWidget = (
+    props: HabitsWidgetProps,
+    env: WidgetEnvironment<HabitsWidgetConfiguration>
+) => {
     "widget"
 
     const dark = env.colorScheme === "dark"
@@ -52,10 +67,9 @@ const HabitsWidget = (props: HabitsWidgetProps, env: WidgetEnvironment) => {
     const ink = dark ? "#f8f5ef" : "#16100c"
     const ink3 = "#7b736c"
     const empty = dark ? "#2b2520" : "#e9e4de"
-    const levels = [empty, "#d5f9b2", "#bdf27e", "#a2eb3c", "#6fae1a"]
 
     const family = env.widgetFamily
-    const cols = family === "systemSmall" ? 8 : 20
+    const cols = family === "systemSmall" ? 8 : 9
     const cell = 11
     const gap = 3
 
@@ -85,106 +99,159 @@ const HabitsWidget = (props: HabitsWidgetProps, env: WidgetEnvironment) => {
         )
     }
 
-    const header = (
-        <HStack spacing={6}>
-            <Text
-                modifiers={[
-                    font({ size: 13, weight: "bold" }),
-                    foregroundStyle(ink)
-                ]}
-            >
-                Habits
-            </Text>
-            <Spacer />
-            <Text
-                modifiers={[
-                    font({ size: 12, weight: "medium", design: "monospaced" }),
-                    foregroundStyle(ink3)
-                ]}
-            >
-                {family === "systemSmall"
-                    ? `${props.doneToday}/${props.habitCount}`
-                    : `${props.doneToday}/${props.habitCount} today`}
-            </Text>
-        </HStack>
-    )
-
-    const heatmap = (
-        <HStack spacing={gap}>
-            {props.weeks.slice(-cols).map((week, c) => (
-                <VStack key={c} spacing={gap}>
-                    {week.map((level, r) => (
-                        <RoundedRectangle
-                            key={r}
-                            cornerRadius={2.5}
-                            modifiers={[
-                                frame({ width: cell, height: cell }),
-                                foregroundStyle(level < 0 ? bg : levels[level])
-                            ]}
-                        />
+    const card = (habit: HabitsWidgetHabit, key: number) => {
+        // The Ink accent is the dark background; flip it so it stays visible.
+        const fill = dark && habit.color === "#16100c" ? ink : habit.color
+        return (
+            <VStack key={key} alignment="leading" spacing={7}>
+                <HStack spacing={4}>
+                    <Text
+                        modifiers={[
+                            font({ size: 13, weight: "bold" }),
+                            foregroundStyle(ink),
+                            lineLimit(1)
+                        ]}
+                    >
+                        {habit.name}
+                    </Text>
+                    <Spacer />
+                    <Text
+                        modifiers={[
+                            font({
+                                size: 11,
+                                weight: "medium",
+                                design: "monospaced"
+                            }),
+                            foregroundStyle(habit.doneToday ? fill : ink3)
+                        ]}
+                    >
+                        {habit.doneToday
+                            ? `✓ ${habit.streak}d`
+                            : `${habit.streak}d`}
+                    </Text>
+                </HStack>
+                <HStack spacing={gap}>
+                    {habit.weeks.slice(-cols).map((week, c) => (
+                        <VStack key={c} spacing={gap}>
+                            {week.map((d, r) => (
+                                <RoundedRectangle
+                                    key={r}
+                                    cornerRadius={2.5}
+                                    modifiers={[
+                                        frame({ width: cell, height: cell }),
+                                        foregroundStyle(
+                                            d < 0 ? bg : d ? fill : empty
+                                        )
+                                    ]}
+                                />
+                            ))}
+                        </VStack>
                     ))}
-                </VStack>
-            ))}
-        </HStack>
+                </HStack>
+            </VStack>
+        )
+    }
+
+    const slots =
+        family === "systemSmall" ? 1 : family === "systemLarge" ? 4 : 2
+    // Habits picked in Edit Widget, in picked order; app order until then.
+    const picked = (env.configuration?.habits ?? []).flatMap((id) =>
+        props.habits.filter((h) => h.id === id)
     )
+    const shown = (picked.length > 0 ? picked : props.habits).slice(0, slots)
+    const items = shown.map((habit, i) => card(habit, i))
+
+    // A free slot invites filling it rather than leaving a hole in the layout.
+    const more = props.habitCount > shown.length
+    const hasHint = items.length < slots
+    if (hasHint) {
+        items.push(
+            <VStack
+                key="hint"
+                spacing={3}
+                modifiers={[
+                    padding({ all: 10 }),
+                    frame({ maxWidth: 1000, maxHeight: 1000 }),
+                    background(
+                        empty,
+                        shapes.roundedRectangle({ cornerRadius: 10 })
+                    )
+                ]}
+            >
+                <Text
+                    modifiers={[
+                        font({ size: 13, weight: "bold" }),
+                        foregroundStyle(ink3)
+                    ]}
+                >
+                    {more ? "+ Show another habit" : "+ Add another habit"}
+                </Text>
+                <Text
+                    modifiers={[
+                        font({ size: 11 }),
+                        foregroundStyle(ink3),
+                        multilineTextAlignment("center")
+                    ]}
+                >
+                    {more
+                        ? "Touch and hold, then Edit Widget."
+                        : "Create one in Accountable to see it here."}
+                </Text>
+            </VStack>
+        )
+    }
+
+    const rows = []
+    for (let i = 0; i < items.length; i += 2) {
+        rows.push(
+            <HStack key={i} alignment="top" spacing={14}>
+                {items[i]}
+                {items[i + 1] ?? null}
+            </HStack>
+        )
+    }
 
     if (family !== "systemLarge") {
         return (
-            <VStack alignment="leading" spacing={8} modifiers={root}>
-                {header}
-                {heatmap}
+            <VStack alignment="leading" modifiers={root}>
+                {rows}
+                {hasHint ? null : <Spacer />}
             </VStack>
         )
     }
 
     return (
-        <VStack alignment="leading" spacing={10} modifiers={root}>
-            {header}
-            {heatmap}
-            <VStack
-                alignment="leading"
-                spacing={8}
-                modifiers={[padding({ top: 4 })]}
-            >
-                {props.rows.slice(0, 5).map((row, i) => (
-                    <HStack key={i} spacing={8}>
-                        <Text
-                            modifiers={[
-                                font({ size: 12, weight: "medium" }),
-                                foregroundStyle(ink),
-                                lineLimit(1),
-                                frame({ width: 72, alignment: "leading" })
-                            ]}
-                        >
-                            {row.name}
-                        </Text>
-                        <HStack spacing={gap}>
-                            {row.recent.map((d, j) => (
-                                <RoundedRectangle
-                                    key={j}
-                                    cornerRadius={2.5}
-                                    modifiers={[
-                                        frame({ width: cell, height: cell }),
-                                        foregroundStyle(d ? row.color : empty)
-                                    ]}
-                                />
-                            ))}
-                        </HStack>
-                        <Spacer />
-                        <Text
-                            modifiers={[
-                                font({ size: 11, design: "monospaced" }),
-                                foregroundStyle(ink3)
-                            ]}
-                        >
-                            {`${row.streak}d`}
-                        </Text>
-                    </HStack>
-                ))}
-            </VStack>
-            <Spacer />
+        <VStack alignment="leading" spacing={14} modifiers={root}>
+            <HStack spacing={6}>
+                <Text
+                    modifiers={[
+                        font({ size: 15, weight: "bold" }),
+                        foregroundStyle(ink)
+                    ]}
+                >
+                    Habits
+                </Text>
+                <Spacer />
+                <Text
+                    modifiers={[
+                        font({
+                            size: 12,
+                            weight: "medium",
+                            design: "monospaced"
+                        }),
+                        foregroundStyle(ink3)
+                    ]}
+                >
+                    {`${props.doneToday}/${props.habitCount} today`}
+                </Text>
+            </HStack>
+            {rows}
+            {hasHint ? null : <Spacer />}
         </VStack>
     )
 }
 
-export default createWidget<HabitsWidgetProps>("HabitsHeatmap", HabitsWidget)
+export default createWidget<HabitsWidgetProps, HabitsWidgetConfiguration>(
+    "HabitsHeatmap",
+    HabitsWidget
+)

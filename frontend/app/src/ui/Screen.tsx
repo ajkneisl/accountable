@@ -1,7 +1,7 @@
 // Standard scrolling screen body: safe-area insets, the app background, and
 // pull-to-refresh (the phone-native replacement for the web's refresh buttons).
 
-import { type ReactNode } from "react"
+import { type ReactNode, useEffect, useRef, useState } from "react"
 import { RefreshControl, ScrollView, View } from "react-native"
 import {
     SafeAreaView,
@@ -32,6 +32,20 @@ export function Screen({
     const insets = useSafeAreaInsets()
     const bottom = edges.includes("bottom") ? 40 : insets.bottom + 40
 
+    // Only show the native spinner for a pull started on this screen. Loading
+    // state is shared across tabs, and iOS leaves a RefreshControl stuck
+    // spinning if it mounts refreshing or flips while the screen is hidden.
+    const [pulling, setPulling] = useState(false)
+    const sawRefresh = useRef(false)
+    useEffect(() => {
+        if (!pulling) return
+        if (refreshing) sawRefresh.current = true
+        else if (sawRefresh.current) {
+            sawRefresh.current = false
+            setPulling(false)
+        }
+    }, [pulling, refreshing])
+
     return (
         <SafeAreaView edges={edges} className="flex-1 bg-bg">
             <ScrollView
@@ -40,8 +54,12 @@ export function Screen({
                 refreshControl={
                     onRefresh && (
                         <RefreshControl
-                            refreshing={refreshing}
-                            onRefresh={onRefresh}
+                            refreshing={pulling}
+                            onRefresh={() => {
+                                sawRefresh.current = false
+                                setPulling(true)
+                                onRefresh()
+                            }}
                             tintColor={colors.ink3}
                         />
                     )

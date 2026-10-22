@@ -1,98 +1,111 @@
-// Modal sheet — the native stand-in for the web's fixed-overlay dialogs
-// (NewGoalDialog, CompetitionDialog, AddWorkoutDialog).
+// Modal sheet for the app's forms (new goal, habit, workout, competition,
+// account changes).
 //
-// The web centres a 460px card over a scrim. On a phone that reads better as a
-// bottom sheet, so this anchors to the bottom, rounds only the top corners, and
-// lifts above the keyboard.
+// Presented as a native iOS page sheet: the system dims and scales the screen
+// behind it and handles swipe-to-dismiss. The primary action sits at the end of
+// the scrolling body rather than pinned to the bottom, so the keyboard can't
+// cover it; the scroll view insets itself for the keyboard.
 
 import { type ReactNode } from "react"
-import {
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    Text,
-    View
-} from "react-native"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { Modal, Pressable, ScrollView, Text, View } from "react-native"
+import { Button } from "./primitives"
+
+export interface SheetAction {
+    label: string
+    onPress: () => void
+    busy?: boolean
+    variant?: "primary" | "danger"
+}
 
 export function Sheet({
     title,
     description,
     onClose,
-    children,
-    footer
+    action,
+    children
 }: {
     title: string
     description?: string
     onClose: () => void
+    /** Full-width button under the form. */
+    action?: SheetAction
     children: ReactNode
-    /** Pinned action row, kept out of the scrolling body. */
-    footer?: ReactNode
 }) {
-    const insets = useSafeAreaInsets()
-
     return (
         <Modal
             visible
-            transparent
             animationType="slide"
+            presentationStyle="pageSheet"
             onRequestClose={onClose}
-            statusBarTranslucent
         >
-            <View className="flex-1 justify-end bg-black/40">
-                {/* Tapping the scrim dismisses, matching the web overlay. */}
-                <Pressable
-                    accessibilityLabel="Close"
-                    onPress={onClose}
-                    className="flex-1"
-                />
-
-                <KeyboardAvoidingView
-                    behavior={Platform.OS === "ios" ? "padding" : undefined}
-                >
-                    <View
-                        style={{ maxHeight: "88%", paddingBottom: insets.bottom }}
-                        className="rounded-t-[24px] bg-bg-card"
+            <View className="flex-1 bg-bg">
+                <View className="flex-row justify-end px-5 pt-4">
+                    <Pressable
+                        onPress={onClose}
+                        accessibilityRole="button"
+                        accessibilityLabel="Close"
+                        hitSlop={10}
+                        className="h-9 w-9 items-center justify-center rounded-full bg-bg-sunken"
                     >
-                        <View className="flex-row items-start justify-between gap-3 px-6 pb-2 pt-6">
-                            <View className="flex-1">
-                                <Text className="text-[22px] font-bold tracking-tight text-ink">
-                                    {title}
-                                </Text>
-                                {description !== undefined && (
-                                    <Text className="mt-1 text-[13px] text-ink-3">
-                                        {description}
-                                    </Text>
-                                )}
-                            </View>
-                            <Pressable
-                                onPress={onClose}
-                                accessibilityRole="button"
-                                accessibilityLabel="Close"
-                                className="h-8 w-8 items-center justify-center rounded-full bg-bg-sunken"
-                            >
-                                <Text className="text-[16px] text-ink-3">×</Text>
-                            </Pressable>
-                        </View>
+                        <Text className="text-[20px] leading-[22px] text-ink-2">
+                            ×
+                        </Text>
+                    </Pressable>
+                </View>
 
-                        <ScrollView
-                            className="px-6"
-                            contentContainerClassName="pb-2 pt-3"
-                            keyboardShouldPersistTaps="handled"
-                        >
-                            {children}
-                        </ScrollView>
-
-                        {footer !== undefined && (
-                            <View className="border-t border-line-2 px-6 pb-2 pt-4">
-                                {footer}
-                            </View>
+                <ScrollView
+                    contentContainerClassName="gap-6 px-5 pb-10 pt-1"
+                    keyboardShouldPersistTaps="handled"
+                    automaticallyAdjustKeyboardInsets
+                >
+                    <View className="gap-2">
+                        <Text className="text-[30px] font-bold tracking-tight text-ink">
+                            {title}
+                        </Text>
+                        {description !== undefined && (
+                            <Text className="text-[16px] leading-[22px] text-ink-3">
+                                {description}
+                            </Text>
                         )}
                     </View>
-                </KeyboardAvoidingView>
+
+                    {children}
+
+                    {action && (
+                        <Button
+                            label={action.label}
+                            onPress={action.onPress}
+                            busy={action.busy}
+                            variant={action.variant ?? "primary"}
+                            size="lg"
+                            className="mt-2"
+                        />
+                    )}
+                </ScrollView>
             </View>
         </Modal>
+    )
+}
+
+/** Labelled group inside a sheet: a field label over its control(s). */
+export function SheetField({
+    label,
+    hint,
+    children
+}: {
+    label: string
+    hint?: string
+    children: ReactNode
+}) {
+    return (
+        <View className="gap-2.5">
+            <Text className="text-[15px] font-semibold text-ink-2">
+                {label}
+            </Text>
+            {children}
+            {hint !== undefined && (
+                <Text className="text-[13px] text-ink-3">{hint}</Text>
+            )}
+        </View>
     )
 }

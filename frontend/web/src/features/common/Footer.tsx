@@ -2,7 +2,6 @@ import { LogoLink } from "./primitives"
 
 /**
  * Site-wide footer — wordmark + product/company links.
- * Used across every page (Landing, Login, Register, Dashboard, Competition).
  */
 export function Footer() {
     return (

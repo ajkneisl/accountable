@@ -1,6 +1,5 @@
 // Landing top navigation.
 
-import { Link } from "react-router-dom"
 import { LogoLink } from "../../common/primitives"
 
 // Each entry jumps to a section's id on the landing page.
@@ -27,12 +26,12 @@ export function NavBar() {
                 ))}
             </div>
             <div className="flex items-center gap-2.5">
-                <Link to="/login" className="btn btn-ghost btn-sm">
-                    Sign in
-                </Link>
-                <Link to="/register" className="btn btn-primary btn-sm">
-                    Start free
-                </Link>
+                <span className="chip">
+                    <span className="dot-lime" /> iOS &amp; Android · coming soon
+                </span>
+                <a href="#download" className="btn btn-primary btn-sm">
+                    Get the app
+                </a>
             </div>
         </nav>
     )

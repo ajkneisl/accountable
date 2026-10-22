@@ -29,28 +29,18 @@ import {
     SourceTile
 } from "../../../ui/primitives"
 import {
-    dayOfIsoWeek,
     formatWeekRange,
     integrationVisual,
     unitLabel
 } from "../../dashboard/types"
 import { FALLBACK_BAR_COLOR, MEDAL } from "../colors"
+import {
+    computeStandings,
+    paceTarget,
+    weeklyTarget,
+    type MemberStanding
+} from "../standings"
 import { AddCompetitionGoalSheet } from "./AddCompetitionGoalSheet"
-
-/** Weekly-equivalent target the weekly total is measured against. */
-function weeklyTarget(board: CompetitionGoalBoard): number {
-    return board.period === "WEEKLY" ? board.target : board.target * 7
-}
-
-/**
- * The total a member must have reached *by now* to be "on pace":
- * - past weeks compare against the full weekly target
- * - the current week prorates it by how far into the week we are
- */
-function paceTarget(board: CompetitionGoalBoard, currentWeek: boolean): number {
-    const wt = weeklyTarget(board)
-    return currentWeek ? (wt * dayOfIsoWeek()) / 7 : wt
-}
 
 function boardKey(b: {
     integration: string
@@ -65,41 +55,6 @@ function goalLabel(board: CompetitionGoalBoard): string {
     const unit = unitLabel(board.integration, board.metric)
     const cadence = board.period === "DAILY" ? "day" : "week"
     return `${board.target} ${unit} / ${cadence}`
-}
-
-type MemberStanding = {
-    userID: string
-    username: string
-    streak: number
-    color: string
-    goalsHit: number
-    /** Per-goal on-pace flags, in board order, for the segmented indicator. */
-    hits: boolean[]
-}
-
-/** Rank members by goals-on-pace, then by streak — leader first. */
-function computeStandings(
-    competition: CompetitionDetail,
-    week: CompetitionWeek,
-    currentWeek: boolean,
-    colorMap: Record<string, string>
-): MemberStanding[] {
-    return competition.members
-        .map((m) => {
-            const hits = week.goals.map((board) => {
-                const mw = board.members.find((x) => x.userID === m.userID)
-                return (mw?.total ?? 0) >= paceTarget(board, currentWeek)
-            })
-            return {
-                userID: m.userID,
-                username: m.username,
-                streak: m.streak,
-                color: colorMap[m.userID] ?? FALLBACK_BAR_COLOR,
-                goalsHit: hits.filter(Boolean).length,
-                hits
-            }
-        })
-        .sort((a, b) => b.goalsHit - a.goalsHit || b.streak - a.streak)
 }
 
 function Standings({

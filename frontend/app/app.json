@@ -8,13 +8,14 @@
         "userInterfaceStyle": "light",
         "ios": {
             "supportsTablet": true,
-            "bundleIdentifier": "com.accountable.app",
+            "bundleIdentifier": "app.umn.acc",
+            "buildNumber": "3",
             "appleTeamId": "CBL6R6SP6A"
         },
         "android": {
             "adaptiveIcon": {
                 "foregroundImage": "./assets/adaptive-icon.png",
-                "backgroundColor": "#f8f5ef"
+                "backgroundColor": "#16100c"
             },
             "predictiveBackGestureEnabled": false
         },
@@ -24,12 +25,16 @@
             "output": "single"
         },
         "plugins": [
+            "./plugins/withSceneLifecycle",
+            "./plugins/withHabitsWidgetPicker",
+            "./plugins/withCompetitionsWidgetPicker",
+            "./plugins/withGoalsWidgetPicker",
             "expo-router",
             [
                 "@kingstinct/react-native-healthkit",
                 {
                     "NSHealthShareUsageDescription": "Accountable reads your workouts so they count toward your goals.",
-                    "NSHealthUpdateUsageDescription": false,
+                    "NSHealthUpdateUsageDescription": "Accountable only reads your workouts. It never writes to Apple Health.",
                     "background": true
                 }
             ],
@@ -50,13 +55,70 @@
                         {
                             "name": "HabitsHeatmap",
                             "displayName": "Habits",
-                            "description": "Your habit heatmap at a glance.",
+                            "description": "Your habits and their streaks at a glance.",
                             "ios": {
                                 "supportedFamilies": [
                                     "systemSmall",
                                     "systemMedium",
                                     "systemLarge"
-                                ]
+                                ],
+                                "configuration": {
+                                    "title": "Habits",
+                                    "description": "Choose the habits to show.",
+                                    "parameters": {
+                                        "habits": {
+                                            "title": "Habits",
+                                            "type": "string",
+                                            "default": ""
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "name": "CompetitionStandings",
+                            "displayName": "Competitions",
+                            "description": "Where you stand in a competition this week.",
+                            "ios": {
+                                "supportedFamilies": [
+                                    "systemSmall",
+                                    "systemMedium",
+                                    "systemLarge"
+                                ],
+                                "configuration": {
+                                    "title": "Competition",
+                                    "description": "Choose the competition to show.",
+                                    "parameters": {
+                                        "competition": {
+                                            "title": "Competition",
+                                            "type": "string",
+                                            "default": ""
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "name": "GoalsProgress",
+                            "displayName": "Goals",
+                            "description": "This week's progress on your goals.",
+                            "ios": {
+                                "supportedFamilies": [
+                                    "systemSmall",
+                                    "systemMedium",
+                                    "systemLarge"
+                                ],
+                                "configuration": {
+                                    "title": "Goals",
+                                    "description": "Choose the goals to show.",
+                                    "parameters": {
+                                        "goals": {
+                                            "title": "Goals",
+                                            "type": "string",
+                                            "default": ""
+                                        }
+                                    }
+                                }
                             }
                         }
                     ]

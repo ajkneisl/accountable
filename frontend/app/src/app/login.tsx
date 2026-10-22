@@ -50,7 +50,6 @@ export default function Login() {
             <View>
                 <Label>Username</Label>
                 <Input
-                    autoFocus
                     autoCapitalize="none"
                     autoCorrect={false}
                     autoComplete="username"

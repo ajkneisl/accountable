@@ -6,7 +6,7 @@ import { HabitCard } from "../../../features/habits/components/HabitCard"
 import { useHabits } from "../../../features/habits/HabitsData"
 import { Screen } from "../../../ui/Screen"
 import { SettingsButton } from "../../../ui/SettingsButton"
-import { Button, Card, Display, Spinner } from "../../../ui/primitives"
+import { AddCard, Card, Display, Spinner } from "../../../ui/primitives"
 
 export default function Habits() {
     const { data, loading, error, reload, toggle, remove, openNewHabit } =
@@ -36,13 +36,6 @@ export default function Habits() {
                         </>
                     )}
                 </Display>
-                <View className="flex-row">
-                    <Button
-                        label="+ New habit"
-                        size="sm"
-                        onPress={openNewHabit}
-                    />
-                </View>
             </View>
 
             {error !== null && (
@@ -80,6 +73,10 @@ export default function Habits() {
                         onDelete={() => void remove(habit.id).catch(reload)}
                     />
                 ))}
+
+            {data !== null && (
+                <AddCard label="New habit" onPress={openNewHabit} />
+            )}
         </Screen>
     )
 }

@@ -5,8 +5,8 @@ import { ScrollView, Text, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
 /**
- * Large title over a form, with [footer] pinned below it. The native header
- * above provides the back button.
+ * Large title over a form, with [footer] under it. The native header above
+ * provides the back button; it's opaque, so the content needs no top inset.
  */
 export function AuthForm({
     title,
@@ -22,29 +22,26 @@ export function AuthForm({
     return (
         <SafeAreaView edges={["bottom"]} className="flex-1 bg-bg">
             <ScrollView
-                contentContainerClassName="flex-grow gap-6 px-6 pb-6 pt-2"
-                contentInsetAdjustmentBehavior="automatic"
+                contentContainerClassName="gap-7 px-6 pb-8 pt-2"
                 keyboardShouldPersistTaps="handled"
                 // Lets iOS inset the scroll view for the keyboard, which behaves
                 // better here than wrapping everything in a KeyboardAvoidingView.
                 automaticallyAdjustKeyboardInsets
             >
                 <View className="gap-1.5">
-                    <Text className="text-[34px] font-bold tracking-tight text-ink">
+                    <Text className="text-[34px] font-bold leading-[40px] tracking-tight text-ink">
                         {title}
                     </Text>
                     {subtitle && (
-                        <Text className="text-[15px] text-ink-3">
+                        <Text className="text-[16px] text-ink-3">
                             {subtitle}
                         </Text>
                     )}
                 </View>
 
-                <View className="gap-4">{children}</View>
+                <View className="gap-5">{children}</View>
 
-                {footer && (
-                    <View className="mt-auto items-center pt-4">{footer}</View>
-                )}
+                {footer && <View className="items-center">{footer}</View>}
             </ScrollView>
         </SafeAreaView>
     )
@@ -61,7 +58,7 @@ export function AuthSwitch({
     onPress: () => void
 }) {
     return (
-        <Text className="text-[15px] text-ink-3">
+        <Text className="text-[16px] text-ink-3">
             {prompt}{" "}
             <Text
                 onPress={onPress}

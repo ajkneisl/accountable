@@ -8,6 +8,8 @@ import { Redirect, Stack } from "expo-router"
 import { useAtomValue } from "jotai"
 import { isAuthenticatedAtom } from "../../auth"
 import { AppDataProvider } from "../../features/common/AppData"
+import { CompetitionsWidgetSync } from "../../features/competition/widget/CompetitionsWidgetSync"
+import { GoalsWidgetSync } from "../../features/dashboard/widget/GoalsWidgetSync"
 import { HabitsProvider } from "../../features/habits/HabitsData"
 import { AppleHealthProvider } from "../../features/health/AppleHealthData"
 
@@ -18,6 +20,8 @@ export default function AppLayout() {
 
     return (
         <AppDataProvider>
+            <CompetitionsWidgetSync />
+            <GoalsWidgetSync />
             <AppleHealthProvider>
                 <HabitsProvider>
                     <Stack screenOptions={{ headerShown: false }}>

@@ -1,4 +1,4 @@
-// Dashboard — today's goals, a habits report, and streaks. Goals are created
+// Dashboard — today's goals, a habits report, competitions, and streaks. Goals are created
 // and listed on the Goals tab. Data comes from the providers above the tabs.
 
 import { Text } from "react-native"
@@ -6,6 +6,7 @@ import { useAtomValue } from "jotai"
 import { userAtom } from "../../../auth"
 import { useAppData } from "../../../features/common/AppData"
 import { useHabits } from "../../../features/habits/HabitsData"
+import { CompetitionCard } from "../../../features/dashboard/components/CompetitionCard"
 import { DashboardHeader } from "../../../features/dashboard/components/DashboardHeader"
 import { HabitsReportCard } from "../../../features/dashboard/components/HabitsReportCard"
 import { IntegrationsSyncCard } from "../../../features/dashboard/components/IntegrationsSyncCard"
@@ -50,6 +51,14 @@ export default function Dashboard() {
             <TodayCard goals={data.goals} />
 
             <HabitsReportCard />
+
+            {data.topCompetition && data.competitions.length > 0 && (
+                <CompetitionCard
+                    competition={data.topCompetition}
+                    total={data.competitions.length}
+                    meID={user?.userID}
+                />
+            )}
 
             <StreaksCard
                 streak={data.streak}

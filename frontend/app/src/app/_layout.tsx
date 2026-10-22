@@ -53,10 +53,12 @@ function Bootstrap({ children }: { children: React.ReactNode }) {
 }
 
 // Native header on the auth forms, so they get the iOS back button and swipe-back.
+// Opaque rather than transparent: a transparent header makes the form inset
+// itself under it, and that inset stacks with the keyboard's.
 const authHeader = {
     headerShown: true,
     headerTitle: "",
-    headerTransparent: true,
+    headerStyle: { backgroundColor: colors.bg },
     headerShadowVisible: false,
     headerBackButtonDisplayMode: "minimal",
     headerTintColor: colors.ink
@@ -72,10 +74,7 @@ export default function RootLayout() {
                         <Stack screenOptions={{ headerShown: false }}>
                             <Stack.Screen name="index" />
                             <Stack.Screen name="welcome" />
-                            <Stack.Screen
-                                name="login"
-                                options={authHeader}
-                            />
+                            <Stack.Screen name="login" options={authHeader} />
                             <Stack.Screen
                                 name="register"
                                 options={authHeader}

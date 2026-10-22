@@ -4,14 +4,8 @@
 import { useState } from "react"
 import { Text, View } from "react-native"
 import { ApiError, logWorkout, useApi, type WorkoutType } from "@shared/index"
-import { Sheet } from "../../../ui/Sheet"
-import {
-    Button,
-    ChoiceButton,
-    ErrorList,
-    Eyebrow,
-    Input
-} from "../../../ui/primitives"
+import { Sheet, SheetField } from "../../../ui/Sheet"
+import { ChoiceButton, ErrorList, Input } from "../../../ui/primitives"
 
 const TYPES: { value: WorkoutType; label: string }[] = [
     { value: "RUN", label: "Run" },
@@ -72,56 +66,54 @@ export function AddWorkoutSheet({
             title="Log a workout"
             description="Recorded under Apple Fitness for today."
             onClose={onClose}
-            footer={
-                <View className="flex-row justify-end gap-2.5">
-                    <Button label="Cancel" variant="line" onPress={onClose} />
-                    <Button
-                        label={submitting ? "Saving…" : "Log workout →"}
-                        onPress={submit}
-                        busy={submitting}
-                    />
-                </View>
-            }
+            action={{
+                label: submitting ? "Saving…" : "Log workout",
+                onPress: submit,
+                busy: submitting
+            }}
         >
-            <Eyebrow className="mb-2.5">Type</Eyebrow>
-            <View className="mb-5 flex-row flex-wrap gap-2">
-                {TYPES.map((t) => (
-                    <ChoiceButton
-                        key={t.value}
-                        selected={type === t.value}
-                        onPress={() => setType(t.value)}
-                    >
-                        <Text className="text-[13px] font-semibold text-ink">
-                            {t.label}
-                        </Text>
-                    </ChoiceButton>
-                ))}
-            </View>
+            <SheetField label="Type">
+                <View className="flex-row flex-wrap gap-2.5">
+                    {TYPES.map((t) => (
+                        <ChoiceButton
+                            key={t.value}
+                            selected={type === t.value}
+                            onPress={() => setType(t.value)}
+                        >
+                            <Text className="text-[16px] font-semibold text-ink">
+                                {t.label}
+                            </Text>
+                        </ChoiceButton>
+                    ))}
+                </View>
+            </SheetField>
 
-            <View className="mb-5 flex-row gap-3">
+            <View className="flex-row gap-4">
                 <View className="flex-1">
-                    <Eyebrow className="mb-2.5">Duration</Eyebrow>
-                    <View className="flex-row items-center gap-2">
-                        <Input
-                            keyboardType="number-pad"
-                            value={duration}
-                            onChangeText={setDuration}
-                            className="w-20"
-                        />
-                        <Text className="text-[13px] text-ink-3">min</Text>
-                    </View>
+                    <SheetField label="Duration">
+                        <View className="flex-row items-center gap-2.5">
+                            <Input
+                                keyboardType="number-pad"
+                                value={duration}
+                                onChangeText={setDuration}
+                                className="flex-1"
+                            />
+                            <Text className="text-[17px] text-ink-3">min</Text>
+                        </View>
+                    </SheetField>
                 </View>
                 <View className="flex-1">
-                    <Eyebrow className="mb-2.5">Calories</Eyebrow>
-                    <View className="flex-row items-center gap-2">
-                        <Input
-                            keyboardType="number-pad"
-                            value={calories}
-                            onChangeText={setCalories}
-                            className="w-24"
-                        />
-                        <Text className="text-[13px] text-ink-3">kcal</Text>
-                    </View>
+                    <SheetField label="Calories">
+                        <View className="flex-row items-center gap-2.5">
+                            <Input
+                                keyboardType="number-pad"
+                                value={calories}
+                                onChangeText={setCalories}
+                                className="flex-1"
+                            />
+                            <Text className="text-[17px] text-ink-3">kcal</Text>
+                        </View>
+                    </SheetField>
                 </View>
             </View>
 

@@ -1,6 +1,6 @@
 // Landing section 04 — head-to-head competition teaser.
 
-import { Link } from "react-router-dom"
+import { StoreBadges } from "./StoreBadges"
 
 export function CompetitionTease() {
     return (
@@ -20,9 +20,7 @@ export function CompetitionTease() {
                         loser buys coffee, loser writes a postcard, loser owns
                         it in the group chat.
                     </p>
-                    <Link to="/competition" className="btn btn-accent btn-lg">
-                        Start a competition →
-                    </Link>
+                    <StoreBadges tone="light" />
                 </div>
 
                 <div className="rounded-[20px] border border-white/10 bg-white/[0.04] p-7">

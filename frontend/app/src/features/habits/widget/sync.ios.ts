@@ -1,17 +1,22 @@
 // Feeds the HabitsHeatmap widget. The widget can't fetch or compute anything
-// itself, so this flattens the API response into ready-to-paint levels and hands
-// it over as a snapshot, which WidgetKit keeps until the next one.
+// itself, so this flattens the API response into ready-to-paint cells and hands
+// it over as a timeline: the current state now, plus the same data rolled
+// forward to each of the next few midnights (nothing checked in on the new
+// days). That way the widget moves on to a new day by itself, even if the app
+// isn't opened, until the next sync replaces the timeline.
 
 import { isRunningInExpoGo } from "expo"
 import type { HabitsResponse } from "@shared/index"
 import { buildGrid, HABIT_PALETTE } from "../grid"
 import type { HabitsWidgetProps } from "./HabitsWidget"
 
-/** Week columns the widget can draw at most (the medium/large width). */
-const WIDGET_WEEKS = 20
+/** Week columns the widget draws at most (one medium/large card). */
+const WIDGET_WEEKS = 9
 
-/** Days in each habit's strip on the large widget. */
-const RECENT_DAYS = 14
+/** Midnights to precompute, so a week without opening the app stays correct. */
+const ROLLOVER_DAYS = 7
+
+const DAY_MS = 86_400_000
 
 type Widget = typeof import("./HabitsWidget").default
 
@@ -36,50 +41,88 @@ function getWidget(): Widget | null {
     return widget
 }
 
-function update(props: HabitsWidgetProps) {
+function update(entries: { date: Date; props: HabitsWidgetProps }[]) {
     try {
-        getWidget()?.updateSnapshot(props)
+        getWidget()?.updateTimeline(entries)
     } catch {
         // A widget refresh is best effort and must never break the app.
     }
 }
 
-export function syncHabitsWidget({
-    start,
-    today,
-    habits
-}: HabitsResponse): void {
-    const last = habits[0]?.done.length ?? 0
+/** `yyyy-MM-dd` [days] after [date]. */
+function addDays(date: string, days: number): string {
+    const [y, m, d] = date.split("-").map(Number)
+    return new Date(Date.UTC(y, m - 1, d) + days * DAY_MS)
+        .toISOString()
+        .slice(0, 10)
+}
 
-    const weeks = buildGrid(start, today, WIDGET_WEEKS).map((week) =>
-        week.map((cell) => {
-            if (cell.future) return -1
-            if (cell.index < 0 || habits.length === 0) return 0
-            const done = habits.filter((h) => h.done[cell.index]).length
-            return done === 0 ? 0 : Math.ceil((done / habits.length) * 4)
-        })
-    )
+/** Widget props for [res] as it will look [ahead] days from now, if nothing else is checked in. */
+function propsFor(res: HabitsResponse, ahead: number): HabitsWidgetProps {
+    const today = addDays(res.today, ahead)
+    const habits = res.habits.map((h) => ({
+        ...h,
+        // A streak survives one unchecked midnight only if today was done.
+        streak:
+            ahead === 0 || (ahead === 1 && h.done[h.done.length - 1])
+                ? h.streak
+                : 0,
+        done: [...h.done, ...Array<boolean>(ahead).fill(false)]
+    }))
+    const grid = buildGrid(res.start, today, WIDGET_WEEKS)
 
-    update({
-        weeks,
-        doneToday: habits.filter((h) => h.done[last - 1]).length,
-        habitCount: habits.length,
-        rows: habits.map((h) => ({
+    return {
+        habits: habits.map((h) => ({
+            id: h.id,
             name: h.name,
             color: HABIT_PALETTE[h.color].fill,
             streak: h.streak,
-            recent: h.done.slice(-RECENT_DAYS).map((d) => (d ? 1 : 0))
+            doneToday: h.done[h.done.length - 1] ?? false,
+            weeks: grid.map((week) =>
+                week.map((cell) =>
+                    cell.future
+                        ? -1
+                        : cell.index >= 0 && h.done[cell.index]
+                          ? 1
+                          : 0
+                )
+            )
         })),
+        doneToday: habits.filter((h) => h.done[h.done.length - 1]).length,
+        habitCount: habits.length,
         signedOut: false
-    })
+    }
+}
+
+export function syncHabitsWidget(res: HabitsResponse): void {
+    const now = new Date()
+    const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+    update(
+        Array.from({ length: ROLLOVER_DAYS + 1 }, (_, ahead) => ({
+            date:
+                ahead === 0
+                    ? now
+                    : new Date(
+                          midnight.getFullYear(),
+                          midnight.getMonth(),
+                          midnight.getDate() + ahead
+                      ),
+            props: propsFor(res, ahead)
+        }))
+    )
 }
 
 export function clearHabitsWidget(): void {
-    update({
-        weeks: [],
-        doneToday: 0,
-        habitCount: 0,
-        rows: [],
-        signedOut: true
-    })
+    update([
+        {
+            date: new Date(),
+            props: {
+                habits: [],
+                doneToday: 0,
+                habitCount: 0,
+                signedOut: true
+            }
+        }
+    ])
 }

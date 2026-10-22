@@ -11,7 +11,7 @@ import {
 } from "../../../features/dashboard/types"
 import { Screen } from "../../../ui/Screen"
 import { SettingsButton } from "../../../ui/SettingsButton"
-import { Button, Card, Display, Spinner } from "../../../ui/primitives"
+import { AddCard, Card, Display, Spinner } from "../../../ui/primitives"
 
 export default function Goals() {
     const { data, loading, error, reload, openNewGoal } = useAppData()
@@ -42,13 +42,6 @@ export default function Goals() {
                 <Text className="text-[15px] text-ink-3">
                     Week {isoWeekNumber(new Date())}
                 </Text>
-                <View className="flex-row">
-                    <Button
-                        label="+ New goal"
-                        size="sm"
-                        onPress={openNewGoal}
-                    />
-                </View>
             </View>
 
             {error !== null && (
@@ -78,6 +71,10 @@ export default function Goals() {
             {goals.map((g) => (
                 <GoalCard key={goalKey(g)} goal={g} />
             ))}
+
+            {!(goals.length === 0 && loading) && (
+                <AddCard label="New goal" onPress={openNewGoal} />
+            )}
         </Screen>
     )
 }

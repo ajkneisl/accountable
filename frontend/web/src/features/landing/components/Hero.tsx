@@ -1,5 +1,5 @@
-import { Link } from "react-router-dom"
 import { HeroPreview } from "./HeroPreview"
+import { StoreBadges } from "./StoreBadges"
 
 /**
  * Hero section of Accountable.
@@ -36,14 +36,8 @@ export function Hero() {
                     place.
                 </p>
 
-                <div className="mb-7 flex items-center gap-3">
-                    <Link to="/register" className="btn btn-primary btn-lg">
-                        Set your first goal
-                    </Link>
-
-                    <Link to="/dashboard" className="btn btn-line btn-lg">
-                        Login
-                    </Link>
+                <div className="mb-7">
+                    <StoreBadges />
                 </div>
 
                 <div className="flex items-center gap-3.5 text-[13px] text-ink-3">

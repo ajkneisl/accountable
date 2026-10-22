@@ -56,9 +56,7 @@ export function Eyebrow({
     className?: string
 }) {
     return (
-        <Text
-            className={`text-[13px] font-semibold text-ink-3 ${className}`}
-        >
+        <Text className={`text-[13px] font-semibold text-ink-3 ${className}`}>
             {children}
         </Text>
     )
@@ -112,6 +110,27 @@ export function Divider({ className = "" }: { className?: string }) {
     return <View className={`h-px bg-line-2 ${className}`} />
 }
 
+/** Dashed, greyed-out card that sits at the end of a list to add another item. */
+export function AddCard({
+    label,
+    onPress
+}: {
+    label: string
+    onPress: () => void
+}) {
+    return (
+        <Pressable
+            onPress={onPress}
+            accessibilityRole="button"
+            accessibilityLabel={label}
+            className="flex-row items-center justify-center gap-2 rounded-lg border border-dashed border-line bg-bg-sunken/50 p-5 active:opacity-60"
+        >
+            <Text className="text-[18px] font-medium text-ink-3">+</Text>
+            <Text className="text-[15px] font-medium text-ink-3">{label}</Text>
+        </Pressable>
+    )
+}
+
 /* ----------------------------------------------------------------- buttons */
 
 type ButtonVariant = "primary" | "accent" | "line" | "ghost" | "danger"
@@ -134,15 +153,15 @@ const BUTTON_FG: Record<ButtonVariant, string> = {
 }
 
 const BUTTON_PAD: Record<ButtonSize, string> = {
-    sm: "px-3 py-2",
-    md: "px-[18px] py-3",
-    lg: "px-[26px] py-4"
+    sm: "px-3.5 py-2.5",
+    md: "px-5 py-3.5",
+    lg: "px-6 py-[17px]"
 }
 
 const BUTTON_TEXT: Record<ButtonSize, string> = {
-    sm: "text-[13px]",
-    md: "text-[15px]",
-    lg: "text-[16px]"
+    sm: "text-[14px]",
+    md: "text-[16px]",
+    lg: "text-[17px] font-semibold"
 }
 
 /** Pill button. Mirrors `.btn` and its variant/size modifiers. */
@@ -247,7 +266,7 @@ export function ChoiceButton({
             onPress={onPress}
             accessibilityRole="button"
             accessibilityState={{ selected }}
-            className={`rounded-[10px] border px-3 py-2.5 ${
+            className={`rounded-[14px] border-[1.5px] px-4 py-3.5 ${
                 selected ? "border-ink bg-bg-sunken" : "border-line bg-bg-card"
             } ${className}`}
         >
@@ -260,18 +279,27 @@ export function ChoiceButton({
 
 export function Label({ children }: { children: ReactNode }) {
     return (
-        <Text className="mb-1.5 text-xs font-medium text-ink-2">{children}</Text>
+        <Text className="mb-2 text-[15px] font-semibold text-ink-2">
+            {children}
+        </Text>
     )
 }
 
+/**
+ * Single-line text field. Sized with an explicit height and no line height:
+ * iOS clips a TextInput's text when a line height is set, which the text-*
+ * classes would otherwise add.
+ */
 export function Input({
     className = "",
+    style,
     ...rest
 }: TextInputProps & { className?: string }) {
     return (
         <TextInput
             placeholderTextColor={colors.ink3}
-            className={`rounded-[10px] border border-line bg-bg-card px-3.5 py-[11px] text-sm text-ink ${className}`}
+            style={[{ fontSize: 17, height: 52, paddingHorizontal: 16 }, style]}
+            className={`rounded-[14px] border border-line bg-bg-card text-ink ${className}`}
             {...rest}
         />
     )
@@ -283,10 +311,10 @@ export function ErrorList({ errors }: { errors: string[] }) {
     return (
         <View
             accessibilityRole="alert"
-            className="gap-1 rounded-[10px] bg-coral-soft p-3"
+            className="gap-1 rounded-[12px] bg-coral-soft p-3.5"
         >
             {errors.map((msg, i) => (
-                <Text key={i} className="text-xs text-coral-ink">
+                <Text key={i} className="text-[14px] text-coral-ink">
                     {msg}
                 </Text>
             ))}
@@ -572,7 +600,11 @@ export function RingChart({
     const r = size / 2 - stroke / 2 - 1
     const c = 2 * Math.PI * r
     const color =
-        tone === "coral" ? colors.coral : tone === "ink" ? colors.ink : colors.lime
+        tone === "coral"
+            ? colors.coral
+            : tone === "ink"
+              ? colors.ink
+              : colors.lime
 
     return (
         <View style={{ width: size, height: size }}>
@@ -600,7 +632,9 @@ export function RingChart({
             </Svg>
             <View className="absolute inset-0 items-center justify-center">
                 <View className="flex-row items-baseline">
-                    <Mono className="text-[28px] font-bold text-ink">{pct}</Mono>
+                    <Mono className="text-[28px] font-bold text-ink">
+                        {pct}
+                    </Mono>
                     <Text className="text-sm text-ink-3">%</Text>
                 </View>
                 <Text className="mt-1 text-[11px] text-ink-3">{label}</Text>

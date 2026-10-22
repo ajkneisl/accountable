@@ -19,7 +19,7 @@ export function AddCompetitionGoalSheet({
         <GoalSheet
             title="Add shared goal"
             description="Every member of this competition is measured against this goal."
-            submitLabel="Add goal →"
+            submitLabel="Add goal"
             submittingLabel="Adding…"
             onClose={onClose}
             onSubmit={async (draft) => {

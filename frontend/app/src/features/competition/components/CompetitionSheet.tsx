@@ -9,15 +9,8 @@ import {
     joinCompetition,
     useApi
 } from "@shared/index"
-import { Sheet } from "../../../ui/Sheet"
-import {
-    Button,
-    ChoiceButton,
-    ErrorList,
-    Eyebrow,
-    Input,
-    MONO
-} from "../../../ui/primitives"
+import { Sheet, SheetField } from "../../../ui/Sheet"
+import { ChoiceButton, ErrorList, Input, MONO } from "../../../ui/primitives"
 
 type Mode = "create" | "join"
 
@@ -76,18 +69,13 @@ export function CompetitionSheet({
         <Sheet
             title={mode === "create" ? "New competition" : "Join a competition"}
             onClose={onClose}
-            footer={
-                <View className="flex-row justify-end gap-2.5">
-                    <Button label="Cancel" variant="line" onPress={onClose} />
-                    <Button
-                        label={mode === "create" ? "Create →" : "Join →"}
-                        onPress={submit}
-                        busy={busy}
-                    />
-                </View>
-            }
+            action={{
+                label: mode === "create" ? "Create competition" : "Join",
+                onPress: submit,
+                busy
+            }}
         >
-            <View className="mb-5 flex-row gap-1.5">
+            <View className="flex-row gap-2.5">
                 {(["create", "join"] as Mode[]).map((m) => (
                     <ChoiceButton
                         key={m}
@@ -99,7 +87,7 @@ export function CompetitionSheet({
                         className="flex-1"
                     >
                         <Text
-                            className={`text-center text-[13px] font-semibold ${
+                            className={`text-center text-[16px] font-semibold ${
                                 mode === m ? "text-ink" : "text-ink-3"
                             }`}
                         >
@@ -110,8 +98,7 @@ export function CompetitionSheet({
             </View>
 
             {mode === "create" ? (
-                <>
-                    <Eyebrow className="mb-2.5">Name</Eyebrow>
+                <SheetField label="Name">
                     <Input
                         autoFocus
                         value={name}
@@ -120,10 +107,9 @@ export function CompetitionSheet({
                         returnKeyType="go"
                         placeholder="e.g. Spring grind"
                     />
-                </>
+                </SheetField>
             ) : (
-                <>
-                    <Eyebrow className="mb-2.5">Join code</Eyebrow>
+                <SheetField label="Join code">
                     <Input
                         autoFocus
                         value={code}
@@ -135,14 +121,10 @@ export function CompetitionSheet({
                         placeholder="ABC123"
                         style={{ fontFamily: MONO, letterSpacing: 1.2 }}
                     />
-                </>
+                </SheetField>
             )}
 
-            {error !== null && (
-                <View className="mt-4">
-                    <ErrorList errors={[error]} />
-                </View>
-            )}
+            {error !== null && <ErrorList errors={[error]} />}
         </Sheet>
     )
 }
