@@ -12,7 +12,8 @@ import {
     goalKey,
     goalTitle,
     integrationVisual,
-    unitLabel
+    unitLabel,
+    unitScale
 } from "../types"
 import type { GoalsWidgetProps } from "./GoalsWidget"
 
@@ -69,6 +70,10 @@ function propsFor(
 ): GoalsWidgetProps {
     const cards = goals.map((g) => {
         const visual = integrationVisual(g.integration)
+        // Totals are painted as-is, so they go over in display units (hours of
+        // sleep, not minutes); the bars only compare against dayTarget.
+        const scale = unitScale(g.integration, g.metric)
+        const shown = (v: number) => Math.round((v / scale) * 10) / 10
         const weekly = g.period === "WEEKLY" ? g.target : g.target * 7
         const fresh = day > 6
         const total = fresh ? 0 : g.weekTotal
@@ -88,8 +93,8 @@ function propsFor(
             name: goalTitle(g),
             source: visual.sourceLabel,
             color: TILE_COLOR[visual.tile] ?? TILE_COLOR.lime,
-            total,
-            target: weekly,
+            total: shown(total),
+            target: shown(weekly),
             unit: unitLabel(g.integration, g.metric),
             // Prorated by how far into the week we are, as on the goal card.
             onPace: total >= (weekly * dayOfIsoWeek(now)) / 7,

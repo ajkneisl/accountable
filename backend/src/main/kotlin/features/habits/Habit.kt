@@ -15,6 +15,7 @@ import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.insertIgnore
 import org.jetbrains.exposed.sql.javatime.date
 import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.update
 import user.Users
 
 /** Longest allowed habit name, after trimming. */
@@ -105,6 +106,18 @@ suspend fun habitFor(userID: UUID, habitID: UUID): Habit? = suspendTransaction {
         .firstOrNull()
         ?.toEntity<Habit>()
 }
+
+/**
+ * Rename and/or recolor a habit; null fields are left as they are. Returns true if [userID] owns
+ * [habitID].
+ */
+suspend fun updateHabit(userID: UUID, habitID: UUID, name: String?, color: HabitColor?): Boolean =
+    suspendTransaction {
+        Habits.update({ (Habits.id eq habitID) and (Habits.userID eq userID) }) {
+            if (name != null) it[Habits.name] = name
+            if (color != null) it[Habits.color] = color
+        } > 0
+    }
 
 /** Delete a habit and (via cascade) its check-ins. Returns true if a row was removed. */
 suspend fun deleteHabit(userID: UUID, habitID: UUID): Boolean = suspendTransaction {

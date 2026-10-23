@@ -13,6 +13,7 @@ import {
 } from "../../../ui/primitives"
 import {
     dayOfIsoWeek,
+    formatAmount,
     formatWeekRange,
     goalTitle,
     integrationVisual,
@@ -113,10 +114,11 @@ export function GoalCard({ goal }: { goal: Goal }) {
                     style={{ fontSize: 40, lineHeight: 42, letterSpacing: -1.2 }}
                     className="font-bold text-ink"
                 >
-                    {total}
+                    {formatAmount(goal.integration, goal.metric, total)}
                 </Mono>
                 <Text className="mb-1.5 flex-1 text-[13px] text-ink-3">
-                    / {weeklyTarget} {unit} ·{" "}
+                    / {formatAmount(goal.integration, goal.metric, weeklyTarget)}{" "}
+                    {unit} ·{" "}
                     {offset === 0 ? "this week" : rangeLabel}
                 </Text>
             </View>

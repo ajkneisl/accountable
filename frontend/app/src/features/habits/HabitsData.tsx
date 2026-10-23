@@ -20,9 +20,10 @@ import {
     deleteHabit,
     listHabits,
     setHabitCheckin,
+    updateHabit,
     useApi
 } from "@shared/index"
-import { NewHabitSheet } from "./components/NewHabitSheet"
+import { HabitSheet } from "./components/HabitSheet"
 import { syncHabitsWidget } from "./widget/sync"
 
 /** Heatmap window: 26 weeks, enough to fill the widest heatmap with history. */
@@ -36,8 +37,11 @@ interface HabitsData {
     /** Mark [habitID] done or not on [date] (`yyyy-MM-dd`). Applied optimistically. */
     toggle: (habitID: string, date: string, done: boolean) => void
     create: (name: string, color: HabitColor) => Promise<void>
+    update: (habitID: string, name: string, color: HabitColor) => Promise<void>
     remove: (habitID: string) => Promise<void>
     openNewHabit: () => void
+    /** Open the edit sheet (rename, recolor, delete) for [habitID]. */
+    openEditHabit: (habitID: string) => void
 }
 
 const HabitsContext = createContext<HabitsData | null>(null)
@@ -64,7 +68,8 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
     const [error, setError] = useState<string | null>(null)
     // `quiet` refetches (on returning to the app) skip the loading spinner.
     const [tick, setTick] = useState({ n: 0, quiet: false })
-    const [newHabitOpen, setNewHabitOpen] = useState(false)
+    // Which habit sheet is up: `null` habitID for a new habit.
+    const [sheet, setSheet] = useState<{ habitID: string | null } | null>(null)
 
     useEffect(() => {
         let cancelled = false
@@ -140,6 +145,15 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
         [api]
     )
 
+    const update = useCallback(
+        async (habitID: string, name: string, color: HabitColor) => {
+            setData(
+                await updateHabit(api, habitID, { name, color }, HABIT_DAYS)
+            )
+        },
+        [api]
+    )
+
     const remove = useCallback(
         async (habitID: string) => {
             await deleteHabit(api, habitID)
@@ -154,7 +168,16 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
         [api]
     )
 
-    const openNewHabit = useCallback(() => setNewHabitOpen(true), [])
+    const openNewHabit = useCallback(() => setSheet({ habitID: null }), [])
+    const openEditHabit = useCallback(
+        (habitID: string) => setSheet({ habitID }),
+        []
+    )
+    const closeSheet = useCallback(() => setSheet(null), [])
+    const editing =
+        sheet?.habitID != null
+            ? data?.habits.find((h) => h.id === sheet.habitID)
+            : undefined
 
     const value = useMemo(
         () => ({
@@ -164,19 +187,38 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
             reload,
             toggle,
             create,
+            update,
             remove,
-            openNewHabit
+            openNewHabit,
+            openEditHabit
         }),
-        [data, loading, error, reload, toggle, create, remove, openNewHabit]
+        [
+            data,
+            loading,
+            error,
+            reload,
+            toggle,
+            create,
+            update,
+            remove,
+            openNewHabit,
+            openEditHabit
+        ]
     )
 
     return (
         <HabitsContext.Provider value={value}>
             {children}
-            {newHabitOpen && (
-                <NewHabitSheet
-                    onClose={() => setNewHabitOpen(false)}
-                    onCreate={create}
+            {sheet?.habitID === null && (
+                <HabitSheet onClose={closeSheet} onSave={create} />
+            )}
+            {editing && (
+                <HabitSheet
+                    key={editing.id}
+                    habit={editing}
+                    onClose={closeSheet}
+                    onSave={(name, color) => update(editing.id, name, color)}
+                    onDelete={() => remove(editing.id)}
                 />
             )}
         </HabitsContext.Provider>

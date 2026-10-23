@@ -9,6 +9,7 @@ import features.habits.deleteHabit
 import features.habits.habitStreak
 import features.habits.habitsView
 import features.habits.setCheckin
+import features.habits.updateHabit
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -16,6 +17,7 @@ import java.util.UUID
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.sql.Database
@@ -110,6 +112,21 @@ class HabitTest {
         val h = habitsView(testUserID, 7).habits.single()
         assertEquals(7, h.total)
         assertEquals(10, h.streak)
+    }
+
+    @Test
+    fun `updating a habit keeps its history`() = runBlocking {
+        val habit = createHabit(testUserID, "Read", HabitColor.LIME)
+        setCheckin(testUserID, habit.id, today, true)
+
+        assertTrue(updateHabit(testUserID, habit.id, "Read 20 pages", null))
+        assertTrue(updateHabit(testUserID, habit.id, null, HabitColor.CORAL))
+        assertFalse(updateHabit(UUID.randomUUID(), habit.id, "Nope", null))
+
+        val h = habitsView(testUserID, 7).habits.single()
+        assertEquals("Read 20 pages", h.name)
+        assertEquals(HabitColor.CORAL, h.color)
+        assertEquals(1, h.total)
     }
 
     @Test

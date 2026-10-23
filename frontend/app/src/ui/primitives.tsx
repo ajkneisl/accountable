@@ -464,6 +464,20 @@ function WorkoutIcon({ size = 24 }: { size?: number }) {
     )
 }
 
+function SleepIcon({ size = 24 }: { size?: number }) {
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+            <Path
+                d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"
+                stroke={colors.ink}
+                strokeWidth={2}
+                strokeLinejoin="round"
+                fill="none"
+            />
+        </Svg>
+    )
+}
+
 /** Brand mark for a known integration, or null so the caller falls back to a glyph. */
 export function IntegrationIcon({
     name,
@@ -479,6 +493,8 @@ export function IntegrationIcon({
             return <LeetCodeIcon size={size} />
         case "apple_fitness":
             return <WorkoutIcon size={size} />
+        case "apple_sleep":
+            return <SleepIcon size={size} />
         default:
             return null
     }

@@ -2,6 +2,7 @@ package features.goals
 
 import api.suspendTransaction
 import integrations.AppleFitnessTable
+import integrations.AppleSleepTable
 import integrations.GitHubTable
 import integrations.LeetCodeTable
 import integrations.api.IntegrationTable
@@ -56,6 +57,8 @@ object GoalMetrics {
                 AppleFitnessTable,
                 AppleFitnessTable.calories,
             ),
+            // Stored in minutes; the app sets and shows these goals in hours.
+            GoalMetric("apple_sleep", "minutes", AppleSleepTable, AppleSleepTable.minutes),
         )
 
     val byKey: Map<Pair<String, String>, GoalMetric> =

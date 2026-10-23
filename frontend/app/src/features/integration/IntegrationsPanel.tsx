@@ -1,6 +1,6 @@
 // Integrations tab of Settings: connect and refresh the data sources goals are
-// tracked against. GitHub and LeetCode link by username, workouts come from
-// Apple Health.
+// tracked against. GitHub and LeetCode link by username, workouts and sleep
+// come from Apple Health.
 
 import { useState } from "react"
 import { Text, View } from "react-native"
@@ -28,6 +28,9 @@ import {
 } from "../../ui/primitives"
 
 const APPLE_FITNESS = "apple_fitness"
+const APPLE_SLEEP = "apple_sleep"
+/** Fed by the Apple Health card rather than linked by username. */
+const HEALTH_SOURCES = [APPLE_FITNESS, APPLE_SLEEP]
 
 function openIntegration(name: string) {
     router.push({ pathname: "/integrations/[name]", params: { name } })
@@ -95,9 +98,9 @@ function AppleHealthCard() {
     const status = !health.supported
         ? "Needs the Accountable iOS app — not available in Expo Go or on this device."
         : !health.connected
-          ? "Import your workouts automatically instead of logging them by hand."
+          ? "Import your workouts and sleep automatically."
           : health.syncing
-            ? "Syncing workouts…"
+            ? "Syncing workouts and sleep…"
             : health.lastSync
               ? `Connected · synced ${formatRefreshed(health.lastSync)}`
               : "Connected"
@@ -162,6 +165,12 @@ function AppleHealthCard() {
                     size="sm"
                     onPress={() => openIntegration(APPLE_FITNESS)}
                 />
+                <Button
+                    label="Sleep"
+                    variant="line"
+                    size="sm"
+                    onPress={() => openIntegration(APPLE_SLEEP)}
+                />
             </View>
 
             {health.connected && (
@@ -180,7 +189,9 @@ export function IntegrationsPanel() {
     const [refreshing, setRefreshing] = useState<string | null>(null)
     const [refreshingAll, setRefreshingAll] = useState(false)
 
-    const sources = data.integrations.filter((it) => it.name !== APPLE_FITNESS)
+    const sources = data.integrations.filter(
+        (it) => !HEALTH_SOURCES.includes(it.name)
+    )
     const connected = sources.filter((it) => it.enabled).length
 
     async function refresh(name: string) {

@@ -39,6 +39,7 @@ export type IntegrationHistoryDay =
           calories: number
           workouts: number
       }
+    | { type: "apple_sleep"; date: number; minutes: number }
 
 /**
  * GET /api/integrations/{name}/history?days={n} — stored per-day data for the last {days}
@@ -217,6 +218,33 @@ export function importWorkouts(
         "POST",
         "/integrations/apple_fitness/workouts/import",
         { workouts },
+        { auth: true }
+    )
+}
+
+/**
+ * One day's Apple Health sleep total. `endedAt` (ms epoch) is when that day's
+ * last sleep ended and decides which local day the total counts toward.
+ */
+export interface ImportedSleepDay {
+    endedAt: number
+    minutes: number
+}
+
+/**
+ * POST /api/integrations/apple_sleep/import — store per-day sleep totals (at
+ * most 400 per call). Each day replaces what was stored for it, so this is safe
+ * to repeat. Resolves to how many days were written.
+ */
+export function importSleep(
+    config: ApiConfig,
+    days: ImportedSleepDay[]
+): Promise<{ imported: number }> {
+    return request(
+        config,
+        "POST",
+        "/integrations/apple_sleep/import",
+        { days },
         { auth: true }
     )
 }

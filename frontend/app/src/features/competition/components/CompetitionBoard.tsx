@@ -29,6 +29,7 @@ import {
     SourceTile
 } from "../../../ui/primitives"
 import {
+    formatAmount,
     formatWeekRange,
     integrationVisual,
     unitLabel
@@ -54,7 +55,8 @@ function boardKey(b: {
 function goalLabel(board: CompetitionGoalBoard): string {
     const unit = unitLabel(board.integration, board.metric)
     const cadence = board.period === "DAILY" ? "day" : "week"
-    return `${board.target} ${unit} / ${cadence}`
+    const target = formatAmount(board.integration, board.metric, board.target)
+    return `${target} ${unit} / ${cadence}`
 }
 
 function Standings({
@@ -191,6 +193,8 @@ function GoalProgress({
     const pace = paceTarget(board, currentWeek)
     const pacePct = Math.min(100, (pace / wt) * 100)
     const members = [...board.members].sort((a, b) => b.total - a.total)
+    const amount = (v: number) =>
+        formatAmount(board.integration, board.metric, v)
 
     return (
         <View className="gap-3.5 py-5">
@@ -205,7 +209,7 @@ function GoalProgress({
                         {goalLabel(board)}
                     </Text>
                     <Text className="text-[11px] text-ink-3">
-                        {visual.sourceLabel} · {wt} {unit} this week
+                        {visual.sourceLabel} · {amount(wt)} {unit} this week
                     </Text>
                 </View>
                 {onRemove && (
@@ -247,9 +251,9 @@ function GoalProgress({
                                 </Text>
                                 <Mono className="text-xs text-ink-3">
                                     <Text className="font-bold text-ink">
-                                        {m.total}
+                                        {amount(m.total)}
                                     </Text>
-                                    /{wt}
+                                    /{amount(wt)}
                                 </Mono>
                                 <Text
                                     className={`w-16 text-right text-[11px] font-semibold ${

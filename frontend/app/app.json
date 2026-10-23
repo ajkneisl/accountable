@@ -9,8 +9,11 @@
         "ios": {
             "supportsTablet": true,
             "bundleIdentifier": "app.umn.acc",
-            "buildNumber": "3",
-            "appleTeamId": "CBL6R6SP6A"
+            "buildNumber": "5",
+            "appleTeamId": "CBL6R6SP6A",
+            "config": {
+                "usesNonExemptEncryption": false
+            }
         },
         "android": {
             "adaptiveIcon": {
@@ -33,8 +36,8 @@
             [
                 "@kingstinct/react-native-healthkit",
                 {
-                    "NSHealthShareUsageDescription": "Accountable reads your workouts so they count toward your goals.",
-                    "NSHealthUpdateUsageDescription": "Accountable only reads your workouts. It never writes to Apple Health.",
+                    "NSHealthShareUsageDescription": "Accountable reads your workouts and sleep so they count toward your goals.",
+                    "NSHealthUpdateUsageDescription": "Accountable only reads your workouts and sleep. It never writes to Apple Health.",
                     "background": true
                 }
             ],

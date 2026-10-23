@@ -2,8 +2,8 @@
 // device-local choice — HealthKit permission lives on the phone, not the
 // account — so it's kept in the keychain alongside the session.
 //
-// While connected, workouts sync in the background: HealthKit background
-// delivery wakes the app (even if it was closed) whenever a workout is saved,
+// While connected, workouts and sleep sync in the background: HealthKit
+// background delivery wakes the app (even if it was closed) whenever either is saved,
 // the app boots, this provider mounts, and the change listener runs a sync. It
 // also syncs on launch and on every return to the foreground.
 
@@ -25,15 +25,21 @@ import {
     disableBackgroundSync,
     enableBackgroundSync,
     isAppleHealthSupported,
-    onWorkoutsChanged,
+    onHealthDataChanged,
     requestAppleHealthAccess,
+    syncAppleHealthSleep,
     syncAppleHealthWorkouts
 } from "./appleHealth"
 
 const CONNECTED_KEY = "accountable_apple_health"
 const LAST_SYNC_KEY = "accountable_apple_health_synced"
+/**
+ * Sleep's own last sync. Kept apart from workouts' so links made before sleep
+ * was read still get a full backfill of it.
+ */
+const SLEEP_SYNC_KEY = "accountable_apple_health_sleep_synced"
 
-/** How far back the first sync reaches. */
+/** How far back the first sync (of workouts, and separately of sleep) reaches. */
 const BACKFILL_MS = 30 * 86_400_000
 
 /**
@@ -91,7 +97,8 @@ export async function forgetAppleHealth(): Promise<void> {
     await disableBackgroundSync().catch(() => {})
     await Promise.all([
         writeKey(CONNECTED_KEY, null),
-        writeKey(LAST_SYNC_KEY, null)
+        writeKey(LAST_SYNC_KEY, null),
+        writeKey(SLEEP_SYNC_KEY, null)
     ])
 }
 
@@ -118,10 +125,20 @@ export function AppleHealthProvider({ children }: { children: ReactNode }) {
                 const since =
                     from === null ? now - BACKFILL_MS : from - OVERLAP_MS
                 const imported = await syncAppleHealthWorkouts(api, since)
+                const sleepSynced = await readKey(SLEEP_SYNC_KEY)
+                const sleepChanged = await syncAppleHealthSleep(
+                    api,
+                    sleepSynced === null
+                        ? now - BACKFILL_MS
+                        : Number(sleepSynced) - OVERLAP_MS
+                )
                 setLastSync(now)
                 lastSyncRef.current = now
-                await writeKey(LAST_SYNC_KEY, String(now))
-                if (imported > 0) reload()
+                await Promise.all([
+                    writeKey(LAST_SYNC_KEY, String(now)),
+                    writeKey(SLEEP_SYNC_KEY, String(now))
+                ])
+                if (imported > 0 || sleepChanged > 0) reload()
             } catch (err) {
                 setError(err instanceof Error ? err.message : "Sync failed")
             } finally {
@@ -145,6 +162,11 @@ export function AppleHealthProvider({ children }: { children: ReactNode }) {
             lastSyncRef.current = last
             if (flag === "1") {
                 setConnected(true)
+                // Links made before sleep was read haven't been asked for it;
+                // iOS only shows the sheet for types it hasn't asked about yet.
+                // Skipped on a background wake, where no sheet can show.
+                if (AppState.currentState === "active")
+                    await requestAppleHealthAccess().catch(() => {})
                 // Covers links made before background sync existed.
                 void enableBackgroundSync().catch(() => {})
                 void sync(last)
@@ -157,7 +179,7 @@ export function AppleHealthProvider({ children }: { children: ReactNode }) {
         const sub = AppState.addEventListener("change", (state) => {
             if (state === "active") void sync(lastSyncRef.current)
         })
-        const unsubscribe = onWorkoutsChanged(
+        const unsubscribe = onHealthDataChanged(
             () => void sync(lastSyncRef.current)
         )
         return () => {

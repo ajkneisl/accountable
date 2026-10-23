@@ -1,19 +1,31 @@
 // HealthKit access for the Apple Health integration. Workouts are read on the
 // device and posted to the backend's import endpoint, which dedupes them by
 // HealthKit UUID, so a sync can always safely re-send an overlapping window.
+// Sleep is totalled per day on the device and posted as one figure per day,
+// which replaces that day's stored total — so it's just as safe to re-send.
 
 import { isRunningInExpoGo } from "expo"
 import {
     type ApiConfig,
+    type ImportedSleepDay,
     type ImportedWorkout,
     type WorkoutType,
+    importSleep,
     importWorkouts
 } from "@shared/index"
 
 type HealthKit = typeof import("@kingstinct/react-native-healthkit")
 
+const WORKOUTS = "HKWorkoutTypeIdentifier" as const
+const SLEEP = "HKCategoryTypeIdentifierSleepAnalysis" as const
+
 /** Most workouts the backend accepts per import call. */
 const IMPORT_PAGE = 500
+
+/** Most sleep days the backend accepts per import call. */
+const SLEEP_IMPORT_PAGE = 400
+
+const DAY_MS = 86_400_000
 
 let healthKit: HealthKit | null | undefined
 
@@ -49,24 +61,22 @@ export async function requestAppleHealthAccess(): Promise<void> {
     const hk = getHealthKit()
     if (!hk) throw new Error("Apple Health isn't available on this device.")
     await hk.requestAuthorization({
-        toRead: [
-            "HKWorkoutTypeIdentifier",
-            "HKQuantityTypeIdentifierActiveEnergyBurned"
-        ]
+        toRead: [WORKOUTS, "HKQuantityTypeIdentifierActiveEnergyBurned", SLEEP]
     })
 }
 
-const WORKOUTS = "HKWorkoutTypeIdentifier"
-
 /**
- * Have iOS wake the app whenever a workout is saved to Health, even after it was
- * terminated. The native observer is registered at launch from persisted config,
+ * Have iOS wake the app whenever a workout or sleep is saved to Health, even
+ * after it was terminated. The native observer is registered at launch from persisted config,
  * so this only needs calling once per connect (repeating it is harmless).
  */
 export async function enableBackgroundSync(): Promise<void> {
     const hk = getHealthKit()
     if (!hk) return
-    await hk.configureBackgroundTypes([WORKOUTS], hk.UpdateFrequency.immediate)
+    await hk.configureBackgroundTypes(
+        [WORKOUTS, SLEEP],
+        hk.UpdateFrequency.immediate
+    )
 }
 
 export async function disableBackgroundSync(): Promise<void> {
@@ -74,14 +84,17 @@ export async function disableBackgroundSync(): Promise<void> {
 }
 
 /**
- * Call [onChange] when Health's workouts change — including the event that woke
- * the app in the background, which the native side holds until JS subscribes.
+ * Call [onChange] when Health's workouts or sleep change — including the event
+ * that woke the app in the background, which the native side holds until JS
+ * subscribes.
  */
-export function onWorkoutsChanged(onChange: () => void): () => void {
+export function onHealthDataChanged(onChange: () => void): () => void {
     const hk = getHealthKit()
     if (!hk) return () => {}
-    const sub = hk.subscribeToChanges(WORKOUTS, () => onChange())
-    return () => void sub.remove()
+    const subs = [WORKOUTS, SLEEP].map((type) =>
+        hk.subscribeToChanges(type, () => onChange())
+    )
+    return () => subs.forEach((sub) => void sub.remove())
 }
 
 /** HealthKit activity → the backend's coarse workout types. */
@@ -154,6 +167,91 @@ export async function syncAppleHealthWorkouts(
             api,
             workouts.slice(i, i + IMPORT_PAGE)
         )
+        imported += res.imported
+    }
+    return imported
+}
+
+type Span = [start: number, end: number]
+
+/** Merge overlapping spans, so sleep recorded by both a watch and a phone counts once. */
+function mergeSpans(spans: Span[]): Span[] {
+    const merged: Span[] = []
+    for (const [start, end] of [...spans].sort((a, b) => a[0] - b[0])) {
+        const last = merged[merged.length - 1]
+        if (last && start <= last[1]) last[1] = Math.max(last[1], end)
+        else merged.push([start, end])
+    }
+    return merged
+}
+
+/** Local midnight of the day containing [ms]. */
+function localDayStart(ms: number): number {
+    const d = new Date(ms)
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+}
+
+/**
+ * Minutes per local day across [spans], keyed by local midnight. Each span counts
+ * toward the day it ended on, so a night's sleep belongs to the morning after.
+ */
+function minutesByDay(spans: Span[]): Map<number, ImportedSleepDay> {
+    const days = new Map<number, ImportedSleepDay>()
+    for (const [start, end] of mergeSpans(spans)) {
+        const day = localDayStart(end)
+        const total = days.get(day) ?? { endedAt: end, minutes: 0 }
+        total.minutes += (end - start) / 60_000
+        total.endedAt = Math.max(total.endedAt, end)
+        days.set(day, total)
+    }
+    return days
+}
+
+/**
+ * Import per-day sleep totals for every day from [since] (ms epoch) on. Resolves
+ * to how many days were written. Counts time asleep (any stage); a day with no
+ * asleep samples falls back to time in bed, which is all an iPhone without a
+ * watch records.
+ */
+export async function syncAppleHealthSleep(
+    api: ApiConfig,
+    since: number
+): Promise<number> {
+    const hk = getHealthKit()
+    if (!hk) return 0
+
+    // Start a day early so a night already under way at [since] is read whole.
+    const samples = await hk.queryCategorySamples(SLEEP, {
+        limit: 0,
+        ascending: true,
+        filter: { date: { startDate: new Date(since - DAY_MS) } }
+    })
+
+    const stage = hk.CategoryValueSleepAnalysis
+    const asleep: Span[] = []
+    const inBed: Span[] = []
+    for (const s of samples) {
+        const span: Span = [
+            new Date(s.startDate).getTime(),
+            new Date(s.endDate).getTime()
+        ]
+        if (s.value === stage.inBed) inBed.push(span)
+        else if (s.value !== stage.awake) asleep.push(span)
+    }
+
+    // Asleep totals win over in-bed ones for any day that has both.
+    const totals = new Map([...minutesByDay(inBed), ...minutesByDay(asleep)])
+    const firstDay = localDayStart(since)
+    const days = [...totals]
+        .filter(([day]) => day >= firstDay)
+        .map(([, t]) => ({
+            endedAt: t.endedAt,
+            minutes: Math.min(24 * 60, Math.round(t.minutes))
+        }))
+
+    let imported = 0
+    for (let i = 0; i < days.length; i += SLEEP_IMPORT_PAGE) {
+        const res = await importSleep(api, days.slice(i, i + SLEEP_IMPORT_PAGE))
         imported += res.imported
     }
     return imported

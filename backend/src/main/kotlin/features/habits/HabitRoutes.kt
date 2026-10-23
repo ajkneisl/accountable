@@ -13,6 +13,7 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
+import io.ktor.server.routing.patch
 import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.route
@@ -40,6 +41,15 @@ private const val STREAK_LOOKBACK_DAYS = 366
  */
 @Serializable
 data class CreateHabitRequest(val name: String, val color: HabitColor = HabitColor.LIME)
+
+/**
+ * Request body for editing a habit. Omitted fields are left unchanged.
+ *
+ * @param name New display name; trimmed, 1–[HABIT_NAME_MAX] characters.
+ * @param color New heatmap accent.
+ */
+@Serializable
+data class UpdateHabitRequest(val name: String? = null, val color: HabitColor? = null)
 
 /**
  * One habit with its heatmap window.
@@ -83,14 +93,25 @@ private val HABIT_LIST_ROUTE: suspend RoutingContext.() -> Unit = {
 private val HABIT_CREATE_ROUTE: suspend RoutingContext.() -> Unit = {
     val userID = call.userID()
     val req = call.receive<CreateHabitRequest>()
-    val name = req.name.trim()
-    if (name.isEmpty()) Error.text("name must not be blank")
-    if (name.length > HABIT_NAME_MAX) Error.text("name must be at most $HABIT_NAME_MAX characters")
+    val name = habitName(req.name)
     if (habitsFor(userID).size >= MAX_HABITS) Error.text("you can track at most $MAX_HABITS habits")
 
     createHabit(userID, name, req.color)
     Cache.invalidateUser(userID)
     call.respond(HttpStatusCode.Created, habitsView(userID, call.days()))
+}
+
+/** PATCH /api/habits/{id}?days=N — rename and/or recolor a habit; responds with the refreshed list. */
+private val HABIT_UPDATE_ROUTE: suspend RoutingContext.() -> Unit = {
+    val userID = call.userID()
+    val req = call.receive<UpdateHabitRequest>()
+    if (req.name == null && req.color == null) Error.text("nothing to update")
+
+    if (!updateHabit(userID, call.habitID(), req.name?.let(::habitName), req.color)) {
+        Error.notFound("habit")
+    }
+    Cache.invalidateUser(userID)
+    call.respond(habitsView(userID, call.days()))
 }
 
 /** DELETE /api/habits/{id} — remove a habit and its history. */
@@ -150,6 +171,14 @@ suspend fun habitsView(userID: UUID, days: Int): HabitsResponse =
         )
     }
 
+/** [raw] trimmed, or a 400 if it's blank or longer than [HABIT_NAME_MAX]. */
+private fun habitName(raw: String): String {
+    val name = raw.trim()
+    if (name.isEmpty()) Error.text("name must not be blank")
+    if (name.length > HABIT_NAME_MAX) Error.text("name must be at most $HABIT_NAME_MAX characters")
+    return name
+}
+
 /** Today's date in [userID]'s timezone. */
 private fun todayFor(userID: UUID): LocalDate =
     Instant.ofEpochMilli(System.currentTimeMillis()).atZone(zoneOf(userID)).toLocalDate()
@@ -170,6 +199,7 @@ fun Route.habitRoutes() {
         route("/habits") {
             get("", HABIT_LIST_ROUTE)
             post("", HABIT_CREATE_ROUTE)
+            patch("/{id}", HABIT_UPDATE_ROUTE)
             delete("/{id}", HABIT_DELETE_ROUTE)
             put("/{id}/checkins/{date}", checkinRoute(done = true))
             delete("/{id}/checkins/{date}", checkinRoute(done = false))

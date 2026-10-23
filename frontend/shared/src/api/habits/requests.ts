@@ -33,6 +33,12 @@ export interface CreateHabitRequest {
     color: HabitColor
 }
 
+/** Fields to change on a habit; omitted ones are left as they are. */
+export interface UpdateHabitRequest {
+    name?: string
+    color?: HabitColor
+}
+
 const windowQuery = (days?: number) => (days ? `?days=${days}` : "")
 
 /** GET /api/habits?days=N — the user's habits with an N-day window (default 126). */
@@ -54,6 +60,22 @@ export function createHabit(
     return request(config, "POST", `/habits${windowQuery(days)}`, body, {
         auth: true
     })
+}
+
+/** PATCH /api/habits/{id} — rename and/or recolor a habit; resolves to the refreshed list. */
+export function updateHabit(
+    config: ApiConfig,
+    id: string,
+    body: UpdateHabitRequest,
+    days?: number
+): Promise<HabitsResponse> {
+    return request(
+        config,
+        "PATCH",
+        `/habits/${encodeURIComponent(id)}${windowQuery(days)}`,
+        body,
+        { auth: true }
+    )
 }
 
 /** DELETE /api/habits/{id} — remove a habit and its history. */

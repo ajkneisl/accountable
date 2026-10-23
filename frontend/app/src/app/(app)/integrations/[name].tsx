@@ -40,6 +40,7 @@ import {
 } from "../../../ui/primitives"
 
 const APPLE_FITNESS = "apple_fitness"
+const APPLE_SLEEP = "apple_sleep"
 
 const DAY_FMT = new Intl.DateTimeFormat(undefined, {
     weekday: "short",
@@ -112,6 +113,12 @@ function ConfigCard({
                     imported from Apple Health — connect it on the Integrations
                     tab to sync them automatically.
                 </Text>
+            ) : name === APPLE_SLEEP ? (
+                <Text className="text-[13px] text-ink-3">
+                    Sleep comes from Apple Health — connect it on the
+                    Integrations tab. Each night counts toward the day you wake
+                    up.
+                </Text>
             ) : status?.enabled ? (
                 <View className="flex-row items-center justify-between gap-3">
                     <View className="flex-1">
@@ -172,6 +179,8 @@ function dayValue(day: IntegrationHistoryDay): number {
             return day.easy + day.medium + day.hard
         case "apple_fitness":
             return day.workouts
+        case "apple_sleep":
+            return day.minutes
     }
 }
 
@@ -188,6 +197,8 @@ function dayLabel(day: IntegrationHistoryDay): string {
             return `${day.workouts} workout${
                 day.workouts === 1 ? "" : "s"
             } · ${day.calories.toLocaleString()} kcal`
+        case "apple_sleep":
+            return `${Math.floor(day.minutes / 60)}h ${day.minutes % 60}m asleep`
     }
 }
 

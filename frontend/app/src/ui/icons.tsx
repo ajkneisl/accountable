@@ -25,3 +25,16 @@ export function GearIcon({ color, size = 24 }: IconProps) {
         </Svg>
     )
 }
+
+/** Check mark for done states. */
+export function CheckIcon({ color, size = 24 }: IconProps) {
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+            <Path
+                d="M5 12.5l4.5 4.5L19 7.5"
+                {...stroke(color)}
+                strokeWidth={2.6}
+            />
+        </Svg>
+    )
+}

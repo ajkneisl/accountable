@@ -9,8 +9,15 @@ import { SettingsButton } from "../../../ui/SettingsButton"
 import { AddCard, Card, Display, Spinner } from "../../../ui/primitives"
 
 export default function Habits() {
-    const { data, loading, error, reload, toggle, remove, openNewHabit } =
-        useHabits()
+    const {
+        data,
+        loading,
+        error,
+        reload,
+        toggle,
+        openNewHabit,
+        openEditHabit
+    } = useHabits()
     const habits = data?.habits ?? []
     const last = habits[0]?.done.length ?? 0
     const doneToday = habits.filter((h) => h.done[last - 1]).length
@@ -70,7 +77,7 @@ export default function Habits() {
                         start={data.start}
                         today={data.today}
                         onToggle={(date, done) => toggle(habit.id, date, done)}
-                        onDelete={() => void remove(habit.id).catch(reload)}
+                        onEdit={() => openEditHabit(habit.id)}
                     />
                 ))}
 

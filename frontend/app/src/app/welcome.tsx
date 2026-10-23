@@ -10,7 +10,8 @@ import { colors } from "../theme"
 const SOURCES = [
     { name: "github", label: "GitHub" },
     { name: "leetcode", label: "LeetCode" },
-    { name: "apple_fitness", label: "Workouts" }
+    { name: "apple_fitness", label: "Workouts" },
+    { name: "apple_sleep", label: "Sleep" }
 ]
 
 export default function Welcome() {
@@ -30,8 +31,8 @@ export default function Welcome() {
                 </View>
 
                 <Text className="text-[17px] leading-[24px] text-ink-2">
-                    Track commits, LeetCode problems, and workouts automatically,
-                    and share your progress with friends.
+                    Track commits, LeetCode problems, workouts, and sleep
+                    automatically, and share your progress with friends.
                 </Text>
 
                 <View className="flex-row gap-3">

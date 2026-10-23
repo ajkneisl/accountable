@@ -12,7 +12,8 @@ export const INTEGRATION_VISUAL: Record<
 > = {
     github: { glyph: "GH", tile: "ink", sourceLabel: "GitHub" },
     leetcode: { glyph: "LC", tile: "lime", sourceLabel: "LeetCode" },
-    apple_fitness: { glyph: "F", tile: "coral", sourceLabel: "Fitness" }
+    apple_fitness: { glyph: "F", tile: "coral", sourceLabel: "Fitness" },
+    apple_sleep: { glyph: "Z", tile: "ink", sourceLabel: "Sleep" }
 }
 
 const FALLBACK_VISUAL = {
@@ -33,7 +34,30 @@ export function unitLabel(integration: string, metric: string): string {
         return "workouts"
     if (integration === "apple_fitness" && metric === "calories")
         return "calories"
+    if (integration === "apple_sleep" && metric === "minutes") return "hours"
     return metric
+}
+
+/**
+ * How many stored units make one displayed unit. Sleep is stored and summed in
+ * minutes but set and shown in hours; everything else is shown as stored.
+ */
+export function unitScale(integration: string, metric: string): number {
+    return integration === "apple_sleep" && metric === "minutes" ? 60 : 1
+}
+
+/**
+ * A stored metric value in display units, as a short string: "7.5" (hours of
+ * sleep, to one decimal), otherwise the rounded count.
+ */
+export function formatAmount(
+    integration: string,
+    metric: string,
+    value: number
+): string {
+    const scale = unitScale(integration, metric)
+    if (scale === 1) return String(Math.round(value))
+    return String(Math.round((value / scale) * 10) / 10)
 }
 
 /** Stable identity for a goal, used for React keys. */
@@ -49,7 +73,8 @@ export function goalKey(goal: {
 export function goalTitle(goal: Goal): string {
     const unit = unitLabel(goal.integration, goal.metric)
     const cadence = goal.period === "DAILY" ? "day" : "week"
-    return `${goal.target} ${unit} / ${cadence}`
+    const target = formatAmount(goal.integration, goal.metric, goal.target)
+    return `${target} ${unit} / ${cadence}`
 }
 
 /** Compact "Jun 3, 2:14 PM" style stamp for when an integration last refreshed. */

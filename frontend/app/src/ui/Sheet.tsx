@@ -22,6 +22,7 @@ export function Sheet({
     description,
     onClose,
     action,
+    footer,
     children
 }: {
     title: string
@@ -29,6 +30,8 @@ export function Sheet({
     onClose: () => void
     /** Full-width button under the form. */
     action?: SheetAction
+    /** Rendered under the action — secondary or destructive extras. */
+    footer?: ReactNode
     children: ReactNode
 }) {
     return (
@@ -81,6 +84,8 @@ export function Sheet({
                             className="mt-2"
                         />
                     )}
+
+                    {footer}
                 </ScrollView>
             </View>
         </Modal>

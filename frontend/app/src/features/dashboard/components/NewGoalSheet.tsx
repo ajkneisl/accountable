@@ -16,7 +16,7 @@ import {
     SourceTile,
     type TileVariant
 } from "../../../ui/primitives"
-import { unitLabel } from "../types"
+import { unitLabel, unitScale } from "../types"
 
 type Source = {
     integration: string
@@ -26,6 +26,8 @@ type Source = {
     /** Eyebrow label for the metric chips row when there are multiple metrics. */
     optionLabel: string
     metrics: { metric: string; label: string }[]
+    /** Cadence and target (in display units) to start from when picked. */
+    defaults?: { period: GoalPeriod; target: string }
 }
 
 const SOURCES: Source[] = [
@@ -59,6 +61,15 @@ const SOURCES: Source[] = [
             { metric: "workouts", label: "Workouts" },
             { metric: "calories", label: "Calories" }
         ]
+    },
+    {
+        integration: "apple_sleep",
+        label: "Sleep",
+        glyph: "Z",
+        tile: "ink",
+        optionLabel: "Metric",
+        metrics: [{ metric: "minutes", label: "Hours asleep" }],
+        defaults: { period: "DAILY", target: "8" }
     }
 ]
 
@@ -100,15 +111,23 @@ export function GoalSheet({
     const source = SOURCES[sourceIdx]
     const targetNum = Number(target)
     const unit = unitLabel(source.integration, metric)
+    // Targets are typed in display units (hours of sleep) but stored as counted.
+    const scale = unitScale(source.integration, metric)
     const cadence = period === "DAILY" ? "day" : "week"
 
     function pickSource(i: number) {
         setSourceIdx(i)
         setMetric(SOURCES[i].metrics[0].metric)
+        const defaults = SOURCES[i].defaults
+        if (defaults) {
+            setPeriod(defaults.period)
+            setTarget(defaults.target)
+        }
     }
 
     async function submit() {
-        if (!Number.isFinite(targetNum) || targetNum <= 0) {
+        const stored = Math.round(targetNum * scale)
+        if (!Number.isFinite(targetNum) || stored <= 0) {
             setErrors(["Enter a target greater than zero."])
             return
         }
@@ -119,7 +138,7 @@ export function GoalSheet({
                 integration: source.integration,
                 metric,
                 period,
-                target: targetNum
+                target: stored
             })
         } catch (err) {
             if (err instanceof ApiError) setErrors(err.messages)
@@ -212,7 +231,9 @@ export function GoalSheet({
             <SheetField label="Target">
                 <View className="flex-row items-center gap-3">
                     <Input
-                        keyboardType="number-pad"
+                        keyboardType={
+                            scale === 1 ? "number-pad" : "decimal-pad"
+                        }
                         value={target}
                         onChangeText={setTarget}
                         className="w-28"
