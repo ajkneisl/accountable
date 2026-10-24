@@ -8,6 +8,7 @@
 import { isRunningInExpoGo } from "expo"
 import type { Goal } from "@shared/index"
 import {
+    goalFill,
     goalKey,
     goalTitle,
     integrationVisual,
@@ -18,13 +19,6 @@ import {
 import type { GoalsWidgetProps } from "./GoalsWidget"
 
 const DAY_MS = 86_400_000
-
-/** Accent per integration tile, as on the goal card (lime when untinted). */
-const TILE_COLOR: Record<string, string> = {
-    ink: "#16100c",
-    lime: "#a2eb3c",
-    coral: "#fd6a3a"
-}
 
 type Widget = typeof import("./GoalsWidget").default
 
@@ -92,7 +86,8 @@ function propsFor(
             id: goalKey(g),
             name: goalTitle(g),
             source: visual.sourceLabel,
-            color: TILE_COLOR[visual.tile] ?? TILE_COLOR.lime,
+            // As on the goal card.
+            color: goalFill(g),
             total: shown(total),
             target: shown(weekly),
             unit: unitLabel(g.integration, g.metric),

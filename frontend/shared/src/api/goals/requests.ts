@@ -1,6 +1,10 @@
+import type { HabitColor } from "../habits/requests"
 import { request, type ApiConfig } from "../http"
 
 export type GoalPeriod = "DAILY" | "WEEKLY"
+
+/** Goals share the habit palette. */
+export type GoalColor = HabitColor
 
 /**
  * A goal returned by the backend, with current-period progress and a 7-day value strip.
@@ -20,6 +24,8 @@ export interface Goal {
     weekVals: number[]
     /** Sum of {@link weekVals}. */
     weekTotal: number
+    /** Card accent; null (or absent) means the integration's default. */
+    color?: GoalColor | null
 }
 
 export interface CreateGoalRequest {
@@ -27,6 +33,12 @@ export interface CreateGoalRequest {
     metric: string
     period: GoalPeriod
     target: number
+}
+
+/** Fields to change on a goal; omitted ones are left as they are. */
+export interface UpdateGoalRequest {
+    target?: number
+    color?: GoalColor
 }
 
 /** One Monday-anchored week of a goal's metric, returned by {@link getGoalWeek}. */
@@ -74,6 +86,23 @@ export function createGoal(
     body: CreateGoalRequest
 ): Promise<Goal> {
     return request(config, "POST", "/goals", body, { auth: true })
+}
+
+/** PATCH /api/goals/{integration}/{metric}/{period} — change a goal's target and/or color. */
+export function updateGoal(
+    config: ApiConfig,
+    integration: string,
+    metric: string,
+    period: GoalPeriod,
+    body: UpdateGoalRequest
+): Promise<Goal> {
+    return request(
+        config,
+        "PATCH",
+        `/goals/${encodeURIComponent(integration)}/${encodeURIComponent(metric)}/${period}`,
+        body,
+        { auth: true }
+    )
 }
 
 /** DELETE /api/goals/{integration}/{metric}/{period} — remove a goal. */

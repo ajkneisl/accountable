@@ -2,6 +2,7 @@ package features.goals
 
 import api.Cache
 import api.Error
+import features.habits.HabitColor
 import integrations.api.Integrations
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
@@ -14,6 +15,7 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
+import io.ktor.server.routing.patch
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import java.util.UUID
@@ -38,6 +40,16 @@ data class CreateGoalRequest(
 )
 
 /**
+ * Request body for editing a goal. Omitted fields are left unchanged. The goal's integration,
+ * metric and period are its identity, so they can't be edited — delete and recreate instead.
+ *
+ * @param target New positive target count for the goal's period window.
+ * @param color New card accent.
+ */
+@Serializable
+data class UpdateGoalRequest(val target: Long? = null, val color: HabitColor? = null)
+
+/**
  * Goal payload with current-period progress and the last 7 days of raw values.
  *
  * @param integration Provider name.
@@ -51,6 +63,7 @@ data class CreateGoalRequest(
  * @param weekVals The current Monday-anchored week's per-day metric values, Monday first. Lets the
  *   goal card render its week chart without a follow-up `/week` request.
  * @param weekTotal Sum of [weekVals].
+ * @param color Card accent, or null to use the integration's default.
  */
 @Serializable
 data class GoalResponse(
@@ -64,6 +77,7 @@ data class GoalResponse(
     val weekStart: Long,
     val weekVals: List<Long>,
     val weekTotal: Long,
+    val color: HabitColor? = null,
 )
 
 /**
@@ -132,6 +146,7 @@ private suspend fun buildGoalResponse(
         weekStart = weekStart,
         weekVals = weekVals,
         weekTotal = weekVals.sum(),
+        color = goal.color,
     )
 }
 
@@ -144,12 +159,7 @@ private suspend fun buildGoalResponse(
  */
 private val GOAL_WEEK_ROUTE: suspend RoutingContext.() -> Unit = {
     val userID = call.userID()
-    val integration = call.parameters["integration"] ?: Error.text("missing integration")
-    val metric = call.parameters["metric"] ?: Error.text("missing metric")
-    val periodRaw = call.parameters["period"] ?: Error.text("missing period")
-    val period =
-        runCatching { GoalPeriod.valueOf(periodRaw.uppercase()) }.getOrNull()
-            ?: Error.text("period must be DAILY or WEEKLY")
+    val (integration, metric, period) = call.goalPath()
 
     val offset = call.request.queryParameters["offset"]?.toIntOrNull() ?: 0
     if (offset < 0) Error.text("offset must not be negative")
@@ -172,20 +182,47 @@ private val GOAL_WEEK_ROUTE: suspend RoutingContext.() -> Unit = {
     )
 }
 
+/**
+ * PATCH /api/goals/{integration}/{metric}/{period} — change a goal's target and/or color; responds
+ * with the updated goal.
+ */
+private val GOAL_UPDATE_ROUTE: suspend RoutingContext.() -> Unit = {
+    val userID = call.userID()
+    val (integration, metric, period) = call.goalPath()
+    val req = call.receive<UpdateGoalRequest>()
+    if (req.target == null && req.color == null) Error.text("nothing to update")
+    if (req.target != null && req.target <= 0) Error.text("target must be positive")
+
+    if (!updateGoal(userID, integration, metric, period, req.target, req.color)) {
+        Error.notFound("goal")
+    }
+    Cache.invalidateUser(userID)
+    val goal = goalFor(userID, integration, metric, period) ?: Error.notFound("goal")
+    call.respond(buildGoalResponse(userID, goal, System.currentTimeMillis(), zoneOf(userID)))
+}
+
 /** DELETE /api/goals/{integration}/{metric}/{period} — remove one goal. */
 private val GOAL_DELETE_ROUTE: suspend RoutingContext.() -> Unit = {
     val userID = call.userID()
-    val integration = call.parameters["integration"] ?: Error.text("missing integration")
-    val metric = call.parameters["metric"] ?: Error.text("missing metric")
-    val periodRaw = call.parameters["period"] ?: Error.text("missing period")
-    val period =
-        runCatching { GoalPeriod.valueOf(periodRaw.uppercase()) }.getOrNull()
-            ?: Error.text("period must be DAILY or WEEKLY")
+    val (integration, metric, period) = call.goalPath()
 
     val removed = deleteGoal(userID, integration, metric, period)
     if (!removed) Error.notFound("goal")
     Cache.invalidateUser(userID)
     call.respond(HttpStatusCode.NoContent)
+}
+
+/** A goal's identity, as addressed by `/{integration}/{metric}/{period}`. */
+private data class GoalPath(val integration: String, val metric: String, val period: GoalPeriod)
+
+private fun ApplicationCall.goalPath(): GoalPath {
+    val integration = parameters["integration"] ?: Error.text("missing integration")
+    val metric = parameters["metric"] ?: Error.text("missing metric")
+    val periodRaw = parameters["period"] ?: Error.text("missing period")
+    val period =
+        runCatching { GoalPeriod.valueOf(periodRaw.uppercase()) }.getOrNull()
+            ?: Error.text("period must be DAILY or WEEKLY")
+    return GoalPath(integration, metric, period)
 }
 
 private fun ApplicationCall.userID(): UUID =
@@ -204,6 +241,7 @@ fun Route.goalRoutes() {
             post("", GOAL_CREATE_ROUTE)
             get("", GOAL_LIST_ROUTE)
             get("/{integration}/{metric}/{period}/week", GOAL_WEEK_ROUTE)
+            patch("/{integration}/{metric}/{period}", GOAL_UPDATE_ROUTE)
             delete("/{integration}/{metric}/{period}", GOAL_DELETE_ROUTE)
         }
     }

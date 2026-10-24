@@ -3,6 +3,7 @@ package features.goals
 import api.MappedTable
 import api.suspendTransaction
 import api.toEntity
+import features.habits.HabitColor
 import java.util.UUID
 import org.jetbrains.exposed.sql.ReferenceOption
 import org.jetbrains.exposed.sql.SortOrder
@@ -10,6 +11,7 @@ import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.update
 import org.jetbrains.exposed.sql.upsert
 import kotlinx.serialization.Serializable
 import user.Users
@@ -41,6 +43,9 @@ object Goals : Table("goals") {
 
     val createdAt = long("created_at").clientDefault { System.currentTimeMillis() }
 
+    /** Accent the goal's card paints with; null falls back to the integration's own color. */
+    val color = enumerationByName("color", 16, HabitColor::class).nullable()
+
     override val primaryKey = PrimaryKey(userID, integration, metric, period)
 }
 
@@ -53,6 +58,7 @@ object Goals : Table("goals") {
  * @param period How often the goal resets.
  * @param target Target count to hit each [period] window. Must be positive.
  * @param createdAt Ms epoch when the goal was created.
+ * @param color Card accent, or null to use the integration's default.
  */
 @MappedTable(Goals::class)
 data class Goal(
@@ -62,9 +68,13 @@ data class Goal(
     override val period: GoalPeriod,
     override val target: Long,
     val createdAt: Long,
+    val color: HabitColor? = null,
 ) : GoalDefinition
 
-/** Insert or replace a goal. Idempotent on (userID, integration, metric, period). */
+/**
+ * Insert or replace a goal. Idempotent on (userID, integration, metric, period). A replaced goal
+ * keeps its color.
+ */
 suspend fun upsertGoal(
     userID: UUID,
     integration: String,
@@ -81,7 +91,15 @@ suspend fun upsertGoal(
         it[Goals.target] = target
         it[Goals.createdAt] = createdAt
     }
-    Goal(userID, integration, metric, period, target, createdAt)
+    Goals.selectAll()
+        .where {
+            (Goals.userID eq userID) and
+                (Goals.integration eq integration) and
+                (Goals.metric eq metric) and
+                (Goals.period eq period)
+        }
+        .single()
+        .toEntity<Goal>()
 }
 
 /** All goals owned by [userID], newest first. */
@@ -109,6 +127,29 @@ suspend fun goalFor(
         .limit(1)
         .firstOrNull()
         ?.toEntity<Goal>()
+}
+
+/**
+ * Change a goal's target and/or color; null fields are left as they are. Returns true if [userID]
+ * has the goal.
+ */
+suspend fun updateGoal(
+    userID: UUID,
+    integration: String,
+    metric: String,
+    period: GoalPeriod,
+    target: Long?,
+    color: HabitColor?,
+): Boolean = suspendTransaction {
+    Goals.update({
+        (Goals.userID eq userID) and
+            (Goals.integration eq integration) and
+            (Goals.metric eq metric) and
+            (Goals.period eq period)
+    }) {
+        if (target != null) it[Goals.target] = target
+        if (color != null) it[Goals.color] = color
+    } > 0
 }
 
 /** Delete a single goal. Returns true if a row was removed. */

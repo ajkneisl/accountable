@@ -2,8 +2,9 @@
 // web/src/features/dashboard/types.ts — the logic is platform-agnostic, only the
 // TileVariant import differs.
 
-import type { Goal } from "@shared/index"
+import type { Goal, GoalColor } from "@shared/index"
 import type { TileVariant } from "../../ui/primitives"
+import { HABIT_PALETTE } from "../habits/grid"
 
 /** Stable per-integration display badge. */
 export const INTEGRATION_VISUAL: Record<
@@ -25,6 +26,24 @@ const FALLBACK_VISUAL = {
 
 export function integrationVisual(integration: string) {
     return INTEGRATION_VISUAL[integration] ?? FALLBACK_VISUAL
+}
+
+/** Palette color matching each tile, so a goal without its own color looks as it always has. */
+const TILE_COLOR: Record<TileVariant, GoalColor> = {
+    ink: "INK",
+    lime: "LIME",
+    coral: "CORAL",
+    "": "LIME"
+}
+
+/** The goal's chosen accent, or its integration's default. */
+export function goalColor(goal: Goal): GoalColor {
+    return goal.color ?? TILE_COLOR[integrationVisual(goal.integration).tile]
+}
+
+/** Fill color for {@link goalColor}. */
+export function goalFill(goal: Goal): string {
+    return HABIT_PALETTE[goalColor(goal)].fill
 }
 
 /** Pretty unit name for a (integration, metric) pair. */

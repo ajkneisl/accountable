@@ -141,9 +141,6 @@ export function StreakSection({
                         label="today, in progress"
                     />
                 </View>
-                <Text className="mt-2.5 text-xs leading-4 text-ink-3">
-                    {STREAK_EXPLANATION}
-                </Text>
             </View>
         </View>
     )

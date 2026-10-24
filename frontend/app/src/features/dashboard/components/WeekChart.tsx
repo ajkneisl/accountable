@@ -2,7 +2,7 @@
 
 import { View } from "react-native"
 import { colors } from "../../../theme"
-import { Mono, type TileVariant } from "../../../ui/primitives"
+import { Mono } from "../../../ui/primitives"
 
 // vals is a fixed Monday–Sunday week (Monday first), so labels are static.
 const WEEKDAY = ["M", "T", "W", "T", "F", "S", "S"]
@@ -12,20 +12,15 @@ const CHART_HEIGHT = 80
 export function WeekChart({
     vals,
     target,
-    tone = "ink"
+    color = colors.ink
 }: {
     vals: number[]
     target: number
-    tone?: TileVariant
+    /** Fill for days that hit the target. */
+    color?: string
 }) {
     // Headroom above the tallest bar so a maxed-out day doesn't touch the top.
     const max = Math.max(target, ...vals, 1) * 1.2
-    const color =
-        tone === "lime"
-            ? colors.lime
-            : tone === "coral"
-              ? colors.coral
-              : colors.ink
 
     return (
         <View>

@@ -4,9 +4,11 @@
 export function Hero() {
     return (
         <section className="px-16 pb-20 pt-16 text-center">
-            <h1 className="display mx-auto mb-6 mt-0 max-w-[900px] text-[80px]">
+            <h1 className="display mx-auto mb-6 mt-0 max-w-[900px] text-[80px] leading-[1.12]">
                 Goals get done when friends are{" "}
-                <span className="rounded-xl bg-lime px-3">watching.</span>
+                <span className="rounded-xl bg-lime px-3 box-decoration-clone">
+                    watching.
+                </span>
             </h1>
 
             <p className="mx-auto mb-3 mt-0 max-w-[560px] text-[19px] leading-[1.5] text-ink-2">

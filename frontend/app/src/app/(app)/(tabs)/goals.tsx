@@ -21,7 +21,8 @@ import {
 } from "../../../ui/primitives"
 
 export default function Goals() {
-    const { data, loading, error, reload, openNewGoal } = useAppData()
+    const { data, loading, error, reload, openNewGoal, openEditGoal } =
+        useAppData()
     const goals = data.goals
     const onTrack = goals.filter((g) => isOnTrack(g)).length
 
@@ -80,7 +81,11 @@ export default function Goals() {
             )}
 
             {goals.map((g) => (
-                <GoalCard key={goalKey(g)} goal={g} />
+                <GoalCard
+                    key={goalKey(g)}
+                    goal={g}
+                    onEdit={() => openEditGoal(goalKey(g))}
+                />
             ))}
 
             {!(goals.length === 0 && loading) && (

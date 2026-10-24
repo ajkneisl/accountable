@@ -73,6 +73,8 @@ fun initDb() {
             AppleHealthImports,
             *IntegrationTables.all.toTypedArray(),
         )
+        // create() skips tables that already exist, so columns added later need adding by hand.
+        exec("ALTER TABLE goals ADD COLUMN IF NOT EXISTS color VARCHAR(16)")
     }
 }
 

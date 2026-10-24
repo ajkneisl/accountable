@@ -9,17 +9,14 @@ import type { CompetitionSummary } from "@shared/index"
 import { userAtom } from "../../../auth"
 import { Screen } from "../../../ui/Screen"
 import { SettingsButton } from "../../../ui/SettingsButton"
-import { SearchIcon } from "../../../ui/icons"
 import {
     AddCard,
     Button,
     Card,
     Chip,
     Display,
-    Input,
     Mono
 } from "../../../ui/primitives"
-import { colors } from "../../../theme"
 import { useAppData } from "../../../features/common/AppData"
 import { CompetitionSheet } from "../../../features/competition/components/CompetitionSheet"
 
@@ -58,8 +55,6 @@ export default function Competitions() {
     const { data, loading, reload } = useAppData()
     const user = useAtomValue(userAtom)
     const [sheetOpen, setSheetOpen] = useState(false)
-    const [searching, setSearching] = useState(false)
-    const [query, setQuery] = useState("")
     const [filter, setFilter] = useState<Filter>("all")
     const [sort, setSort] = useState<Sort>("newest")
 
@@ -68,22 +63,16 @@ export default function Competitions() {
     const ownedCount = competitions.filter((c) => c.ownerID === meID).length
 
     const visible = useMemo(() => {
-        // Match on name or join code, ignoring case and a leading "#".
-        const q = query.trim().toLowerCase().replace(/^#/, "")
         return competitions
             .filter((c) => {
-                if (filter === "owned" && c.ownerID !== meID) return false
-                if (filter === "joined" && c.ownerID === meID) return false
-                if (!q) return true
-                return (
-                    c.name.toLowerCase().includes(q) ||
-                    c.joinCode.toLowerCase().includes(q)
-                )
+                if (filter === "owned") return c.ownerID === meID
+                if (filter === "joined") return c.ownerID !== meID
+                return true
             })
             .sort(COMPARATORS[sort])
-    }, [competitions, query, filter, sort, meID])
+    }, [competitions, filter, sort, meID])
 
-    const narrowed = query.trim() !== "" || filter !== "all"
+    const narrowed = filter !== "all"
 
     return (
         <Screen
@@ -99,55 +88,17 @@ export default function Competitions() {
             </View>
 
             {competitions.length > 0 && (
-                <View className="flex-row gap-2.5">
-                    <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel="Search competitions"
-                        accessibilityState={{ expanded: searching }}
-                        onPress={() => {
-                            // Closing the field drops the query with it.
-                            if (searching) setQuery("")
-                            setSearching(!searching)
-                        }}
-                        className={`h-10 w-10 items-center justify-center rounded-full border ${
-                            searching ? "border-ink bg-ink" : "border-line"
-                        }`}
-                    >
-                        <SearchIcon
-                            color={searching ? colors.bg : colors.ink}
-                            size={18}
-                        />
-                    </Pressable>
-                </View>
-            )}
-
-            {competitions.length > 0 && (
-                <View className="gap-3">
-                    {searching && (
-                        <Input
-                            value={query}
-                            onChangeText={setQuery}
-                            placeholder="Search by name or code"
-                            autoFocus
-                            autoCapitalize="none"
-                            autoCorrect={false}
-                            clearButtonMode="while-editing"
-                            returnKeyType="search"
-                            accessibilityLabel="Search competitions"
-                        />
-                    )}
-                    <View className="flex-row flex-wrap items-center justify-between gap-2">
-                        <Segmented
-                            options={FILTERS}
-                            value={filter}
-                            onChange={setFilter}
-                        />
-                        <Segmented
-                            options={SORTS}
-                            value={sort}
-                            onChange={setSort}
-                        />
-                    </View>
+                <View className="flex-row flex-wrap items-center justify-between gap-2">
+                    <Segmented
+                        options={FILTERS}
+                        value={filter}
+                        onChange={setFilter}
+                    />
+                    <Segmented
+                        options={SORTS}
+                        value={sort}
+                        onChange={setSort}
+                    />
                 </View>
             )}
 
@@ -162,18 +113,13 @@ export default function Competitions() {
             ) : visible.length === 0 ? (
                 <Card className="gap-3 p-5">
                     <Text className="text-[13px] text-ink-3">
-                        No competitions match
-                        {query.trim() ? ` "${query.trim()}"` : " this filter"}.
+                        No competitions match this filter.
                     </Text>
                     <Button
-                        label="Clear filters"
+                        label="Clear filter"
                         variant="line"
                         size="sm"
-                        onPress={() => {
-                            setQuery("")
-                            setSearching(false)
-                            setFilter("all")
-                        }}
+                        onPress={() => setFilter("all")}
                     />
                 </Card>
             ) : (
