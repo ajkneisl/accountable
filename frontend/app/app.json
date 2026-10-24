@@ -1,6 +1,6 @@
 {
     "expo": {
-        "name": "Accountable",
+        "name": "Beacc",
         "slug": "accountable",
         "version": "1.0.0",
         "orientation": "portrait",
@@ -36,8 +36,8 @@
             [
                 "@kingstinct/react-native-healthkit",
                 {
-                    "NSHealthShareUsageDescription": "Accountable reads your workouts and sleep so they count toward your goals.",
-                    "NSHealthUpdateUsageDescription": "Accountable only reads your workouts and sleep. It never writes to Apple Health.",
+                    "NSHealthShareUsageDescription": "Beacc reads your workouts, sleep and steps so they count toward your goals.",
+                    "NSHealthUpdateUsageDescription": "Beacc only reads your workouts, sleep and steps. It never writes to Apple Health.",
                     "background": true
                 }
             ],

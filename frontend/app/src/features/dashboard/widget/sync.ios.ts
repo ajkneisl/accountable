@@ -8,10 +8,10 @@
 import { isRunningInExpoGo } from "expo"
 import type { Goal } from "@shared/index"
 import {
-    dayOfIsoWeek,
     goalKey,
     goalTitle,
     integrationVisual,
+    paceStatus,
     unitLabel,
     unitScale
 } from "../types"
@@ -96,15 +96,15 @@ function propsFor(
             total: shown(total),
             target: shown(weekly),
             unit: unitLabel(g.integration, g.metric),
-            // Prorated by how far into the week we are, as on the goal card.
-            onPace: total >= (weekly * dayOfIsoWeek(now)) / 7,
+            // Paced against the days already over, as on the goal card.
+            status: paceStatus(total, weekly, true, now),
             days,
             dayTarget: g.period === "DAILY" ? g.target : g.target / 7
         }
     })
     return {
         goals: cards,
-        onPace: cards.filter((c) => c.onPace).length,
+        onPace: cards.filter((c) => c.status === "onTrack").length,
         signedOut: false
     }
 }
@@ -133,7 +133,7 @@ export function syncGoalsWidget(goals: Goal[]): void {
         const at = day(d - today)
         entries.push({
             date: at,
-            // Score at midday: pace reads the weekday in UTC.
+            // Score at midday, safely inside that local day.
             props: propsFor(goals, today, d, at.getTime() + 12 * 3_600_000)
         })
     }

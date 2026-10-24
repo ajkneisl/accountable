@@ -16,7 +16,7 @@ TEAM_ID=CBL6R6SP6A
 API_URL=${EXPO_PUBLIC_API_URL:-https://acc.umn.app/api}
 
 WORK=$(mktemp -d -t accountable-testflight)
-ARCHIVE=$WORK/Accountable.xcarchive
+ARCHIVE=$WORK/Beacc.xcarchive
 LOG=$WORK/xcodebuild.log
 trap 'echo "Logs: $LOG"' ERR
 
@@ -44,7 +44,7 @@ node -e '
 say "Generating the native project"
 CI=1 EXPO_NO_TELEMETRY=1 npx expo prebuild -p ios --clean
 
-BUILT=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" ios/Accountable/Info.plist)
+BUILT=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" ios/Beacc/Info.plist)
 if [[ $BUILT != "$NEXT" ]]; then
     echo "Info.plist has build $BUILT, expected $NEXT" >&2
     exit 1
@@ -54,8 +54,8 @@ fi
 
 say "Archiving (API: $API_URL)"
 EXPO_PUBLIC_API_URL=$API_URL xcodebuild archive \
-    -workspace ios/Accountable.xcworkspace \
-    -scheme Accountable \
+    -workspace ios/Beacc.xcworkspace \
+    -scheme Beacc \
     -configuration Release \
     -destination "generic/platform=iOS" \
     -archivePath "$ARCHIVE" \
@@ -67,7 +67,7 @@ EXPO_PUBLIC_API_URL=$API_URL xcodebuild archive \
     exit 1
 }
 
-if ! grep -aq "$API_URL" "$ARCHIVE/Products/Applications/Accountable.app/main.jsbundle"; then
+if ! grep -aq "$API_URL" "$ARCHIVE/Products/Applications/Beacc.app/main.jsbundle"; then
     echo "The JS bundle doesn't contain $API_URL" >&2
     exit 1
 fi

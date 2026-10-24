@@ -5,6 +5,7 @@ import api.Error
 import integrations.IntegrationData
 import integrations.appleFitnessRoutes
 import integrations.appleSleepRoutes
+import integrations.appleStepsRoutes
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.auth.authenticate
@@ -241,6 +242,7 @@ fun Route.integrationRoutes() {
             post("/refresh", INTEGRATION_REFRESH_ALL_ROUTE)
             appleFitnessRoutes()
             appleSleepRoutes()
+            appleStepsRoutes()
             get("/{name}/history", INTEGRATION_HISTORY_ROUTE)
             post("/{name}", INTEGRATION_ENABLE_ROUTE)
             delete("/{name}", INTEGRATION_DISABLE_ROUTE)

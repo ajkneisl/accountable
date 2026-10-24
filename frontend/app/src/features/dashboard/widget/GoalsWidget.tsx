@@ -44,7 +44,7 @@ export interface GoalsWidgetGoal {
     /** Weekly-equivalent target. */
     target: number
     unit: string
-    onPace: boolean
+    status: "onTrack" | "atRisk" | "behind"
     /** Per-day values, Monday first; -1 for a day after today. */
     days: number[]
     /** Per-day target the bars are measured against. */
@@ -97,8 +97,8 @@ const GoalsWidget = (
                 </Text>
                 <Text modifiers={[font({ size: 12 }), foregroundStyle(ink3)]}>
                     {props.signedOut
-                        ? "Sign in to Accountable to see your goals."
-                        : "Add a goal in Accountable to track it here."}
+                        ? "Sign in to Beacc to see your goals."
+                        : "Add a goal in Beacc to track it here."}
                 </Text>
                 <Spacer />
             </VStack>
@@ -111,7 +111,7 @@ const GoalsWidget = (
     const card = (goal: GoalsWidgetGoal, key: number) => {
         // The Ink accent is the dark background; flip it so it stays visible.
         const accent = dark && goal.color === "#16100c" ? ink : goal.color
-        const tone = goal.onPace ? accent : coral
+        const tone = goal.status === "behind" ? coral : accent
         // Headroom above the tallest bar, as on the in-app week chart.
         const max = Math.max(goal.dayTarget, ...goal.days, 1) * 1.2
         return (
@@ -171,7 +171,11 @@ const GoalsWidget = (
                     ))}
                 </HStack>
                 <Text modifiers={[mono(11), foregroundStyle(tone)]}>
-                    {goal.onPace ? "on pace" : "behind"}
+                    {goal.status === "onTrack"
+                        ? "on pace"
+                        : goal.status === "atRisk"
+                          ? "at risk"
+                          : "behind"}
                 </Text>
             </VStack>
         )
@@ -220,7 +224,7 @@ const GoalsWidget = (
                 >
                     {more
                         ? "Touch and hold, then Edit Widget."
-                        : "Create one in Accountable to see it here."}
+                        : "Create one in Beacc to see it here."}
                 </Text>
             </VStack>
         )

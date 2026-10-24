@@ -76,8 +76,12 @@ export function WorkoutCard({
                 </View>
             </View>
 
-            <View className="mb-4 flex-row">
+            <View className="mb-4 flex-row items-center gap-3">
                 <Button label="+ Add workout" size="sm" onPress={onAdd} />
+                <Text className="flex-1 text-[11px] leading-[15px] text-ink-3">
+                    Manual override — workouts sync from Apple Health
+                    automatically.
+                </Text>
             </View>
 
             {workouts.length === 0 ? (

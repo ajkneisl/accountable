@@ -28,21 +28,17 @@ export default function Habits() {
             onRefresh={reload}
             topRight={<SettingsButton />}
         >
-            <View className="gap-3">
-                <Display size={32}>
-                    {habits.length === 0 ? (
-                        "Build something daily."
-                    ) : (
-                        <>
-                            {doneToday} of {habits.length} done.{" "}
-                            <Text className="text-ink-3">
-                                {doneToday === habits.length
-                                    ? "Clean sweep."
-                                    : "Keep going."}
-                            </Text>
-                        </>
-                    )}
-                </Display>
+            <View className="gap-1.5 pr-12">
+                <Display size={32}>Habits</Display>
+                <Text className="text-[15px] text-ink-3">
+                    {habits.length === 0
+                        ? "Build something daily."
+                        : `${doneToday} of ${habits.length} done today. ${
+                              doneToday === habits.length
+                                  ? "Clean sweep."
+                                  : "Keep going."
+                          }`}
+                </Text>
             </View>
 
             {error !== null && (

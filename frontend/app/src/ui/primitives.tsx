@@ -395,7 +395,7 @@ export function AccLogo({ size = 18 }: { size?: number }) {
                 style={{ fontSize: size, letterSpacing: size * -0.02 }}
                 className="font-bold text-ink"
             >
-                Accountable
+                Beacc
             </Text>
         </View>
     )
@@ -478,6 +478,29 @@ function SleepIcon({ size = 24 }: { size?: number }) {
     )
 }
 
+function StepsIcon({ size = 24 }: { size?: number }) {
+    const props = {
+        stroke: colors.ink,
+        strokeWidth: 2,
+        strokeLinejoin: "round" as const,
+        fill: "none"
+    }
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+            <Path
+                d="M7 3c1.7 0 2.5 1.8 2.5 4.5S8.8 13 7 13s-2.5-2.8-2.5-5.5S5.3 3 7 3Z"
+                {...props}
+            />
+            <Path d="M5 16.5h4V19a2 2 0 0 1-4 0v-2.5Z" {...props} />
+            <Path
+                d="M17 7c1.7 0 2.5 1.8 2.5 4.5S18.8 17 17 17s-2.5-2.8-2.5-5.5S15.3 7 17 7Z"
+                {...props}
+            />
+            <Path d="M15 20h4v.5a2 2 0 0 1-4 0V20Z" {...props} />
+        </Svg>
+    )
+}
+
 /** Brand mark for a known integration, or null so the caller falls back to a glyph. */
 export function IntegrationIcon({
     name,
@@ -495,6 +518,8 @@ export function IntegrationIcon({
             return <WorkoutIcon size={size} />
         case "apple_sleep":
             return <SleepIcon size={size} />
+        case "apple_steps":
+            return <StepsIcon size={size} />
         default:
             return null
     }

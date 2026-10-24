@@ -7,7 +7,7 @@ import type {
     CompetitionGoalBoard,
     CompetitionWeek
 } from "@shared/index"
-import { dayOfIsoWeek } from "../dashboard/types"
+import { paceBar } from "../dashboard/types"
 import { FALLBACK_BAR_COLOR } from "./colors"
 
 /** Weekly-equivalent target the weekly total is measured against. */
@@ -18,7 +18,7 @@ export function weeklyTarget(board: CompetitionGoalBoard): number {
 /**
  * The total a member must have reached *by [now]* to be "on pace":
  * - past weeks compare against the full weekly target
- * - the current week prorates it by how far into the week we are
+ * - the current week spreads it over the days already over ([paceBar])
  */
 export function paceTarget(
     board: CompetitionGoalBoard,
@@ -26,7 +26,7 @@ export function paceTarget(
     now = Date.now()
 ): number {
     const wt = weeklyTarget(board)
-    return currentWeek ? (wt * dayOfIsoWeek(now)) / 7 : wt
+    return currentWeek ? paceBar(wt, now) : wt
 }
 
 export type MemberStanding = {

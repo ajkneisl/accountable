@@ -4,6 +4,8 @@ import integrations.AppleFitness
 import integrations.AppleFitnessTable
 import integrations.AppleSleep
 import integrations.AppleSleepTable
+import integrations.AppleSteps
+import integrations.AppleStepsTable
 import integrations.GitHub
 import integrations.GitHubTable
 import integrations.LeetCode
@@ -47,11 +49,17 @@ fun startOfUtcDay(epochMs: Long): Long = startOfDay(epochMs, ZoneOffset.UTC)
 
 /** Registry of every integration's table. */
 object IntegrationTables {
-    val all: List<IntegrationTable> = listOf(GitHubTable, LeetCodeTable, AppleFitnessTable, AppleSleepTable)
+    val all: List<IntegrationTable> = listOf(
+            GitHubTable,
+            LeetCodeTable,
+            AppleFitnessTable,
+            AppleSleepTable,
+            AppleStepsTable,
+        )
 }
 
 /** Registry of every [Integration] instance, indexed by [Integration.name]. */
 object Integrations {
-    val all: List<Integration<*>> = listOf(GitHub, LeetCode, AppleFitness, AppleSleep)
+    val all: List<Integration<*>> = listOf(GitHub, LeetCode, AppleFitness, AppleSleep, AppleSteps)
     val byName: Map<String, Integration<*>> = all.associateBy { it.name }
 }

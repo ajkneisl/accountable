@@ -32,6 +32,7 @@ import {
     formatAmount,
     formatWeekRange,
     integrationVisual,
+    paceStatus,
     unitLabel
 } from "../../dashboard/types"
 import { FALLBACK_BAR_COLOR, MEDAL } from "../colors"
@@ -168,6 +169,11 @@ function Standings({
                     </View>
                 )
             })}
+
+            <Text className="mt-2 px-2 text-xs leading-4 text-ink-3">
+                Streak is days in a row hitting every shared goal, counted from the
+                day each member joined. Today counts once its goals are met.
+            </Text>
         </View>
     )
 }
@@ -232,7 +238,7 @@ function GoalProgress({
                 {members.map((m) => {
                     const isMe = m.userID === meID
                     const color = colorMap[m.userID] ?? FALLBACK_BAR_COLOR
-                    const onPace = m.total >= pace
+                    const status = paceStatus(m.total, wt, currentWeek)
                     const pct = Math.min(100, (m.total / wt) * 100)
                     return (
                         <View key={m.userID} className="gap-1.5">
@@ -257,12 +263,18 @@ function GoalProgress({
                                 </Mono>
                                 <Text
                                     className={`w-16 text-right text-[11px] font-semibold ${
-                                        onPace
+                                        status === "onTrack"
                                             ? "text-lime-ink"
-                                            : "text-coral-ink"
+                                            : status === "atRisk"
+                                              ? "text-ink-2"
+                                              : "text-coral-ink"
                                     }`}
                                 >
-                                    {onPace ? "on pace" : "behind"}
+                                    {status === "onTrack"
+                                        ? "on pace"
+                                        : status === "atRisk"
+                                          ? "at risk"
+                                          : "behind"}
                                 </Text>
                             </View>
 

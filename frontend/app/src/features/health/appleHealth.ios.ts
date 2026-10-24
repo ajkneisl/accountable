@@ -3,14 +3,17 @@
 // HealthKit UUID, so a sync can always safely re-send an overlapping window.
 // Sleep is totalled per day on the device and posted as one figure per day,
 // which replaces that day's stored total — so it's just as safe to re-send.
+// Steps work the same way, with HealthKit doing the per-day totalling.
 
 import { isRunningInExpoGo } from "expo"
 import {
     type ApiConfig,
     type ImportedSleepDay,
+    type ImportedStepsDay,
     type ImportedWorkout,
     type WorkoutType,
     importSleep,
+    importSteps,
     importWorkouts
 } from "@shared/index"
 
@@ -18,12 +21,22 @@ type HealthKit = typeof import("@kingstinct/react-native-healthkit")
 
 const WORKOUTS = "HKWorkoutTypeIdentifier" as const
 const SLEEP = "HKCategoryTypeIdentifierSleepAnalysis" as const
+const STEPS = "HKQuantityTypeIdentifierStepCount" as const
+const READ_TYPES = [
+    WORKOUTS,
+    "HKQuantityTypeIdentifierActiveEnergyBurned",
+    SLEEP,
+    STEPS
+] as const
 
 /** Most workouts the backend accepts per import call. */
 const IMPORT_PAGE = 500
 
-/** Most sleep days the backend accepts per import call. */
+/** Most sleep (or step) days the backend accepts per import call. */
 const SLEEP_IMPORT_PAGE = 400
+
+/** The backend's per-day step cap; anything above is junk data. */
+const MAX_STEPS_PER_DAY = 250_000
 
 const DAY_MS = 86_400_000
 
@@ -60,9 +73,25 @@ export function isAppleHealthSupported(): boolean {
 export async function requestAppleHealthAccess(): Promise<void> {
     const hk = getHealthKit()
     if (!hk) throw new Error("Apple Health isn't available on this device.")
-    await hk.requestAuthorization({
-        toRead: [WORKOUTS, "HKQuantityTypeIdentifierActiveEnergyBurned", SLEEP]
-    })
+    await hk.requestAuthorization({ toRead: [...READ_TYPES] })
+}
+
+/**
+ * Whether the permission sheet has already been answered for every type we read.
+ * iOS won't say whether access was granted, so this is the closest it gets to
+ * "connected" — it survives anything that wipes the app's own stored flag.
+ */
+export async function hasRequestedAppleHealthAccess(): Promise<boolean> {
+    const hk = getHealthKit()
+    if (!hk) return false
+    try {
+        const status = await hk.getRequestStatusForAuthorization({
+            toRead: [...READ_TYPES]
+        })
+        return status === hk.AuthorizationRequestStatus.unnecessary
+    } catch {
+        return false
+    }
 }
 
 /**
@@ -252,6 +281,50 @@ export async function syncAppleHealthSleep(
     let imported = 0
     for (let i = 0; i < days.length; i += SLEEP_IMPORT_PAGE) {
         const res = await importSleep(api, days.slice(i, i + SLEEP_IMPORT_PAGE))
+        imported += res.imported
+    }
+    return imported
+}
+
+/**
+ * Import per-day step totals for every day from [since] (ms epoch) on. Resolves
+ * to how many days were written. HealthKit's cumulative sum dedupes steps a
+ * watch and phone both counted, so each day's figure is already its total.
+ */
+export async function syncAppleHealthSteps(
+    api: ApiConfig,
+    since: number
+): Promise<number> {
+    const hk = getHealthKit()
+    if (!hk) return 0
+
+    const firstDay = localDayStart(since)
+    const stats = await hk.queryStatisticsCollectionForQuantity(
+        STEPS,
+        ["cumulativeSum"],
+        new Date(firstDay),
+        { day: 1 },
+        { filter: { date: { startDate: new Date(firstDay) } }, unit: "count" }
+    )
+
+    const days: ImportedStepsDay[] = []
+    for (const s of stats) {
+        if (!s.startDate) continue
+        const start = localDayStart(new Date(s.startDate).getTime())
+        if (start < firstDay) continue
+        days.push({
+            // Local noon, so a few hours' gap to the account's zone keeps the date.
+            day: start + DAY_MS / 2,
+            steps: Math.min(
+                MAX_STEPS_PER_DAY,
+                Math.round(s.sumQuantity?.quantity ?? 0)
+            )
+        })
+    }
+
+    let imported = 0
+    for (let i = 0; i < days.length; i += SLEEP_IMPORT_PAGE) {
+        const res = await importSteps(api, days.slice(i, i + SLEEP_IMPORT_PAGE))
         imported += res.imported
     }
     return imported

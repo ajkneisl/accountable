@@ -13,7 +13,8 @@ export const INTEGRATION_VISUAL: Record<
     github: { glyph: "GH", tile: "ink", sourceLabel: "GitHub" },
     leetcode: { glyph: "LC", tile: "lime", sourceLabel: "LeetCode" },
     apple_fitness: { glyph: "F", tile: "coral", sourceLabel: "Fitness" },
-    apple_sleep: { glyph: "Z", tile: "ink", sourceLabel: "Sleep" }
+    apple_sleep: { glyph: "Z", tile: "ink", sourceLabel: "Sleep" },
+    apple_steps: { glyph: "ST", tile: "lime", sourceLabel: "Steps" }
 }
 
 const FALLBACK_VISUAL = {
@@ -35,6 +36,7 @@ export function unitLabel(integration: string, metric: string): string {
     if (integration === "apple_fitness" && metric === "calories")
         return "calories"
     if (integration === "apple_sleep" && metric === "minutes") return "hours"
+    if (integration === "apple_steps" && metric === "steps") return "steps"
     return metric
 }
 
@@ -114,27 +116,64 @@ export function isoWeekNumber(d: Date): number {
     return Math.ceil(((+utc - +yearStart) / 86400000 + 1) / 7)
 }
 
-/** Day-of-ISO-week (Mon=1..Sun=7) for the current UTC instant. */
-export function dayOfIsoWeek(now = Date.now()): number {
-    const d = new Date(now)
-    const isoDow = d.getUTCDay() // 0=Sun..6=Sat
-    return isoDow === 0 ? 7 : isoDow
+/** Weekday (0 = Monday … 6 = Sunday) of [now] in the device's time zone. */
+export function localWeekday(now = Date.now()): number {
+    return (new Date(now).getDay() + 6) % 7
+}
+
+export type PaceStatus = "onTrack" | "atRisk" | "behind"
+
+/**
+ * What a weekly total must have reached to be on track: the target spread
+ * evenly over the days already over. Today doesn't count against you until it
+ * ends, so Monday's bar is 0.
+ */
+export function paceBar(weeklyTarget: number, now = Date.now()): number {
+    return (weeklyTarget * localWeekday(now)) / 7
 }
 
 /**
- * Target value the user should have reached by *now* to be considered on track:
+ * Pace of a weekly [total] toward [weeklyTarget]:
+ * - onTrack: at or above the [paceBar] (a past week: the full target is met)
+ * - atRisk: under the bar, but what's left still fits in the days left,
+ *   including today, at the daily share rounded up to a whole unit
+ * - behind: what's left no longer fits (a past week: the target was missed)
+ */
+export function paceStatus(
+    total: number,
+    weeklyTarget: number,
+    currentWeek = true,
+    now = Date.now()
+): PaceStatus {
+    if (!currentWeek) return total >= weeklyTarget ? "onTrack" : "behind"
+    if (total >= paceBar(weeklyTarget, now)) return "onTrack"
+    const daysLeft = 7 - localWeekday(now)
+    const perDay = Math.max(1, Math.ceil(weeklyTarget / 7))
+    return weeklyTarget - total <= perDay * daysLeft ? "atRisk" : "behind"
+}
+
+/**
+ * Pace of [goal.progress]. Weekly goals follow [paceStatus]; a daily goal is on
+ * track once met and only at risk until then, since the day is still running.
+ */
+export function goalPace(goal: Goal, now = Date.now()): PaceStatus {
+    if (goal.period === "DAILY")
+        return goal.progress >= goal.target ? "onTrack" : "atRisk"
+    return paceStatus(goal.progress, goal.target, true, now)
+}
+
+export function isOnTrack(goal: Goal, now = Date.now()): boolean {
+    return goalPace(goal, now) === "onTrack"
+}
+
+/**
+ * Value the user should reach by the *end of today* to stay on track:
  * - DAILY: the full target
- * - WEEKLY: prorated target × (days-into-week / 7)
+ * - WEEKLY: target × (days through today / 7)
  */
 export function targetByNow(goal: Goal, now = Date.now()): number {
     if (goal.period === "DAILY") return goal.target
-    const dow = dayOfIsoWeek(now)
-    return (goal.target * dow) / 7
-}
-
-/** True iff [goal.progress] meets the prorated [targetByNow]. */
-export function isOnTrack(goal: Goal, now = Date.now()): boolean {
-    return goal.progress >= targetByNow(goal, now)
+    return (goal.target * (localWeekday(now) + 1)) / 7
 }
 
 /** Fraction of target hit *so far in the current window*, clamped to [0, 1]. */

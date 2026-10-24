@@ -31,6 +31,10 @@ enum class HabitColor {
     CORAL,
     INDIGO,
     INK,
+    AMBER,
+    TEAL,
+    SKY,
+    PLUM,
 }
 
 /** Table that contains [Habit]. A user-defined, once-a-day thing they want to keep doing. */

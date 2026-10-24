@@ -6,7 +6,7 @@
 // mirrored in memory: `hydrateSession` loads it once at boot and every write keeps
 // the two in step.
 
-import { atom, useSetAtom } from "jotai"
+import { atom, getDefaultStore } from "jotai"
 import * as SecureStore from "expo-secure-store"
 import {
     ApiError,
@@ -99,10 +99,10 @@ export async function hydrateSession(): Promise<boolean> {
 }
 
 /**
- * Restore the stored session at launch: validate the access token, and if it has
- * expired (they last a day) trade the refresh token for a new pair. The session
- * is only dropped when the server rejects it — a network failure keeps the
- * tokens for the next launch, since a background wake may well be offline.
+ * Restore the stored session at launch. An expired access token (they last a
+ * day) is traded for a new pair by {@link refreshSession} inside `getSelf`. The
+ * session is only dropped when the server rejects it — a network failure keeps
+ * the tokens for the next launch, since a background wake may well be offline.
  */
 export async function restoreSession(
     api: ApiConfig
@@ -120,46 +120,73 @@ export async function restoreSession(
             ])
         }
         return me
-    } catch (err) {
-        if (!(err instanceof ApiError && err.status === 401)) return null
-    }
-
-    const stored = await tokenStore.getRefresh()
-    if (!stored) {
-        await tokenStore.clear()
-        return null
-    }
-    try {
-        await tokenStore.set(await refresh(api, stored))
-        return await getSelf(api)
-    } catch (err) {
-        if (err instanceof ApiError) await tokenStore.clear()
+    } catch {
         return null
     }
 }
 
+let inflightRefresh: Promise<boolean> | null = null
+
+/**
+ * {@link ApiConfig.onUnauthorized}: trade the refresh token for a new pair after
+ * a 401. Refresh tokens are single-use, so concurrent 401s share one exchange, and
+ * a request that was rejected with an already-replaced token just retries. When
+ * the server rejects the refresh token the session is over and the user is
+ * signed out; a network failure leaves the tokens alone and surfaces the 401.
+ */
+async function refreshSession(rejectedToken: string | null): Promise<boolean> {
+    if (accessToken && accessToken !== rejectedToken) return true
+
+    inflightRefresh ??= (async () => {
+        const stored = await tokenStore.getRefresh()
+        if (!stored) {
+            await endSession()
+            return false
+        }
+        try {
+            await tokenStore.set(await refresh(apiConfig, stored))
+            return true
+        } catch (err) {
+            if (err instanceof ApiError) await endSession()
+            return false
+        }
+    })().finally(() => {
+        inflightRefresh = null
+    })
+
+    return inflightRefresh
+}
+
 export const apiConfig: ApiConfig = {
     baseUrl,
-    getAccessToken: tokenStore.getAccess
+    getAccessToken: tokenStore.getAccess,
+    onUnauthorized: refreshSession
 }
 
 export const userAtom = atom<SelfResponse | null>(null)
 
 export const isAuthenticatedAtom = atom((get) => get(userAtom) !== null)
 
+/**
+ * Drop every trace of the local session. Clearing {@link userAtom} sends the
+ * authenticated layout back to the welcome screen.
+ */
+async function endSession(): Promise<void> {
+    await tokenStore.clear()
+    clearHabitsWidget()
+    clearCompetitionsWidget()
+    clearGoalsWidget()
+    await forgetAppleHealth()
+    getDefaultStore().set(userAtom, null)
+}
+
 /** Returns a handler that revokes the session, clears tokens, and returns to sign-in. */
 export function useSignOut() {
     const api = useApi()
-    const setUser = useSetAtom(userAtom)
     return async () => {
         const refresh = await tokenStore.getRefresh()
         if (refresh) await logout(api, refresh).catch(() => {})
-        await tokenStore.clear()
-        clearHabitsWidget()
-        clearCompetitionsWidget()
-        clearGoalsWidget()
-        await forgetAppleHealth()
-        setUser(null)
+        await endSession()
         router.replace("/welcome")
     }
 }

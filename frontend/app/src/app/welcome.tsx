@@ -4,15 +4,7 @@
 import { Text, View } from "react-native"
 import { router } from "expo-router"
 import { SafeAreaView } from "react-native-safe-area-context"
-import { AccLogo, Button, Display, IntegrationIcon } from "../ui/primitives"
-import { colors } from "../theme"
-
-const SOURCES = [
-    { name: "github", label: "GitHub" },
-    { name: "leetcode", label: "LeetCode" },
-    { name: "apple_fitness", label: "Workouts" },
-    { name: "apple_sleep", label: "Sleep" }
-]
+import { AccLogo, Button, Display } from "../ui/primitives"
 
 export default function Welcome() {
     return (
@@ -31,22 +23,9 @@ export default function Welcome() {
                 </View>
 
                 <Text className="text-[17px] leading-[24px] text-ink-2">
-                    Track commits, LeetCode problems, workouts, and sleep
-                    automatically, and share your progress with friends.
+                    Track progress automatically from the apps you already
+                    use, and share it with friends.
                 </Text>
-
-                <View className="flex-row gap-3">
-                    {SOURCES.map((s) => (
-                        <View
-                            key={s.name}
-                            accessibilityLabel={s.label}
-                            style={{ backgroundColor: colors.bgSunken }}
-                            className="h-12 w-12 items-center justify-center rounded-[14px]"
-                        >
-                            <IntegrationIcon name={s.name} size={22} />
-                        </View>
-                    ))}
-                </View>
             </View>
 
             <View className="gap-3 pb-2">

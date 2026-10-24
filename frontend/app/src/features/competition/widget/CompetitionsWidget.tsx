@@ -95,8 +95,8 @@ const CompetitionsWidget = (
                 </Text>
                 <Text modifiers={[font({ size: 12 }), foregroundStyle(ink3)]}>
                     {props.signedOut
-                        ? "Sign in to Accountable to see your standings."
-                        : "Create or join a competition in Accountable to see the standings."}
+                        ? "Sign in to Beacc to see your standings."
+                        : "Create or join a competition in Beacc to see the standings."}
                 </Text>
                 <Spacer />
             </VStack>

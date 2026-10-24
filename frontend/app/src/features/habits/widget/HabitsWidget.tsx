@@ -91,8 +91,8 @@ const HabitsWidget = (
                 </Text>
                 <Text modifiers={[font({ size: 12 }), foregroundStyle(ink3)]}>
                     {props.signedOut
-                        ? "Sign in to Accountable to see your habits."
-                        : "Add a habit in Accountable to start your heatmap."}
+                        ? "Sign in to Beacc to see your habits."
+                        : "Add a habit in Beacc to start your heatmap."}
                 </Text>
                 <Spacer />
             </VStack>
@@ -195,7 +195,7 @@ const HabitsWidget = (
                 >
                     {more
                         ? "Touch and hold, then Edit Widget."
-                        : "Create one in Accountable to see it here."}
+                        : "Create one in Beacc to see it here."}
                 </Text>
             </VStack>
         )

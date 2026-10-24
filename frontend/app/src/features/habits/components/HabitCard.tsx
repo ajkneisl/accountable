@@ -27,10 +27,7 @@ export function HabitCard({
     const palette = HABIT_PALETTE[habit.color]
     const doneToday = habit.done[habit.done.length - 1] ?? false
     // Dark fills need a light check to stay visible.
-    const checkColor =
-        habit.color === "INK" || habit.color === "INDIGO"
-            ? colors.bg
-            : colors.ink
+    const checkColor = palette.dark ? colors.bg : colors.ink
 
     return (
         <Card className="gap-4 p-5">

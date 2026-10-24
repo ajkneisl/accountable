@@ -1,6 +1,6 @@
 // Integration detail — connect/disconnect plus a recent-history view of the raw
 // data the integration records (independent of any goals). For Apple Fitness this
-// is also the home of workout logging.
+// is also the home of workout logging, and of Apple Health's sleep and step history.
 
 import { useCallback, useEffect, useState } from "react"
 import { Text, View } from "react-native"
@@ -41,6 +41,7 @@ import {
 
 const APPLE_FITNESS = "apple_fitness"
 const APPLE_SLEEP = "apple_sleep"
+const APPLE_STEPS = "apple_steps"
 
 const DAY_FMT = new Intl.DateTimeFormat(undefined, {
     weekday: "short",
@@ -109,15 +110,19 @@ function ConfigCard({
 
             {name === APPLE_FITNESS ? (
                 <Text className="text-[13px] text-ink-3">
-                    Workouts you log below are recorded here, along with any
-                    imported from Apple Health — connect it on the Integrations
-                    tab to sync them automatically.
+                    Workouts you log below are recorded here, along with
+                    workouts, sleep and steps imported from Apple Health.
                 </Text>
             ) : name === APPLE_SLEEP ? (
                 <Text className="text-[13px] text-ink-3">
                     Sleep comes from Apple Health — connect it on the
                     Integrations tab. Each night counts toward the day you wake
                     up.
+                </Text>
+            ) : name === APPLE_STEPS ? (
+                <Text className="text-[13px] text-ink-3">
+                    Steps come from Apple Health — connect it on the
+                    Integrations tab.
                 </Text>
             ) : status?.enabled ? (
                 <View className="flex-row items-center justify-between gap-3">
@@ -181,6 +186,8 @@ function dayValue(day: IntegrationHistoryDay): number {
             return day.workouts
         case "apple_sleep":
             return day.minutes
+        case "apple_steps":
+            return day.steps
     }
 }
 
@@ -199,13 +206,17 @@ function dayLabel(day: IntegrationHistoryDay): string {
             } · ${day.calories.toLocaleString()} kcal`
         case "apple_sleep":
             return `${Math.floor(day.minutes / 60)}h ${day.minutes % 60}m asleep`
+        case "apple_steps":
+            return `${day.steps.toLocaleString()} steps`
     }
 }
 
 function HistoryCard({
+    title = "Recent activity",
     history,
     loading
 }: {
+    title?: string
     history: IntegrationHistoryDay[]
     loading: boolean
 }) {
@@ -213,7 +224,7 @@ function HistoryCard({
     return (
         <Card className="p-5">
             <View className="mb-3.5 flex-row items-center gap-2">
-                <Eyebrow>Recent activity</Eyebrow>
+                <Eyebrow>{title}</Eyebrow>
                 {loading && <Spinner />}
             </View>
             {history.length === 0 ? (
@@ -260,6 +271,15 @@ export default function IntegrationScreen() {
     const known = name in INTEGRATION_VISUAL
     const [history, setHistory] = useState<IntegrationHistoryDay[]>([])
     const [historyLoading, setHistoryLoading] = useState(true)
+    // Apple Health's sleep and steps, shown alongside Fitness so all of it
+    // lives on one screen.
+    const withSleep = name === APPLE_FITNESS
+    const [sleepHistory, setSleepHistory] = useState<IntegrationHistoryDay[]>(
+        []
+    )
+    const [stepsHistory, setStepsHistory] = useState<IntegrationHistoryDay[]>(
+        []
+    )
     const [refreshing, setRefreshing] = useState(false)
     const [addWorkoutOpen, setAddWorkoutOpen] = useState(false)
 
@@ -267,13 +287,26 @@ export default function IntegrationScreen() {
         if (!known) return
         setHistoryLoading(true)
         try {
-            setHistory(await getIntegrationHistory(api, name))
+            const [main, sleep, steps] = await Promise.all([
+                getIntegrationHistory(api, name),
+                withSleep
+                    ? getIntegrationHistory(api, APPLE_SLEEP).catch(() => [])
+                    : [],
+                withSleep
+                    ? getIntegrationHistory(api, APPLE_STEPS).catch(() => [])
+                    : []
+            ])
+            setHistory(main)
+            setSleepHistory(sleep)
+            setStepsHistory(steps)
         } catch {
             setHistory([])
+            setSleepHistory([])
+            setStepsHistory([])
         } finally {
             setHistoryLoading(false)
         }
-    }, [api, name, known])
+    }, [api, name, known, withSleep])
 
     useEffect(() => {
         loadHistory()
@@ -341,7 +374,27 @@ export default function IntegrationScreen() {
                 onChanged={afterConfigChange}
             />
 
-            <HistoryCard history={history} loading={historyLoading} />
+            <HistoryCard
+                title={withSleep ? "Recent workouts" : undefined}
+                history={history}
+                loading={historyLoading}
+            />
+
+            {withSleep && (
+                <HistoryCard
+                    title="Recent sleep"
+                    history={sleepHistory}
+                    loading={historyLoading}
+                />
+            )}
+
+            {withSleep && (
+                <HistoryCard
+                    title="Recent steps"
+                    history={stepsHistory}
+                    loading={historyLoading}
+                />
+            )}
 
             {name === APPLE_FITNESS && (
                 <WorkoutCard

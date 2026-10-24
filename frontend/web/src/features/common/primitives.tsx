@@ -5,13 +5,13 @@ import { Link } from "react-router-dom"
 
 export type TileVariant = "ink" | "lime" | "coral" | ""
 
-/** Wordmark lockup — a lime dot + "Accountable". */
+/** Wordmark lockup — a lime dot + "Beacc". */
 export function AccLogo({ size = "md" }: { size?: "md" | "lg" | number }) {
     const s = typeof size === "number" ? size : size === "lg" ? 22 : 18
     return (
         <span className="acc-logo" style={{ fontSize: s }}>
             <span className="dot" />
-            Accountable
+            Beacc
         </span>
     )
 }

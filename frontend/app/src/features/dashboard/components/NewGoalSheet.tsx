@@ -70,6 +70,15 @@ const SOURCES: Source[] = [
         optionLabel: "Metric",
         metrics: [{ metric: "minutes", label: "Hours asleep" }],
         defaults: { period: "DAILY", target: "8" }
+    },
+    {
+        integration: "apple_steps",
+        label: "Steps",
+        glyph: "ST",
+        tile: "lime",
+        optionLabel: "Metric",
+        metrics: [{ metric: "steps", label: "Steps" }],
+        defaults: { period: "DAILY", target: "10000" }
     }
 ]
 

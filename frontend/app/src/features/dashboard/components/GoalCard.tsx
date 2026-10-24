@@ -12,12 +12,12 @@ import {
     SourceTile
 } from "../../../ui/primitives"
 import {
-    dayOfIsoWeek,
     formatAmount,
     formatWeekRange,
     goalTitle,
     integrationVisual,
     isoWeekNumber,
+    paceStatus,
     unitLabel
 } from "../types"
 import { WeekChart } from "./WeekChart"
@@ -81,12 +81,10 @@ export function GoalCard({ goal }: { goal: Goal }) {
     const total = week?.total ?? goal.progress
     const weeklyTarget = weeklyTargetFor(goal)
 
-    // On track: the current week prorates the target by how far into the week we
-    // are; a completed past week compares against the full weekly target.
-    const proratedTarget =
-        offset === 0 ? (weeklyTarget * dayOfIsoWeek()) / 7 : weeklyTarget
-    const onTrack = total >= proratedTarget
-    const tone = onTrack ? visual.tile || "lime" : "coral"
+    // The current week is paced against the days already over; a completed past
+    // week compares against the full weekly target.
+    const pace = paceStatus(total, weeklyTarget, offset === 0)
+    const tone = pace === "behind" ? "coral" : visual.tile || "lime"
 
     const rangeLabel = week ? formatWeekRange(week.weekStart) : "—"
     const weekNum = isoWeekNumber(new Date(week ? week.weekStart : Date.now()))
@@ -152,7 +150,11 @@ export function GoalCard({ goal }: { goal: Goal }) {
 
             <View className="flex-row items-center border-t border-line-2 pt-2.5">
                 <Text className="flex-1 text-xs text-ink-3">
-                    {onTrack ? "On track" : "Behind pace"}
+                    {pace === "onTrack"
+                        ? "On track"
+                        : pace === "atRisk"
+                          ? "At risk"
+                          : "Behind pace"}
                 </Text>
                 <Mono className="text-[11px] text-ink-3">
                     {Math.round((total / Math.max(1, weeklyTarget)) * 100)}%

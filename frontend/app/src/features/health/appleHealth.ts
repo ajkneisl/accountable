@@ -9,6 +9,11 @@ export function isAppleHealthSupported(): boolean {
 
 export async function requestAppleHealthAccess(): Promise<void> {}
 
+/** Whether the permission sheet has already been answered for every type we read. */
+export async function hasRequestedAppleHealthAccess(): Promise<boolean> {
+    return false
+}
+
 /** Have iOS wake the app whenever a workout or sleep is saved to Health. */
 export async function enableBackgroundSync(): Promise<void> {}
 
@@ -29,6 +34,14 @@ export async function syncAppleHealthWorkouts(
 
 /** Import per-day sleep totals since [since] (ms epoch). Resolves to how many days were written. */
 export async function syncAppleHealthSleep(
+    _api: ApiConfig,
+    _since: number
+): Promise<number> {
+    return 0
+}
+
+/** Import per-day step totals since [since] (ms epoch). Resolves to how many days were written. */
+export async function syncAppleHealthSteps(
     _api: ApiConfig,
     _since: number
 ): Promise<number> {

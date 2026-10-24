@@ -1,6 +1,6 @@
 // Integrations tab of Settings: connect and refresh the data sources goals are
-// tracked against. GitHub and LeetCode link by username, workouts and sleep
-// come from Apple Health.
+// tracked against. GitHub and LeetCode link by username, workouts, sleep and
+// steps come from Apple Health.
 
 import { useState } from "react"
 import { Text, View } from "react-native"
@@ -29,8 +29,9 @@ import {
 
 const APPLE_FITNESS = "apple_fitness"
 const APPLE_SLEEP = "apple_sleep"
+const APPLE_STEPS = "apple_steps"
 /** Fed by the Apple Health card rather than linked by username. */
-const HEALTH_SOURCES = [APPLE_FITNESS, APPLE_SLEEP]
+const HEALTH_SOURCES = [APPLE_FITNESS, APPLE_SLEEP, APPLE_STEPS]
 
 function openIntegration(name: string) {
     router.push({ pathname: "/integrations/[name]", params: { name } })
@@ -96,11 +97,11 @@ function AppleHealthCard() {
     const health = useAppleHealth()
 
     const status = !health.supported
-        ? "Needs the Accountable iOS app — not available in Expo Go or on this device."
+        ? "Needs the Beacc iOS app — not available in Expo Go or on this device."
         : !health.connected
-          ? "Import your workouts and sleep automatically."
+          ? "Import your workouts, sleep and steps automatically."
           : health.syncing
-            ? "Syncing workouts and sleep…"
+            ? "Syncing workouts, sleep and steps…"
             : health.lastSync
               ? `Connected · synced ${formatRefreshed(health.lastSync)}`
               : "Connected"
@@ -160,25 +161,12 @@ function AppleHealthCard() {
                     </>
                 )}
                 <Button
-                    label="Workouts"
+                    label="View data"
                     variant="line"
                     size="sm"
                     onPress={() => openIntegration(APPLE_FITNESS)}
                 />
-                <Button
-                    label="Sleep"
-                    variant="line"
-                    size="sm"
-                    onPress={() => openIntegration(APPLE_SLEEP)}
-                />
             </View>
-
-            {health.connected && (
-                <Text className="mt-3 text-[11px] text-ink-3">
-                    Disconnecting stops syncing. To revoke access entirely, use
-                    Settings › Health › Data Access on your iPhone.
-                </Text>
-            )}
         </Card>
     )
 }

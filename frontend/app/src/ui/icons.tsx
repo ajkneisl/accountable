@@ -38,3 +38,23 @@ export function CheckIcon({ color, size = 24 }: IconProps) {
         </Svg>
     )
 }
+
+/** Magnifying glass for search. */
+export function SearchIcon({ color, size = 24 }: IconProps) {
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+            <Circle cx={11} cy={11} r={6.5} {...stroke(color)} />
+            <Path d="M16 16l4.5 4.5" {...stroke(color)} />
+        </Svg>
+    )
+}
+
+/** Circled "i" for explanations. */
+export function InfoIcon({ color, size = 24 }: IconProps) {
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+            <Circle cx={12} cy={12} r={9} {...stroke(color)} />
+            <Path d="M12 11v5M12 8h.01" {...stroke(color)} />
+        </Svg>
+    )
+}

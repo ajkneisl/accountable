@@ -9,7 +9,17 @@ import type { CompetitionSummary } from "@shared/index"
 import { userAtom } from "../../../auth"
 import { Screen } from "../../../ui/Screen"
 import { SettingsButton } from "../../../ui/SettingsButton"
-import { Button, Card, Chip, Display, Input, Mono } from "../../../ui/primitives"
+import { SearchIcon } from "../../../ui/icons"
+import {
+    AddCard,
+    Button,
+    Card,
+    Chip,
+    Display,
+    Input,
+    Mono
+} from "../../../ui/primitives"
+import { colors } from "../../../theme"
 import { useAppData } from "../../../features/common/AppData"
 import { CompetitionSheet } from "../../../features/competition/components/CompetitionSheet"
 
@@ -47,7 +57,8 @@ const COMPARATORS: Record<
 export default function Competitions() {
     const { data, loading, reload } = useAppData()
     const user = useAtomValue(userAtom)
-    const [sheetMode, setSheetMode] = useState<"create" | "join" | null>(null)
+    const [sheetOpen, setSheetOpen] = useState(false)
+    const [searching, setSearching] = useState(false)
     const [query, setQuery] = useState("")
     const [filter, setFilter] = useState<Filter>("all")
     const [sort, setSort] = useState<Sort>("newest")
@@ -80,39 +91,51 @@ export default function Competitions() {
             onRefresh={reload}
             topRight={<SettingsButton />}
         >
-            <View className="gap-2">
-                <Display size={32}>All competitions</Display>
+            <View className="gap-2 pr-12">
+                <Display size={32}>Competitions</Display>
                 <Text className="text-[13px] text-ink-3">
                     {competitions.length} total · {ownedCount} created by you
                 </Text>
             </View>
 
-            <View className="flex-row gap-2.5">
-                <Button
-                    label="+ New"
-                    size="sm"
-                    onPress={() => setSheetMode("create")}
-                />
-                <Button
-                    label="Join with code"
-                    variant="line"
-                    size="sm"
-                    onPress={() => setSheetMode("join")}
-                />
-            </View>
+            {competitions.length > 0 && (
+                <View className="flex-row gap-2.5">
+                    <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="Search competitions"
+                        accessibilityState={{ expanded: searching }}
+                        onPress={() => {
+                            // Closing the field drops the query with it.
+                            if (searching) setQuery("")
+                            setSearching(!searching)
+                        }}
+                        className={`h-10 w-10 items-center justify-center rounded-full border ${
+                            searching ? "border-ink bg-ink" : "border-line"
+                        }`}
+                    >
+                        <SearchIcon
+                            color={searching ? colors.bg : colors.ink}
+                            size={18}
+                        />
+                    </Pressable>
+                </View>
+            )}
 
             {competitions.length > 0 && (
                 <View className="gap-3">
-                    <Input
-                        value={query}
-                        onChangeText={setQuery}
-                        placeholder="Search by name or code"
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        clearButtonMode="while-editing"
-                        returnKeyType="search"
-                        accessibilityLabel="Search competitions"
-                    />
+                    {searching && (
+                        <Input
+                            value={query}
+                            onChangeText={setQuery}
+                            placeholder="Search by name or code"
+                            autoFocus
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            clearButtonMode="while-editing"
+                            returnKeyType="search"
+                            accessibilityLabel="Search competitions"
+                        />
+                    )}
                     <View className="flex-row flex-wrap items-center justify-between gap-2">
                         <Segmented
                             options={FILTERS}
@@ -148,6 +171,7 @@ export default function Competitions() {
                         size="sm"
                         onPress={() => {
                             setQuery("")
+                            setSearching(false)
                             setFilter("all")
                         }}
                     />
@@ -169,12 +193,18 @@ export default function Competitions() {
                 </View>
             )}
 
-            {sheetMode && (
+            {!(competitions.length === 0 && loading) && (
+                <AddCard
+                    label="Create or join competition"
+                    onPress={() => setSheetOpen(true)}
+                />
+            )}
+
+            {sheetOpen && (
                 <CompetitionSheet
-                    initialMode={sheetMode}
-                    onClose={() => setSheetMode(null)}
+                    onClose={() => setSheetOpen(false)}
                     onDone={(id) => {
-                        setSheetMode(null)
+                        setSheetOpen(false)
                         reload()
                         router.push({
                             pathname: "/competition/[id]",

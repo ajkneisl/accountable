@@ -1,6 +1,14 @@
 import { request, type ApiConfig } from "../http"
 
-export type HabitColor = "LIME" | "CORAL" | "INDIGO" | "INK"
+export type HabitColor =
+    | "LIME"
+    | "CORAL"
+    | "INDIGO"
+    | "INK"
+    | "AMBER"
+    | "TEAL"
+    | "SKY"
+    | "PLUM"
 
 /** One habit with its heatmap window. */
 export interface Habit {

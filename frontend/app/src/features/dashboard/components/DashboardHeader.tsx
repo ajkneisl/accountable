@@ -1,29 +1,20 @@
-// Greeting at the top of the dashboard.
+// Greeting at the top of the dashboard. Goal status lives in TodayCard.
 
 import { Text, View } from "react-native"
-import type { Goal, SelfResponse } from "@shared/index"
+import type { SelfResponse } from "@shared/index"
 import { Display } from "../../../ui/primitives"
-import { isOnTrack } from "../types"
 
-export function DashboardHeader({
-    user,
-    goals
-}: {
-    user: SelfResponse | null
-    goals: Goal[]
-}) {
-    const onTrack = goals.filter((g) => isOnTrack(g)).length
-    const status =
-        goals.length === 0
-            ? "No goals yet."
-            : onTrack === goals.length
-              ? "Every goal is on track."
-              : `${onTrack} of ${goals.length} goals on track.`
+export function DashboardHeader({ user }: { user: SelfResponse | null }) {
+    const date = new Date().toLocaleDateString(undefined, {
+        weekday: "long",
+        month: "long",
+        day: "numeric"
+    })
 
     return (
         <View className="gap-1.5 pr-12">
             <Display size={32}>Hey {user?.username ?? "there"}.</Display>
-            <Text className="text-[15px] text-ink-3">{status}</Text>
+            <Text className="text-[15px] text-ink-3">{date}</Text>
         </View>
     )
 }

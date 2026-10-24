@@ -54,30 +54,70 @@ export function buildGrid(
     )
 }
 
-/** Fill, soft tint and ink for a habit's accent. */
+/**
+ * Fill, soft tint and ink for a habit's accent. `dark` marks fills that need a
+ * light foreground (e.g. the check mark) to stay visible.
+ */
 export const HABIT_PALETTE: Record<
     HabitColor,
-    { fill: string; soft: string; ink: string; label: string }
+    { fill: string; soft: string; ink: string; label: string; dark: boolean }
 > = {
     LIME: {
         fill: colors.lime,
         soft: colors.limeSoft,
         ink: colors.limeInk,
-        label: "Lime"
+        label: "Lime",
+        dark: false
     },
     CORAL: {
         fill: colors.coral,
         soft: colors.coralSoft,
         ink: colors.coralInk,
-        label: "Coral"
+        label: "Coral",
+        dark: false
     },
     INDIGO: {
         fill: colors.indigo,
         soft: "#dfe3f7",
         ink: colors.indigo,
-        label: "Indigo"
+        label: "Indigo",
+        dark: true
     },
-    INK: { fill: colors.ink, soft: colors.line, ink: colors.ink, label: "Ink" }
+    INK: {
+        fill: colors.ink,
+        soft: colors.line,
+        ink: colors.ink,
+        label: "Ink",
+        dark: true
+    },
+    AMBER: {
+        fill: "#f5b82e",
+        soft: "#fdefc8",
+        ink: "#6b4700",
+        label: "Amber",
+        dark: false
+    },
+    TEAL: {
+        fill: "#14a39a",
+        soft: "#d2f1ee",
+        ink: "#00524c",
+        label: "Teal",
+        dark: false
+    },
+    SKY: {
+        fill: "#4aa8f0",
+        soft: "#dcecfb",
+        ink: "#0b4a7a",
+        label: "Sky",
+        dark: false
+    },
+    PLUM: {
+        fill: "#8e3fa8",
+        soft: "#efdff5",
+        ink: "#8e3fa8",
+        label: "Plum",
+        dark: true
+    }
 }
 
 export const HABIT_COLORS = Object.keys(HABIT_PALETTE) as HabitColor[]
