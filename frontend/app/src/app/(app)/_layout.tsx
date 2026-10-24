@@ -12,6 +12,7 @@ import { CompetitionsWidgetSync } from "../../features/competition/widget/Compet
 import { GoalsWidgetSync } from "../../features/dashboard/widget/GoalsWidgetSync"
 import { HabitsProvider } from "../../features/habits/HabitsData"
 import { AppleHealthProvider } from "../../features/health/AppleHealthData"
+import { ScreenTimeProvider } from "../../features/screenTime/ScreenTimeData"
 
 export default function AppLayout() {
     const authed = useAtomValue(isAuthenticatedAtom)
@@ -23,17 +24,19 @@ export default function AppLayout() {
             <CompetitionsWidgetSync />
             <GoalsWidgetSync />
             <AppleHealthProvider>
-                <HabitsProvider>
-                    <Stack screenOptions={{ headerShown: false }}>
-                        <Stack.Screen name="(tabs)" />
-                        <Stack.Screen
-                            name="competition/[id]"
-                            options={{ presentation: "card" }}
-                        />
-                        <Stack.Screen name="integrations/[name]" />
-                        <Stack.Screen name="settings" />
-                    </Stack>
-                </HabitsProvider>
+                <ScreenTimeProvider>
+                    <HabitsProvider>
+                        <Stack screenOptions={{ headerShown: false }}>
+                            <Stack.Screen name="(tabs)" />
+                            <Stack.Screen
+                                name="competition/[id]"
+                                options={{ presentation: "card" }}
+                            />
+                            <Stack.Screen name="integrations/[name]" />
+                            <Stack.Screen name="settings" />
+                        </Stack>
+                    </HabitsProvider>
+                </ScreenTimeProvider>
             </AppleHealthProvider>
         </AppDataProvider>
     )

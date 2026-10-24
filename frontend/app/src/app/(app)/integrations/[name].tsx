@@ -1,6 +1,7 @@
 // Integration detail — connect/disconnect plus a recent-history view of the raw
 // data the integration records (independent of any goals). For Apple Fitness this
 // is also the home of workout logging, and of Apple Health's sleep and step history.
+// Screen Time is recorded on the phone, so it's connected from the Integrations tab.
 
 import { useCallback, useEffect, useState } from "react"
 import { Text, View } from "react-native"
@@ -42,6 +43,7 @@ import {
 const APPLE_FITNESS = "apple_fitness"
 const APPLE_SLEEP = "apple_sleep"
 const APPLE_STEPS = "apple_steps"
+const SCREEN_TIME = "screen_time"
 
 const DAY_FMT = new Intl.DateTimeFormat(undefined, {
     weekday: "short",
@@ -124,6 +126,12 @@ function ConfigCard({
                     Steps come from Apple Health — connect it on the
                     Integrations tab.
                 </Text>
+            ) : name === SCREEN_TIME ? (
+                <Text className="text-[13px] text-ink-3">
+                    Screen time is recorded on your iPhone — connect it on the
+                    Integrations tab. Totals are rounded down to the last 15
+                    minutes and sync whenever you open Beacc.
+                </Text>
             ) : status?.enabled ? (
                 <View className="flex-row items-center justify-between gap-3">
                     <View className="flex-1">
@@ -188,6 +196,8 @@ function dayValue(day: IntegrationHistoryDay): number {
             return day.minutes
         case "apple_steps":
             return day.steps
+        case "screen_time":
+            return day.minutes
     }
 }
 
@@ -208,6 +218,8 @@ function dayLabel(day: IntegrationHistoryDay): string {
             return `${Math.floor(day.minutes / 60)}h ${day.minutes % 60}m asleep`
         case "apple_steps":
             return `${day.steps.toLocaleString()} steps`
+        case "screen_time":
+            return `${Math.floor(day.minutes / 60)}h ${day.minutes % 60}m on screen`
     }
 }
 

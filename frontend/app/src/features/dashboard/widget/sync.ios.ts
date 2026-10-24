@@ -12,7 +12,8 @@ import {
     goalKey,
     goalTitle,
     integrationVisual,
-    paceStatus,
+    isLimit,
+    paceStatusFor,
     unitLabel,
     unitScale
 } from "../types"
@@ -96,9 +97,10 @@ function propsFor(
             target: shown(daily ? g.target : weekly),
             unit: unitLabel(g.integration, g.metric),
             // Paced against the days already over, as on the goal card.
-            status: paceStatus(weekTotal, weekly, true, now),
+            status: paceStatusFor(g)(weekTotal, weekly, true, now),
             days,
-            dayTarget: g.period === "DAILY" ? g.target : g.target / 7
+            dayTarget: g.period === "DAILY" ? g.target : g.target / 7,
+            limit: isLimit(g.integration, g.metric)
         }
     })
     return {

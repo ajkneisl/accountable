@@ -36,7 +36,8 @@ const INTEGRATION_VISUAL: Record<
     leetcode: { glyph: "LC", tile: "lime", sourceLabel: "LeetCode" },
     apple_fitness: { glyph: "F", tile: "coral", sourceLabel: "Fitness" },
     apple_sleep: { glyph: "Z", tile: "ink", sourceLabel: "Sleep" },
-    apple_steps: { glyph: "ST", tile: "lime", sourceLabel: "Steps" }
+    apple_steps: { glyph: "ST", tile: "lime", sourceLabel: "Steps" },
+    screen_time: { glyph: "SC", tile: "coral", sourceLabel: "Screen Time" }
 }
 
 const FALLBACK_VISUAL = {
@@ -59,15 +60,36 @@ export function unitLabel(integration: string, metric: string): string {
         return "calories"
     if (integration === "apple_sleep" && metric === "minutes") return "hours"
     if (integration === "apple_steps" && metric === "steps") return "steps"
+    if (integration === "screen_time" && metric === "minutes") return "hours"
     return metric
 }
 
 /**
- * How many stored units make one displayed unit. Sleep is stored and summed in
- * minutes but set and shown in hours; everything else is shown as stored.
+ * How many stored units make one displayed unit. Sleep and screen time are
+ * stored and summed in minutes but set and shown in hours; everything else is
+ * shown as stored.
  */
 function unitScale(integration: string, metric: string): number {
-    return integration === "apple_sleep" && metric === "minutes" ? 60 : 1
+    return (integration === "apple_sleep" || integration === "screen_time") &&
+        metric === "minutes"
+        ? 60
+        : 1
+}
+
+/** Whether goals on this metric are limits, met by staying at or under the target. */
+export function isLimit(integration: string, metric: string): boolean {
+    return integration === "screen_time" && metric === "minutes"
+}
+
+/** Whether [value] meets [target] for this metric, honoring {@link isLimit}. */
+export function meetsTarget(
+    goal: { integration: string; metric: string },
+    value: number,
+    target: number
+): boolean {
+    return isLimit(goal.integration, goal.metric)
+        ? value <= target
+        : value >= target
 }
 
 /** A stored metric value in display units: "7.5" hours of sleep, otherwise the rounded count. */
@@ -100,7 +122,8 @@ export function goalTitle(goal: {
     const unit = unitLabel(goal.integration, goal.metric)
     const cadence = goal.period === "DAILY" ? "day" : "week"
     const target = formatAmount(goal.integration, goal.metric, goal.target)
-    return `${target} ${unit} / ${cadence}`
+    const limit = isLimit(goal.integration, goal.metric) ? "≤ " : ""
+    return `${limit}${target} ${unit} / ${cadence}`
 }
 
 /** Weekly-equivalent target: weekly goals as-is, daily goals × 7. */
@@ -166,6 +189,35 @@ export function paceStatus(
     const daysLeft = 7 - localWeekday(now)
     const perDay = Math.max(1, Math.ceil(weeklyTarget / 7))
     return weeklyTarget - total <= perDay * daysLeft ? "atRisk" : "behind"
+}
+
+/**
+ * Pace of a weekly [total] against a [weeklyLimit] ({@link isLimit}), the
+ * mirror of [paceStatus]:
+ * - onTrack: within the limit's share for the days through today (a past
+ *   week: within the full limit)
+ * - atRisk: past today's share, but still under the weekly limit
+ * - behind: over the weekly limit, which no later day can undo
+ */
+export function limitPaceStatus(
+    total: number,
+    weeklyLimit: number,
+    currentWeek = true,
+    now = Date.now()
+): PaceStatus {
+    if (total > weeklyLimit) return "behind"
+    if (!currentWeek) return "onTrack"
+    return total <= (weeklyLimit * (localWeekday(now) + 1)) / 7
+        ? "onTrack"
+        : "atRisk"
+}
+
+/** [paceStatus] or [limitPaceStatus], whichever fits the goal's metric. */
+export function paceStatusFor(goal: {
+    integration: string
+    metric: string
+}): typeof paceStatus {
+    return isLimit(goal.integration, goal.metric) ? limitPaceStatus : paceStatus
 }
 
 export const PACE_LABEL: Record<PaceStatus, string> = {

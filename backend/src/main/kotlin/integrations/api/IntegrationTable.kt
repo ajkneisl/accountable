@@ -10,6 +10,8 @@ import integrations.GitHub
 import integrations.GitHubTable
 import integrations.LeetCode
 import integrations.LeetCodeTable
+import integrations.ScreenTime
+import integrations.ScreenTimeTable
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -55,11 +57,12 @@ object IntegrationTables {
             AppleFitnessTable,
             AppleSleepTable,
             AppleStepsTable,
+            ScreenTimeTable,
         )
 }
 
 /** Registry of every [Integration] instance, indexed by [Integration.name]. */
 object Integrations {
-    val all: List<Integration<*>> = listOf(GitHub, LeetCode, AppleFitness, AppleSleep, AppleSteps)
+    val all: List<Integration<*>> = listOf(GitHub, LeetCode, AppleFitness, AppleSleep, AppleSteps, ScreenTime)
     val byName: Map<String, Integration<*>> = all.associateBy { it.name }
 }

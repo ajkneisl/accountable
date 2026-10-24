@@ -15,7 +15,8 @@ export const INTEGRATION_VISUAL: Record<
     leetcode: { glyph: "LC", tile: "lime", sourceLabel: "LeetCode" },
     apple_fitness: { glyph: "F", tile: "coral", sourceLabel: "Fitness" },
     apple_sleep: { glyph: "Z", tile: "ink", sourceLabel: "Sleep" },
-    apple_steps: { glyph: "ST", tile: "lime", sourceLabel: "Steps" }
+    apple_steps: { glyph: "ST", tile: "lime", sourceLabel: "Steps" },
+    screen_time: { glyph: "SC", tile: "coral", sourceLabel: "Screen Time" }
 }
 
 const FALLBACK_VISUAL = {
@@ -56,15 +57,39 @@ export function unitLabel(integration: string, metric: string): string {
         return "calories"
     if (integration === "apple_sleep" && metric === "minutes") return "hours"
     if (integration === "apple_steps" && metric === "steps") return "steps"
+    if (integration === "screen_time" && metric === "minutes") return "hours"
     return metric
 }
 
 /**
- * How many stored units make one displayed unit. Sleep is stored and summed in
- * minutes but set and shown in hours; everything else is shown as stored.
+ * How many stored units make one displayed unit. Sleep and screen time are
+ * stored and summed in minutes but set and shown in hours; everything else is
+ * shown as stored.
  */
 export function unitScale(integration: string, metric: string): number {
-    return integration === "apple_sleep" && metric === "minutes" ? 60 : 1
+    return (integration === "apple_sleep" || integration === "screen_time") &&
+        metric === "minutes"
+        ? 60
+        : 1
+}
+
+/**
+ * Whether goals on this metric are limits — met by staying at or under the
+ * target rather than reaching it. Mirrors the backend's GoalDirection.AT_MOST.
+ */
+export function isLimit(integration: string, metric: string): boolean {
+    return integration === "screen_time" && metric === "minutes"
+}
+
+/** Whether [value] meets [target] for this metric, honoring {@link isLimit}. */
+export function meetsTarget(
+    goal: { integration: string; metric: string },
+    value: number,
+    target: number
+): boolean {
+    return isLimit(goal.integration, goal.metric)
+        ? value <= target
+        : value >= target
 }
 
 /**
@@ -95,7 +120,8 @@ export function goalTitle(goal: Goal): string {
     const unit = unitLabel(goal.integration, goal.metric)
     const cadence = goal.period === "DAILY" ? "day" : "week"
     const target = formatAmount(goal.integration, goal.metric, goal.target)
-    return `${target} ${unit} / ${cadence}`
+    const limit = isLimit(goal.integration, goal.metric) ? "≤ " : ""
+    return `${limit}${target} ${unit} / ${cadence}`
 }
 
 /** Compact "Jun 3, 2:14 PM" style stamp for when an integration last refreshed. */
@@ -172,13 +198,46 @@ export function paceStatus(
 }
 
 /**
- * Pace of [goal.progress]. Weekly goals follow [paceStatus]; a daily goal is on
- * track once met and only at risk until then, since the day is still running.
+ * Pace of a weekly [total] against a [weeklyLimit] ({@link isLimit}), the
+ * mirror of [paceStatus]:
+ * - onTrack: within the limit's share for the days through today (a past
+ *   week: within the full limit)
+ * - atRisk: past today's share, but still under the weekly limit
+ * - behind: over the weekly limit, which no later day can undo
+ */
+export function limitPaceStatus(
+    total: number,
+    weeklyLimit: number,
+    currentWeek = true,
+    now = Date.now()
+): PaceStatus {
+    if (total > weeklyLimit) return "behind"
+    if (!currentWeek) return "onTrack"
+    return total <= (weeklyLimit * (localWeekday(now) + 1)) / 7
+        ? "onTrack"
+        : "atRisk"
+}
+
+/** [paceStatus] or [limitPaceStatus], whichever fits the goal's metric. */
+export function paceStatusFor(goal: {
+    integration: string
+    metric: string
+}): typeof paceStatus {
+    return isLimit(goal.integration, goal.metric) ? limitPaceStatus : paceStatus
+}
+
+/**
+ * Pace of [goal.progress]. Weekly goals follow [paceStatusFor]; a daily goal is
+ * on track once met and only at risk until then, since the day is still
+ * running. A daily limit is on track until it's broken, and then can't recover.
  */
 export function goalPace(goal: Goal, now = Date.now()): PaceStatus {
-    if (goal.period === "DAILY")
+    if (goal.period === "DAILY") {
+        if (isLimit(goal.integration, goal.metric))
+            return goal.progress <= goal.target ? "onTrack" : "behind"
         return goal.progress >= goal.target ? "onTrack" : "atRisk"
-    return paceStatus(goal.progress, goal.target, true, now)
+    }
+    return paceStatusFor(goal)(goal.progress, goal.target, true, now)
 }
 
 export function isOnTrack(goal: Goal, now = Date.now()): boolean {
@@ -195,9 +254,14 @@ export function targetByNow(goal: Goal, now = Date.now()): number {
     return (goal.target * (localWeekday(now) + 1)) / 7
 }
 
-/** Fraction of target hit *so far in the current window*, clamped to [0, 1]. */
+/**
+ * Fraction of target hit *so far in the current window*, clamped to [0, 1]. A
+ * limit is fully on track while within its share, then shrinks as it goes over.
+ */
 export function onTrackFraction(goal: Goal, now = Date.now()): number {
     const target = targetByNow(goal, now)
+    if (isLimit(goal.integration, goal.metric))
+        return goal.progress <= target ? 1 : target / goal.progress
     if (target <= 0) return 1
     return Math.min(1, goal.progress / target)
 }

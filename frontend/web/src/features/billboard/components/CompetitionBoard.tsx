@@ -13,7 +13,7 @@ import {
     goalKey,
     goalTitle,
     integrationVisual,
-    paceStatus,
+    paceStatusFor,
     unitLabel,
     weeklyTarget
 } from "../format"
@@ -147,7 +147,7 @@ function GoalProgress({
 
             {members.map((m) => {
                 const color = colorMap[m.userID] ?? FALLBACK_BAR_COLOR
-                const status = paceStatus(m.total, wt)
+                const status = paceStatusFor(board)(m.total, wt)
                 const pct = Math.min(
                     100,
                     (shown(m) / Math.max(1, board.target)) * 100

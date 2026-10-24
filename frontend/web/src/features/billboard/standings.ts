@@ -7,7 +7,13 @@ import type {
     CompetitionMemberWeek,
     CompetitionWeek
 } from "@shared/index"
-import { localWeekday, paceBar, weeklyTarget } from "./format"
+import {
+    isLimit,
+    localWeekday,
+    meetsTarget,
+    paceBar,
+    weeklyTarget
+} from "./format"
 
 // Distinct, evenly-spaced hues.
 const BAR_COLORS = [
@@ -52,9 +58,15 @@ export function displayValue(
     return member.vals[localWeekday(now)] ?? 0
 }
 
-/** The total a member must have reached by now to be on pace this week. */
+/**
+ * The total a member must have reached by now to be on pace this week — or for
+ * a limit ({@link isLimit}), the most they can have used: its share through today.
+ */
 export function paceTarget(board: CompetitionGoalBoard, now = Date.now()) {
-    return paceBar(weeklyTarget(board), now)
+    const wt = weeklyTarget(board)
+    if (isLimit(board.integration, board.metric))
+        return (wt * (localWeekday(now) + 1)) / 7
+    return paceBar(wt, now)
 }
 
 export type MemberStanding = {
@@ -78,7 +90,11 @@ export function computeStandings(
         .map((m) => {
             const hits = week.goals.map((board) => {
                 const mw = board.members.find((x) => x.userID === m.userID)
-                return (mw?.total ?? 0) >= paceTarget(board, now)
+                return meetsTarget(
+                    board,
+                    mw?.total ?? 0,
+                    paceTarget(board, now)
+                )
             })
             return {
                 userID: m.userID,

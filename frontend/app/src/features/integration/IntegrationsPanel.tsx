@@ -1,6 +1,6 @@
 // Integrations tab of Settings: connect and refresh the data sources goals are
 // tracked against. GitHub and LeetCode link by username, workouts, sleep and
-// steps come from Apple Health.
+// steps come from Apple Health, and screen time from iOS Screen Time.
 
 import { useState } from "react"
 import { Text, View } from "react-native"
@@ -17,6 +17,7 @@ import {
     integrationVisual
 } from "../dashboard/types"
 import { useAppleHealth } from "../health/AppleHealthData"
+import { useScreenTime } from "../screenTime/ScreenTimeData"
 import {
     Button,
     Card,
@@ -30,8 +31,9 @@ import {
 const APPLE_FITNESS = "apple_fitness"
 const APPLE_SLEEP = "apple_sleep"
 const APPLE_STEPS = "apple_steps"
-/** Fed by the Apple Health card rather than linked by username. */
-const HEALTH_SOURCES = [APPLE_FITNESS, APPLE_SLEEP, APPLE_STEPS]
+const SCREEN_TIME = "screen_time"
+/** Fed by the Apple Health and Screen Time cards rather than linked by username. */
+const DEVICE_SOURCES = [APPLE_FITNESS, APPLE_SLEEP, APPLE_STEPS, SCREEN_TIME]
 
 function openIntegration(name: string) {
     router.push({ pathname: "/integrations/[name]", params: { name } })
@@ -171,6 +173,90 @@ function AppleHealthCard() {
     )
 }
 
+function ScreenTimeCard() {
+    const screenTime = useScreenTime()
+
+    const status = !screenTime.supported
+        ? "Needs the Beacc iOS app — not available in Expo Go or on this device."
+        : !screenTime.connected
+          ? "Track your screen time against a daily or weekly limit."
+          : screenTime.syncing
+            ? "Syncing screen time…"
+            : screenTime.lastSync
+              ? `Connected · synced ${formatRefreshed(screenTime.lastSync)}`
+              : "Connected"
+
+    return (
+        <Card className="p-5">
+            <View className="flex-row items-center gap-3">
+                <SourceTile
+                    label="SC"
+                    variant="coral"
+                    icon={<IntegrationIcon name={SCREEN_TIME} />}
+                />
+                <View className="flex-1">
+                    <View className="flex-row items-center gap-2">
+                        <Text className="text-[14px] font-semibold text-ink">
+                            Screen Time
+                        </Text>
+                        <View
+                            className={`h-1.5 w-1.5 rounded-full ${
+                                screenTime.connected ? "bg-lime" : "bg-line"
+                            }`}
+                        />
+                    </View>
+                    <Text className="text-xs text-ink-3">{status}</Text>
+                </View>
+                {screenTime.syncing && <Spinner />}
+            </View>
+
+            {screenTime.error !== null && (
+                <Text className="mt-3 text-xs text-coral-ink">
+                    {screenTime.error}
+                </Text>
+            )}
+
+            <View className="mt-4 flex-row flex-wrap gap-2">
+                {screenTime.supported && !screenTime.connected && (
+                    <Button
+                        label="Connect Screen Time"
+                        size="sm"
+                        onPress={() => void screenTime.connect()}
+                    />
+                )}
+                {screenTime.connected && (
+                    <>
+                        <Button
+                            label="Sync now"
+                            size="sm"
+                            busy={screenTime.syncing}
+                            onPress={() => void screenTime.syncNow()}
+                        />
+                        <Button
+                            label="Choose apps"
+                            variant="line"
+                            size="sm"
+                            onPress={() => void screenTime.chooseApps()}
+                        />
+                        <Button
+                            label="Disconnect"
+                            variant="line"
+                            size="sm"
+                            onPress={screenTime.disconnect}
+                        />
+                    </>
+                )}
+                <Button
+                    label="View data"
+                    variant="line"
+                    size="sm"
+                    onPress={() => openIntegration(SCREEN_TIME)}
+                />
+            </View>
+        </Card>
+    )
+}
+
 export function IntegrationsPanel() {
     const api = useApi()
     const { data, loading, reload } = useAppData()
@@ -178,7 +264,7 @@ export function IntegrationsPanel() {
     const [refreshingAll, setRefreshingAll] = useState(false)
 
     const sources = data.integrations.filter(
-        (it) => !HEALTH_SOURCES.includes(it.name)
+        (it) => !DEVICE_SOURCES.includes(it.name)
     )
     const connected = sources.filter((it) => it.enabled).length
 
@@ -246,6 +332,8 @@ export function IntegrationsPanel() {
             </Card>
 
             <AppleHealthCard />
+
+            <ScreenTimeCard />
         </>
     )
 }

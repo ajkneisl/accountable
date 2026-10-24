@@ -6,6 +6,7 @@ import integrations.AppleSleepTable
 import integrations.AppleStepsTable
 import integrations.GitHubTable
 import integrations.LeetCodeTable
+import integrations.ScreenTimeTable
 import integrations.api.IntegrationTable
 import java.time.DayOfWeek
 import java.time.Instant
@@ -27,15 +28,25 @@ private fun LocalDate.startMs(zone: ZoneId): Long =
 private fun localDate(now: Long, zone: ZoneId): LocalDate =
     Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
 
+/** Which side of a goal's target counts as meeting it. */
+enum class GoalDirection {
+    /** Reach the target or more (commits, steps). */
+    AT_LEAST,
+
+    /** Stay at or under the target (screen time). */
+    AT_MOST,
+}
+
 /**
  * A metric a [Goal] can track. Pairs a provider name + metric key with the [IntegrationTable]
- * column whose per-day values get summed to compute progress.
+ * column whose per-day values get summed to compute progress, and the [direction] its goals run.
  */
 data class GoalMetric(
     val integration: String,
     val metric: String,
     val table: IntegrationTable,
     val column: Column<Long>,
+    val direction: GoalDirection = GoalDirection.AT_LEAST,
 )
 
 /** Registry of every metric a user is allowed to set a goal against. */
@@ -61,11 +72,30 @@ object GoalMetrics {
             // Stored in minutes; the app sets and shows these goals in hours.
             GoalMetric("apple_sleep", "minutes", AppleSleepTable, AppleSleepTable.minutes),
             GoalMetric("apple_steps", "steps", AppleStepsTable, AppleStepsTable.steps),
+            // Stored in minutes like sleep, but a limit: the goal is to stay under it.
+            GoalMetric(
+                "screen_time",
+                "minutes",
+                ScreenTimeTable,
+                ScreenTimeTable.minutes,
+                GoalDirection.AT_MOST,
+            ),
         )
 
     val byKey: Map<Pair<String, String>, GoalMetric> =
         all.associateBy { it.integration to it.metric }
 }
+
+/** [this] goal's [GoalDirection], from its registered metric; unregistered metrics count up. */
+val GoalDefinition.direction: GoalDirection
+    get() = GoalMetrics.byKey[integration to metric]?.direction ?: GoalDirection.AT_LEAST
+
+/** Whether [value] over one of [this] goal's windows meets its target, honoring [direction]. */
+fun GoalDefinition.isMet(value: Long): Boolean =
+    when (direction) {
+        GoalDirection.AT_LEAST -> value >= target
+        GoalDirection.AT_MOST -> value <= target
+    }
 
 /**
  * Start (inclusive) and end (exclusive) ms-epoch bounds of the current [period] window containing

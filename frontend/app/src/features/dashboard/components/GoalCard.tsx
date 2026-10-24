@@ -24,9 +24,11 @@ import {
     goalFill,
     goalTitle,
     integrationVisual,
+    isLimit,
     isoWeekNumber,
     localWeekday,
-    paceStatus,
+    meetsTarget,
+    paceStatusFor,
     unitLabel
 } from "../types"
 import { WeekChart } from "./WeekChart"
@@ -147,7 +149,7 @@ export function GoalCard({
 
     // The current week is paced against the days already over; a completed past
     // week compares against the full weekly target.
-    const pace = paceStatus(total, weeklyTarget, offset === 0)
+    const pace = paceStatusFor(goal)(total, weeklyTarget, offset === 0)
 
     const rangeLabel = week ? formatWeekRange(week.weekStart) : "—"
 
@@ -158,7 +160,7 @@ export function GoalCard({
     const daysCounted = offset === 0 ? localWeekday() + 1 : 7
     const daysHit = vals
         .slice(0, daysCounted)
-        .filter((v) => v >= goal.target).length
+        .filter((v) => meetsTarget(goal, v, goal.target)).length
     const headline = daily
         ? offset === 0
             ? (vals[localWeekday()] ?? 0)
@@ -226,7 +228,12 @@ export function GoalCard({
                 </Text>
             </View>
 
-            <WeekChart vals={vals} target={dailyTargetFor(goal)} color={goalFill(goal)} />
+            <WeekChart
+                vals={vals}
+                target={dailyTargetFor(goal)}
+                limit={isLimit(goal.integration, goal.metric)}
+                color={goalFill(goal)}
+            />
 
             <View className="flex-row items-center justify-between">
                 <Pressable

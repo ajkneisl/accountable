@@ -12,10 +12,13 @@ const CHART_HEIGHT = 80
 export function WeekChart({
     vals,
     target,
+    limit = false,
     color = colors.ink
 }: {
     vals: number[]
     target: number
+    /** The target is a ceiling: days at or under it count as hit. */
+    limit?: boolean
     /** Fill for days that hit the target. */
     color?: string
 }) {
@@ -50,7 +53,9 @@ export function WeekChart({
                                 (v / max) * CHART_HEIGHT,
                                 v === 0 ? 0 : 4
                             ),
-                            backgroundColor: v >= target ? color : colors.line,
+                            backgroundColor: (limit ? v <= target : v >= target)
+                                ? color
+                                : colors.line,
                             borderRadius: 3
                         }}
                         className="flex-1"

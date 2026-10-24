@@ -51,6 +51,8 @@ export interface GoalsWidgetGoal {
     days: number[]
     /** Per-day target the bars are measured against. */
     dayTarget: number
+    /** The target is a ceiling (screen time): days at or under it are hit. */
+    limit: boolean
 }
 
 export interface GoalsWidgetProps {
@@ -207,7 +209,10 @@ const GoalsWidget = (
                                 foregroundStyle(
                                     v < 0
                                         ? "clear"
-                                        : v > 0 && v >= goal.dayTarget
+                                        : v > 0 &&
+                                            (goal.limit
+                                                ? v <= goal.dayTarget
+                                                : v >= goal.dayTarget)
                                           ? accent
                                           : empty
                                 )

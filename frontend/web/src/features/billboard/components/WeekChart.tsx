@@ -7,11 +7,14 @@ const WEEKDAY = ["M", "T", "W", "T", "F", "S", "S"]
 export function WeekChart({
     vals,
     target,
+    limit = false,
     color,
     className
 }: {
     vals: number[]
     target: number
+    /** The target is a ceiling: days at or under it count as hit. */
+    limit?: boolean
     color: string
     className: string
 }) {
@@ -32,7 +35,9 @@ export function WeekChart({
                         style={{
                             height: `${(v / max) * 100}%`,
                             minHeight: v === 0 ? 0 : 4,
-                            background: v >= target ? color : "var(--line)"
+                            background: (limit ? v <= target : v >= target)
+                                ? color
+                                : "var(--line)"
                         }}
                     />
                 ))}

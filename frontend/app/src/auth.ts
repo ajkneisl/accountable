@@ -20,6 +20,7 @@ import {
 } from "@shared/index"
 import { router } from "expo-router"
 import { forgetAppleHealth } from "./features/health/AppleHealthData"
+import { forgetScreenTime } from "./features/screenTime/screenTime"
 import { clearCompetitionsWidget } from "./features/competition/widget/sync"
 import { clearGoalsWidget } from "./features/dashboard/widget/sync"
 import { clearHabitsWidget } from "./features/habits/widget/sync"
@@ -177,6 +178,7 @@ async function endSession(): Promise<void> {
     clearCompetitionsWidget()
     clearGoalsWidget()
     await forgetAppleHealth()
+    forgetScreenTime()
     getDefaultStore().set(userAtom, null)
 }
 

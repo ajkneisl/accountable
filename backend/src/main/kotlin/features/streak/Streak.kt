@@ -4,6 +4,7 @@ import features.goals.GoalDefinition
 import features.goals.GoalPeriod
 import features.goals.currentWindow
 import features.goals.goalsFor
+import features.goals.isMet
 import features.goals.metricByDay
 import features.goals.sumInRange
 import java.time.Instant
@@ -20,7 +21,7 @@ private const val MAX_STREAK_DAYS = 366
  * entry in [goals].
  *
  * Walks backward day by day from today. A day [D] counts iff:
- * - every daily goal's metric on [D] reached its target, AND
+ * - every daily goal's metric on [D] met its target (see [isMet]), AND
  * - if [D] is in a *completed* week (i.e. before this week), every weekly goal's metric summed
  *   across that week reached its target.
  *
@@ -59,14 +60,14 @@ suspend fun streakFor(
         val dayEnd = startMs(day.plusDays(1), zone)
 
         val dailyPassed =
-            dailyGoals.all { goal -> dailyValues.getValue(goal).sumInRange(dayStart, dayEnd) >= goal.target }
+            dailyGoals.all { goal -> goal.isMet(dailyValues.getValue(goal).sumInRange(dayStart, dayEnd)) }
         if (!dailyPassed) return streak
 
         if (dayStart < currentWeekStart) {
             val (weekStart, weekEnd) = currentWindow(GoalPeriod.WEEKLY, dayStart, zone)
             val weeklyPassed =
                 weeklyGoals.all { goal ->
-                    weeklyValues.getValue(goal).sumInRange(weekStart, weekEnd) >= goal.target
+                    goal.isMet(weeklyValues.getValue(goal).sumInRange(weekStart, weekEnd))
                 }
             if (!weeklyPassed) return streak
         }
@@ -139,12 +140,12 @@ suspend fun streakHistory(userID: UUID, days: Int, now: Long): List<DayStatus> {
         val dayStart = startMs(day, zone)
         val dayEnd = startMs(day.plusDays(1), zone)
         val dailyPassed =
-            dailyGoals.all { goal -> dailyValues.getValue(goal).sumInRange(dayStart, dayEnd) >= goal.target }
+            dailyGoals.all { goal -> goal.isMet(dailyValues.getValue(goal).sumInRange(dayStart, dayEnd)) }
         val weeklyPassed =
             if (dayStart < currentWeekStart) {
                 val (weekStart, weekEnd) = currentWindow(GoalPeriod.WEEKLY, dayStart, zone)
                 weeklyGoals.all { goal ->
-                    weeklyValues.getValue(goal).sumInRange(weekStart, weekEnd) >= goal.target
+                    goal.isMet(weeklyValues.getValue(goal).sumInRange(weekStart, weekEnd))
                 }
             } else true
 

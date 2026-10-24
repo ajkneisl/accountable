@@ -501,6 +501,26 @@ function StepsIcon({ size = 24 }: { size?: number }) {
     )
 }
 
+function ScreenTimeIcon({ size = 24 }: { size?: number }) {
+    const props = {
+        stroke: colors.ink,
+        strokeWidth: 2,
+        strokeLinecap: "round" as const,
+        strokeLinejoin: "round" as const,
+        fill: "none"
+    }
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+            <Path
+                d="M8 2.5h8a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-15a2 2 0 0 1 2-2Z"
+                {...props}
+            />
+            <Path d="M12 8.5v3.5l2 1.5" {...props} />
+            <Path d="M11 18.5h2" {...props} />
+        </Svg>
+    )
+}
+
 /** Brand mark for a known integration, or null so the caller falls back to a glyph. */
 export function IntegrationIcon({
     name,
@@ -520,6 +540,8 @@ export function IntegrationIcon({
             return <SleepIcon size={size} />
         case "apple_steps":
             return <StepsIcon size={size} />
+        case "screen_time":
+            return <ScreenTimeIcon size={size} />
         default:
             return null
     }

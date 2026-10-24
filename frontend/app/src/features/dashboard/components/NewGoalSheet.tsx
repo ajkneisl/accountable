@@ -16,7 +16,7 @@ import {
     SourceTile,
     type TileVariant
 } from "../../../ui/primitives"
-import { unitLabel, unitScale } from "../types"
+import { isLimit, unitLabel, unitScale } from "../types"
 
 type Source = {
     integration: string
@@ -79,6 +79,15 @@ const SOURCES: Source[] = [
         optionLabel: "Metric",
         metrics: [{ metric: "steps", label: "Steps" }],
         defaults: { period: "DAILY", target: "10000" }
+    },
+    {
+        integration: "screen_time",
+        label: "Screen Time",
+        glyph: "SC",
+        tile: "coral",
+        optionLabel: "Metric",
+        metrics: [{ metric: "minutes", label: "Hours on screen, at most" }],
+        defaults: { period: "DAILY", target: "2" }
     }
 ]
 
@@ -237,7 +246,9 @@ export function GoalSheet({
                 </View>
             </SheetField>
 
-            <SheetField label="Target">
+            <SheetField
+                label={isLimit(source.integration, metric) ? "Limit" : "Target"}
+            >
                 <View className="flex-row items-center gap-3">
                     <Input
                         keyboardType={
@@ -249,6 +260,7 @@ export function GoalSheet({
                     />
                     <Text className="text-[17px] text-ink-3">
                         {unit} / {cadence}
+                        {isLimit(source.integration, metric) ? " or less" : ""}
                     </Text>
                 </View>
             </SheetField>

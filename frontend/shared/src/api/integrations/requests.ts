@@ -41,6 +41,7 @@ export type IntegrationHistoryDay =
       }
     | { type: "apple_sleep"; date: number; minutes: number }
     | { type: "apple_steps"; date: number; steps: number }
+    | { type: "screen_time"; date: number; minutes: number }
 
 /**
  * GET /api/integrations/{name}/history?days={n} — stored per-day data for the last {days}
@@ -272,6 +273,33 @@ export function importSteps(
         config,
         "POST",
         "/integrations/apple_steps/import",
+        { days },
+        { auth: true }
+    )
+}
+
+/**
+ * One day's screen time in minutes. `day` is any ms epoch inside that day (the
+ * app sends local noon) and decides which local day the total counts toward.
+ */
+export interface ImportedScreenTimeDay {
+    day: number
+    minutes: number
+}
+
+/**
+ * POST /api/integrations/screen_time/import — store per-day screen time totals
+ * (at most 400 per call). Each day replaces what was stored for it, so this is
+ * safe to repeat. Resolves to how many days were written.
+ */
+export function importScreenTime(
+    config: ApiConfig,
+    days: ImportedScreenTimeDay[]
+): Promise<{ imported: number }> {
+    return request(
+        config,
+        "POST",
+        "/integrations/screen_time/import",
         { days },
         { auth: true }
     )

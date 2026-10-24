@@ -16,6 +16,7 @@ import features.streak.streakFor
 import features.streak.streakHistory
 import integrations.GitHubTable
 import integrations.LeetCodeTable
+import integrations.ScreenTimeTable
 import integrations.api.startOfUtcDay
 import java.time.Instant
 import java.time.ZoneOffset
@@ -58,8 +59,9 @@ class StreakTest {
             password = "",
         )
         transaction {
-            SchemaUtils.create(Users, Goals, GitHubTable, LeetCodeTable)
+            SchemaUtils.create(Users, Goals, GitHubTable, LeetCodeTable, ScreenTimeTable)
             GitHubTable.deleteAll()
+            ScreenTimeTable.deleteAll()
             LeetCodeTable.deleteAll()
             Goals.deleteAll()
             Users.deleteAll()
@@ -86,6 +88,17 @@ class StreakTest {
             it[hard] = 0
         }
     }
+
+    private fun seedScreenTime(userID: UUID, offset: Int, minutes: Long) = transaction {
+        ScreenTimeTable.insert {
+            it[ScreenTimeTable.userID] = userID
+            it[date] = dayStart(offset)
+            it[ScreenTimeTable.minutes] = minutes
+        }
+    }
+
+    private fun dailyScreenTimeLimit(userID: UUID, target: Long) =
+        Goal(userID, "screen_time", "minutes", GoalPeriod.DAILY, target, now)
 
     private fun dailyCommitGoal(userID: UUID, target: Long = 1) =
         Goal(userID, "github", "commits", GoalPeriod.DAILY, target, now)
@@ -184,6 +197,23 @@ class StreakTest {
         seedGithub(user, 0, 1)
         seedGithub(user, -1, 5)
         assertEquals(0, streakFor(user, listOf(dailyCommitGoal(user, target = 2)), now))
+    }
+
+    @Test
+    fun `streakFor counts screen time days at or under the limit`() = runBlocking {
+        val user = newUser()
+        seedScreenTime(user, 0, 60)
+        seedScreenTime(user, -1, 120) // exactly the limit still passes
+        seedScreenTime(user, -2, 121)
+        assertEquals(2, streakFor(user, listOf(dailyScreenTimeLimit(user, target = 120)), now))
+    }
+
+    @Test
+    fun `streakFor breaks today once screen time goes over the limit`() = runBlocking {
+        val user = newUser()
+        seedScreenTime(user, 0, 200)
+        seedScreenTime(user, -1, 30)
+        assertEquals(0, streakFor(user, listOf(dailyScreenTimeLimit(user, target = 120)), now))
     }
 
     @Test
