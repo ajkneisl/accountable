@@ -1,5 +1,6 @@
-// A read-only goal card: this week's total against the weekly target, a Mon–Sun
-// chart, and pace. [fill] stretches the chart to the card's height for widgets.
+// A read-only goal card: this week's total against the weekly target (today's
+// value against the daily target for a daily goal), a Mon–Sun chart, and pace.
+// [fill] stretches the chart to the card's height for widgets.
 
 import type { Goal } from "@shared/index"
 import {
@@ -10,6 +11,7 @@ import {
     goalFill,
     goalTitle,
     integrationVisual,
+    localWeekday,
     paceStatus,
     unitLabel,
     weeklyTarget
@@ -31,6 +33,14 @@ export function GoalCard({
     const amount = (v: number) => formatAmount(goal.integration, goal.metric, v)
     const pct = Math.round((goal.weekTotal / Math.max(1, wt)) * 100)
 
+    // Daily goals read per day, not as a ×7 weekly sum: today's value against
+    // the daily target, and the days hit so far in place of the percentage.
+    const daily = goal.period === "DAILY"
+    const today = localWeekday()
+    const daysHit = goal.weekVals
+        .slice(0, today + 1)
+        .filter((v) => v >= goal.target).length
+
     return (
         <div
             className={`card flex flex-col gap-[1.25em] p-[1.55em] ${
@@ -51,10 +61,13 @@ export function GoalCard({
 
             <div className="flex items-end gap-[0.75em]">
                 <div className="mono text-[3.1em] font-bold leading-none tracking-[-0.03em]">
-                    {amount(goal.weekTotal)}
+                    {amount(
+                        daily ? (goal.weekVals[today] ?? 0) : goal.weekTotal
+                    )}
                 </div>
                 <div className="mb-[0.35em] text-[0.95em] text-ink-3">
-                    / {amount(wt)} {unit} this week
+                    / {amount(daily ? goal.target : wt)} {unit}{" "}
+                    {daily ? "today" : "this week"}
                 </div>
             </div>
 
@@ -77,7 +90,8 @@ export function GoalCard({
                 />
                 <div className="flex-1">{PACE_LABEL[pace]}</div>
                 <div className="mono">
-                    {formatWeekRange(goal.weekStart)} · {pct}%
+                    {formatWeekRange(goal.weekStart)} ·{" "}
+                    {daily ? `${daysHit}/${today + 1} days` : `${pct}%`}
                 </div>
             </div>
         </div>

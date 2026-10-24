@@ -2,7 +2,10 @@
 // goal's per-member progress for the current week. [split] lays the two cards
 // side by side at full height for the full-screen widget.
 
-import type { CompetitionGoalBoard } from "@shared/index"
+import type {
+    CompetitionGoalBoard,
+    CompetitionMemberWeek
+} from "@shared/index"
 import type { CompetitionView } from "../data"
 import {
     formatAmount,
@@ -20,6 +23,7 @@ import {
     type MemberStanding,
     buildColorMap,
     computeStandings,
+    displayValue,
     paceTarget
 } from "../standings"
 import { Badge, Dot } from "./primitives"
@@ -118,7 +122,11 @@ function GoalProgress({
     const unit = unitLabel(board.integration, board.metric)
     const wt = weeklyTarget(board)
     const pacePct = Math.min(100, (paceTarget(board) / Math.max(1, wt)) * 100)
-    const members = [...board.members].sort((a, b) => b.total - a.total)
+    // Daily goals show today's amounts against the daily target; pace (the
+    // status label) still scores the whole week.
+    const daily = board.period === "DAILY"
+    const shown = (m: CompetitionMemberWeek) => displayValue(board, m)
+    const members = [...board.members].sort((a, b) => shown(b) - shown(a))
     const amount = (v: number) =>
         formatAmount(board.integration, board.metric, v)
 
@@ -131,7 +139,8 @@ function GoalProgress({
                         {goalTitle(board)}
                     </div>
                     <div className="text-[0.8em] text-ink-3">
-                        {visual.sourceLabel} · {amount(wt)} {unit} this week
+                        {visual.sourceLabel} ·{" "}
+                        {daily ? "today" : `${amount(wt)} ${unit} this week`}
                     </div>
                 </div>
             </div>
@@ -139,7 +148,10 @@ function GoalProgress({
             {members.map((m) => {
                 const color = colorMap[m.userID] ?? FALLBACK_BAR_COLOR
                 const status = paceStatus(m.total, wt)
-                const pct = Math.min(100, (m.total / Math.max(1, wt)) * 100)
+                const pct = Math.min(
+                    100,
+                    (shown(m) / Math.max(1, board.target)) * 100
+                )
                 return (
                     <div
                         key={m.userID}
@@ -160,14 +172,16 @@ function GoalProgress({
                             <i
                                 style={{ width: `${pct}%`, background: color }}
                             />
-                            <div
-                                className="absolute inset-y-0 w-px bg-ink-3 opacity-50"
-                                style={{ left: `${pacePct}%` }}
-                            />
+                            {!daily && (
+                                <div
+                                    className="absolute inset-y-0 w-px bg-ink-3 opacity-50"
+                                    style={{ left: `${pacePct}%` }}
+                                />
+                            )}
                         </div>
                         <span className="mono w-[5.5em] text-right text-[0.85em] text-ink-3">
-                            <b className="text-ink">{amount(m.total)}</b>/
-                            {amount(wt)}
+                            <b className="text-ink">{amount(shown(m))}</b>/
+                            {amount(board.target)}
                         </span>
                         <span
                             className={`w-[4.5em] text-right text-[0.8em] font-semibold ${STATUS_CLASS[status]}`}

@@ -4,9 +4,10 @@
 import type {
     CompetitionDetail,
     CompetitionGoalBoard,
+    CompetitionMemberWeek,
     CompetitionWeek
 } from "@shared/index"
-import { paceBar, weeklyTarget } from "./format"
+import { localWeekday, paceBar, weeklyTarget } from "./format"
 
 // Distinct, evenly-spaced hues.
 const BAR_COLORS = [
@@ -35,6 +36,20 @@ export function buildColorMap(userIDs: string[]): Record<string, string> {
         map[id] = BAR_COLORS[i % BAR_COLORS.length]
     })
     return map
+}
+
+/**
+ * The amount a member's row shows against [board.target]: a weekly goal's
+ * running total, or today's value for a daily goal, so it reads per day rather
+ * than as a ×7 sum.
+ */
+export function displayValue(
+    board: CompetitionGoalBoard,
+    member: CompetitionMemberWeek,
+    now = Date.now()
+): number {
+    if (board.period !== "DAILY") return member.total
+    return member.vals[localWeekday(now)] ?? 0
 }
 
 /** The total a member must have reached by now to be on pace this week. */

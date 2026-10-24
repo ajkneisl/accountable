@@ -134,7 +134,7 @@ export function formatTime(ms: number): string {
 }
 
 /** Weekday (0 = Monday … 6 = Sunday) of [now] in the browser's time zone. */
-function localWeekday(now = Date.now()): number {
+export function localWeekday(now = Date.now()): number {
     return (new Date(now).getDay() + 6) % 7
 }
 
