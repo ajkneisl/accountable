@@ -2,11 +2,12 @@
 // AppDataProvider: it re-syncs whenever the shared dashboard payload reloads
 // (new goal, pull to refresh), and refetches the goals on every return to the
 // foreground, so new progress and a new day reach the widget even if the Goals
-// tab is never opened. Renders nothing.
+// tab is never opened. Competition goals are shown alongside the user's own.
+// Renders nothing.
 
 import { useEffect } from "react"
 import { AppState } from "react-native"
-import { listGoals, useApi } from "@shared/index"
+import { getDashboard, useApi } from "@shared/index"
 import { useAppData } from "../../common/AppData"
 import { syncGoalsWidget } from "./sync"
 
@@ -16,14 +17,16 @@ export function GoalsWidgetSync() {
     const ready = !loading && error === null
 
     useEffect(() => {
-        if (ready) syncGoalsWidget(data.goals)
-    }, [data.goals, ready])
+        if (ready) syncGoalsWidget([...data.goals, ...data.competitionGoals])
+    }, [data.goals, data.competitionGoals, ready])
 
     useEffect(() => {
         const sub = AppState.addEventListener("change", (state) => {
             if (state === "active")
-                listGoals(api)
-                    .then(syncGoalsWidget)
+                getDashboard(api)
+                    .then((d) =>
+                        syncGoalsWidget([...d.goals, ...d.competitionGoals])
+                    )
                     .catch(() => {})
         })
         return () => sub.remove()

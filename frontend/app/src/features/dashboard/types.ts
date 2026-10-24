@@ -106,13 +106,19 @@ export function formatAmount(
     return String(Math.round((value / scale) * 10) / 10)
 }
 
-/** Stable identity for a goal, used for React keys. */
+/**
+ * Stable identity for a goal, used for React keys. A competition goal is
+ * prefixed with its competition, so it can't collide with a personal goal (or
+ * another competition's) on the same metric; personal keys are unchanged.
+ */
 export function goalKey(goal: {
     integration: string
     metric: string
     period: string
+    competition?: { id: string } | null
 }): string {
-    return `${goal.integration}:${goal.metric}:${goal.period}`
+    const key = `${goal.integration}:${goal.metric}:${goal.period}`
+    return goal.competition ? `${goal.competition.id}:${key}` : key
 }
 
 /** "Ship 5 commits / week" style label. */

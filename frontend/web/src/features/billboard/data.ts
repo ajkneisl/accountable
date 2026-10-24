@@ -4,10 +4,18 @@ import {
     type ApiConfig,
     type CompetitionDetail,
     type CompetitionWeek,
+    type Goal,
     getCompetition,
+    getDashboard,
     getCompetitionWeek,
     listCompetitions
 } from "@shared/index"
+
+/** The user's own goals followed by their competitions' goals, as in the app. */
+export async function loadGoals(api: ApiConfig): Promise<Goal[]> {
+    const { goals, competitionGoals } = await getDashboard(api)
+    return [...goals, ...competitionGoals]
+}
 
 /** A competition's members and shared goals, with the current week's progress. */
 export interface CompetitionView {

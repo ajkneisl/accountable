@@ -96,7 +96,7 @@ export default function Goals() {
 
             {competitionGoals.map((g) => (
                 <GoalCard
-                    key={`${g.competition?.id}:${goalKey(g)}`}
+                    key={goalKey(g)}
                     goal={g}
                 />
             ))}

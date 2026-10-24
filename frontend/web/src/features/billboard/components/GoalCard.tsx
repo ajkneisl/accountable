@@ -55,8 +55,9 @@ export function GoalCard({
                     <div className="truncate text-[1.15em] font-semibold tracking-[-0.01em]">
                         {goalTitle(goal)}
                     </div>
-                    <div className="text-[0.85em] text-ink-3">
-                        {visual.sourceLabel} · {goal.metric}
+                    <div className="truncate text-[0.85em] text-ink-3">
+                        {visual.sourceLabel} ·{" "}
+                        {goal.competition ? goal.competition.name : goal.metric}
                     </div>
                 </div>
             </div>

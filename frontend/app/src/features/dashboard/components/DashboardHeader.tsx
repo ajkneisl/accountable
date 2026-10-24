@@ -12,7 +12,7 @@ export function DashboardHeader({ user }: { user: SelfResponse | null }) {
     })
 
     return (
-        <View className="gap-1.5 pr-12">
+        <View className="gap-1.5 pr-24">
             <Display size={32}>Hey {user?.username ?? "there"}.</Display>
             <Text className="text-[15px] text-ink-3">{date}</Text>
         </View>

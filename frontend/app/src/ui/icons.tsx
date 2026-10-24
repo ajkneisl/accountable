@@ -58,3 +58,13 @@ export function InfoIcon({ color, size = 24 }: IconProps) {
         </Svg>
     )
 }
+
+/** Circular arrow for refresh / sync. */
+export function RefreshIcon({ color, size = 24 }: IconProps) {
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+            <Path d="M20 11a8 8 0 1 0-2.3 5.7" {...stroke(color)} />
+            <Path d="M20 4v7h-7" {...stroke(color)} />
+        </Svg>
+    )
+}

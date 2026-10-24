@@ -4,13 +4,13 @@
 import type { ReactNode } from "react"
 import { useAtomValue } from "jotai"
 import { Link } from "react-router-dom"
-import { listGoals, listHabits, useApi } from "@shared/index"
+import { listHabits, useApi } from "@shared/index"
 import { useSignOut, userAtom } from "../../auth"
 import { LogoLink } from "../common/primitives"
 import { CompetitionBoard } from "./components/CompetitionBoard"
 import { GoalCard } from "./components/GoalCard"
 import { HabitCard } from "./components/HabitCard"
-import { loadCompetitions } from "./data"
+import { loadCompetitions, loadGoals } from "./data"
 import { goalKey } from "./format"
 import { HABIT_DAYS } from "./grid"
 import { type Live, useLive } from "./hooks"
@@ -71,7 +71,7 @@ export default function Billboard() {
     const user = useAtomValue(userAtom)
     const signOut = useSignOut()
 
-    const goals = useLive("goals", () => listGoals(api))
+    const goals = useLive("goals", () => loadGoals(api))
     const habits = useLive("habits", () => listHabits(api, HABIT_DAYS))
     const competitions = useLive("competitions", () => loadCompetitions(api))
 

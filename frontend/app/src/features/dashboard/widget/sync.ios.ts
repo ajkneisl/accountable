@@ -89,7 +89,11 @@ function propsFor(
         const total = daily ? (fresh ? 0 : days[day]) : weekTotal
         return {
             id: goalKey(g),
-            name: goalTitle(g),
+            // Named after its competition too, so Edit Widget can tell it apart
+            // from a personal goal on the same metric.
+            name: g.competition
+                ? `${goalTitle(g)} · ${g.competition.name}`
+                : goalTitle(g),
             source: visual.sourceLabel,
             // As on the goal card.
             color: goalFill(g),

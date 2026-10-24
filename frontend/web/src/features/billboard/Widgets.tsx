@@ -3,14 +3,14 @@
 
 import { useAtomValue } from "jotai"
 import { useParams } from "react-router-dom"
-import { listGoals, listHabits, useApi } from "@shared/index"
+import { listHabits, useApi } from "@shared/index"
 import { userAtom } from "../../auth"
 import { CompetitionBoard } from "./components/CompetitionBoard"
 import { GoalCard } from "./components/GoalCard"
 import { Heatmap } from "./components/Heatmap"
 import { WidgetFrame } from "./components/WidgetFrame"
 import { CheckDot, Placeholder } from "./components/primitives"
-import { loadCompetition } from "./data"
+import { loadCompetition, loadGoals } from "./data"
 import { goalKey, streakLabel } from "./format"
 import { HABIT_DAYS, HABIT_PALETTE } from "./grid"
 import { useLive } from "./hooks"
@@ -24,7 +24,7 @@ function gridShape(n: number) {
 /** Every goal as a card, tiled to fill the screen. */
 export function GoalsWidget() {
     const api = useApi()
-    const live = useLive("goals", () => listGoals(api))
+    const live = useLive("goals", () => loadGoals(api))
 
     return (
         <WidgetFrame title="Goals" live={live}>

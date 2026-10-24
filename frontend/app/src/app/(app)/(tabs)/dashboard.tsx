@@ -1,7 +1,7 @@
 // Dashboard — today's goals with the goal streak, a habits report, and competitions. Goals are created
 // and listed on the Goals tab. Data comes from the providers above the tabs.
 
-import { Text } from "react-native"
+import { Text, View } from "react-native"
 import { useAtomValue } from "jotai"
 import { userAtom } from "../../../auth"
 import { useAppData } from "../../../features/common/AppData"
@@ -9,11 +9,21 @@ import { useHabits } from "../../../features/habits/HabitsData"
 import { CompetitionCard } from "../../../features/dashboard/components/CompetitionCard"
 import { DashboardHeader } from "../../../features/dashboard/components/DashboardHeader"
 import { HabitsReportCard } from "../../../features/dashboard/components/HabitsReportCard"
-import { IntegrationsSyncCard } from "../../../features/dashboard/components/IntegrationsSyncCard"
+import { SyncAllButton } from "../../../features/dashboard/components/SyncAllButton"
 import { TodayCard } from "../../../features/dashboard/components/TodayCard"
 import { Screen } from "../../../ui/Screen"
 import { SettingsButton } from "../../../ui/SettingsButton"
 import { Card } from "../../../ui/primitives"
+
+/** Sync beside the gear, so every source can be pulled in from home. */
+function DashboardActions() {
+    return (
+        <View className="flex-row gap-2.5">
+            <SyncAllButton />
+            <SettingsButton />
+        </View>
+    )
+}
 
 export default function Dashboard() {
     const user = useAtomValue(userAtom)
@@ -30,7 +40,7 @@ export default function Dashboard() {
             <Screen
                 refreshing={loading}
                 onRefresh={refresh}
-                topRight={<SettingsButton />}
+                topRight={<DashboardActions />}
             >
                 <Card className="bg-coral-soft p-4">
                     <Text className="text-[13px] text-coral-ink">{error}</Text>
@@ -43,11 +53,15 @@ export default function Dashboard() {
         <Screen
             refreshing={loading}
             onRefresh={refresh}
-            topRight={<SettingsButton />}
+            topRight={<DashboardActions />}
         >
             <DashboardHeader user={user} />
 
-            <TodayCard goals={data.goals} streak={data.streak} />
+            {/* Competition goals count as your own, as on the Goals tab. */}
+            <TodayCard
+                goals={[...data.goals, ...data.competitionGoals]}
+                streak={data.streak}
+            />
 
             <HabitsReportCard />
 
@@ -58,8 +72,6 @@ export default function Dashboard() {
                     meID={user?.userID}
                 />
             )}
-
-            <IntegrationsSyncCard />
         </Screen>
     )
 }
