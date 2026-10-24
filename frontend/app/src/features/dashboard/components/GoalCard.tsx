@@ -1,14 +1,19 @@
 // A single goal card — progress, a fixed Mon–Sun week chart, and per-goal week
-// navigation. The gear opens the edit sheet (target, color, delete). The web card's scroll-into-view/flash behaviour is dropped: it
-// existed to answer sidebar deep links, and there's no sidebar on mobile.
+// navigation. The gear opens the edit sheet (target, color, delete). Competition goals
+// belong to the competition, so a chip naming it takes the gear's place. The web card's
+// scroll-into-view/flash behaviour is dropped: it existed to answer sidebar deep links,
+// and there's no sidebar on mobile.
 
 import { useEffect, useMemo, useState } from "react"
 import { Pressable, Text, View } from "react-native"
+import { router } from "expo-router"
 import { type Goal, type GoalWeek, getGoalWeek, useApi } from "@shared/index"
 import { colors } from "../../../theme"
 import { GearIcon } from "../../../ui/icons"
 import {
     Card,
+    Chip,
+    Dot,
     IntegrationIcon,
     Mono,
     SourceTile
@@ -35,6 +40,40 @@ function dailyTargetFor(goal: Goal): number {
     return goal.period === "DAILY" ? goal.target : goal.target / 7
 }
 
+/** Header chip naming a competition goal's competition, in the gear's slot; opens it. */
+function CompetitionChip({
+    competition,
+    color
+}: {
+    competition: NonNullable<Goal["competition"]>
+    color: string
+}) {
+    return (
+        <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Open competition ${competition.name}`}
+            onPress={() =>
+                router.push({
+                    pathname: "/competition/[id]",
+                    params: { id: competition.id }
+                })
+            }
+            hitSlop={8}
+            className="max-w-[45%]"
+        >
+            <Chip>
+                <Dot color={color} size={6} />
+                <Text
+                    numberOfLines={1}
+                    className="shrink text-[11px] font-semibold text-ink-2"
+                >
+                    {competition.name}
+                </Text>
+            </Chip>
+        </Pressable>
+    )
+}
+
 /** Weekly-equivalent target: weekly goals as-is, daily goals × 7. */
 function weeklyTargetFor(goal: Goal): number {
     return goal.period === "WEEKLY" ? goal.target : goal.target * 7
@@ -45,7 +84,8 @@ export function GoalCard({
     onEdit
 }: {
     goal: Goal
-    onEdit: () => void
+    /** Opens the edit sheet; omitted for goals the user can't edit (competition goals). */
+    onEdit?: () => void
 }) {
     const api = useApi()
     const visual = integrationVisual(goal.integration)
@@ -72,7 +112,14 @@ export function GoalCard({
     useEffect(() => {
         if (offset === 0) return // current week comes from the payload — skip the request
         let cancelled = false
-        getGoalWeek(api, goal.integration, goal.metric, goal.period, offset)
+        getGoalWeek(
+            api,
+            goal.integration,
+            goal.metric,
+            goal.period,
+            offset,
+            goal.competition?.id
+        )
             .then((w) => {
                 if (!cancelled) setFetchedWeek(w)
             })
@@ -82,7 +129,14 @@ export function GoalCard({
         return () => {
             cancelled = true
         }
-    }, [api, goal.integration, goal.metric, goal.period, offset])
+    }, [
+        api,
+        goal.integration,
+        goal.metric,
+        goal.period,
+        goal.competition?.id,
+        offset
+    ])
 
     const week = offset === 0 ? seedWeek : fetchedWeek
 
@@ -128,15 +182,23 @@ export function GoalCard({
                         {visual.sourceLabel} · {goal.metric}
                     </Text>
                 </View>
-                <Pressable
-                    onPress={onEdit}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Edit ${goalTitle(goal)}`}
-                    hitSlop={8}
-                    className="h-8 w-8 items-center justify-center rounded-[9px] border border-line bg-bg-card"
-                >
-                    <GearIcon color={colors.ink3} size={16} />
-                </Pressable>
+                {goal.competition && (
+                    <CompetitionChip
+                        competition={goal.competition}
+                        color={goalFill(goal)}
+                    />
+                )}
+                {onEdit && (
+                    <Pressable
+                        onPress={onEdit}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Edit ${goalTitle(goal)}`}
+                        hitSlop={8}
+                        className="h-8 w-8 items-center justify-center rounded-[9px] border border-line bg-bg-card"
+                    >
+                        <GearIcon color={colors.ink3} size={16} />
+                    </Pressable>
+                )}
             </View>
 
             <View className="flex-row items-end gap-3">

@@ -26,6 +26,14 @@ export interface Goal {
     weekTotal: number
     /** Card accent; null (or absent) means the integration's default. */
     color?: GoalColor | null
+    /** The competition this goal belongs to; null (or absent) for a personal goal. */
+    competition?: GoalCompetition | null
+}
+
+/** The competition a {@link Goal} comes from. */
+export interface GoalCompetition {
+    id: string
+    name: string
 }
 
 export interface CreateGoalRequest {
@@ -62,19 +70,24 @@ export function listGoals(config: ApiConfig): Promise<Goal[]> {
 
 /**
  * GET /api/goals/{integration}/{metric}/{period}/week?offset=N — a goal's Monday-anchored week,
- * `offset` weeks before the current week (0 = this week, 1 = last week, …).
+ * `offset` weeks before the current week (0 = this week, 1 = last week, …). Pass
+ * `competitionID` for a competition goal rather than one of the caller's own.
  */
 export function getGoalWeek(
     config: ApiConfig,
     integration: string,
     metric: string,
     period: GoalPeriod,
-    offset = 0
+    offset = 0,
+    competitionID?: string
 ): Promise<GoalWeek> {
+    const competition = competitionID
+        ? `&competition=${encodeURIComponent(competitionID)}`
+        : ""
     return request(
         config,
         "GET",
-        `/goals/${encodeURIComponent(integration)}/${encodeURIComponent(metric)}/${period}/week?offset=${offset}`,
+        `/goals/${encodeURIComponent(integration)}/${encodeURIComponent(metric)}/${period}/week?offset=${offset}${competition}`,
         undefined,
         { auth: true }
     )

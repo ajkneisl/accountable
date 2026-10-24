@@ -2,6 +2,10 @@ package features.goals
 
 import api.Cache
 import api.Error
+import features.competition.CompetitionGoal
+import features.competition.competitionsFor
+import features.competition.goalsForCompetition
+import features.competition.isMember
 import features.habits.HabitColor
 import integrations.api.Integrations
 import io.ktor.http.HttpStatusCode
@@ -64,6 +68,7 @@ data class UpdateGoalRequest(val target: Long? = null, val color: HabitColor? = 
  *   goal card render its week chart without a follow-up `/week` request.
  * @param weekTotal Sum of [weekVals].
  * @param color Card accent, or null to use the integration's default.
+ * @param competition The competition this goal belongs to, or null for a personal goal.
  */
 @Serializable
 data class GoalResponse(
@@ -78,7 +83,11 @@ data class GoalResponse(
     val weekVals: List<Long>,
     val weekTotal: Long,
     val color: HabitColor? = null,
+    val competition: GoalCompetition? = null,
 )
+
+/** The competition a [GoalResponse] comes from. */
+@Serializable data class GoalCompetition(val id: String, val name: String)
 
 /**
  * One Monday-anchored week of a goal's metric, returned by [GOAL_WEEK_ROUTE].
@@ -126,12 +135,38 @@ suspend fun goalsView(userID: UUID): List<GoalResponse> =
         goalsFor(userID).map { buildGoalResponse(userID, it, now, zone) }
     }
 
-/** Compose one goal's full response: current-period progress, last-7-days, and this week. */
+/**
+ * The goals of every competition [userID] is in, with [userID]'s own progress against each. Not
+ * cached: an owner editing a competition's goals only bumps that competition's cache version, which
+ * a per-user entry wouldn't see.
+ */
+suspend fun competitionGoalsView(userID: UUID): List<GoalResponse> {
+    val now = System.currentTimeMillis()
+    val zone = zoneOf(userID)
+    return competitionsFor(userID).flatMap { competition ->
+        val source = GoalCompetition(competition.id.toString(), competition.name)
+        goalsForCompetition(competition.id).map {
+            buildGoalResponse(userID, it, it.createdAt, null, now, zone, source)
+        }
+    }
+}
+
 private suspend fun buildGoalResponse(
     userID: UUID,
     goal: Goal,
     now: Long,
     zone: java.time.ZoneId,
+): GoalResponse = buildGoalResponse(userID, goal, goal.createdAt, goal.color, now, zone, null)
+
+/** Compose one goal's full response: current-period progress, last-7-days, and this week. */
+private suspend fun buildGoalResponse(
+    userID: UUID,
+    goal: GoalDefinition,
+    createdAt: Long,
+    color: HabitColor?,
+    now: Long,
+    zone: java.time.ZoneId,
+    competition: GoalCompetition?,
 ): GoalResponse {
     val (weekStart, _) = weekWindow(now, zone, 0)
     val weekVals = weekValues(userID, goal, weekStart, zone)
@@ -142,20 +177,22 @@ private suspend fun buildGoalResponse(
         target = goal.target,
         progress = progressFor(userID, goal, now),
         vals = perDayValues(userID, goal, days = 7, now = now),
-        createdAt = goal.createdAt,
+        createdAt = createdAt,
         weekStart = weekStart,
         weekVals = weekVals,
         weekTotal = weekVals.sum(),
-        color = goal.color,
+        color = color,
+        competition = competition,
     )
 }
 
 /**
- * GET /api/goals/{integration}/{metric}/{period}/week?offset=N
+ * GET /api/goals/{integration}/{metric}/{period}/week?offset=N&competition=ID
  *
  * Returns the Monday-anchored week of the goal's metric `offset` weeks before the current week
  * (offset 0 = this week, 1 = last week, …). Lets the UI page back through past weeks per goal.
- * Weeks are fixed Monday→Monday windows in the user's timezone.
+ * Weeks are fixed Monday→Monday windows in the user's timezone. With `competition`, the goal is
+ * that competition's (the caller must be a member) rather than the caller's own.
  */
 private val GOAL_WEEK_ROUTE: suspend RoutingContext.() -> Unit = {
     val userID = call.userID()
@@ -164,7 +201,11 @@ private val GOAL_WEEK_ROUTE: suspend RoutingContext.() -> Unit = {
     val offset = call.request.queryParameters["offset"]?.toIntOrNull() ?: 0
     if (offset < 0) Error.text("offset must not be negative")
 
-    val goal = goalFor(userID, integration, metric, period) ?: Error.notFound("goal")
+    val goal: GoalDefinition =
+        when (val competitionID = call.request.queryParameters["competition"]) {
+            null -> goalFor(userID, integration, metric, period)
+            else -> competitionGoalFor(userID, competitionID, integration, metric, period)
+        } ?: Error.notFound("goal")
 
     val zone = zoneOf(userID)
     val (weekStart, weekEnd) = weekWindow(System.currentTimeMillis(), zone, offset)
@@ -210,6 +251,23 @@ private val GOAL_DELETE_ROUTE: suspend RoutingContext.() -> Unit = {
     if (!removed) Error.notFound("goal")
     Cache.invalidateUser(userID)
     call.respond(HttpStatusCode.NoContent)
+}
+
+/** [competitionID]'s goal with this identity, or null if it has none or [userID] isn't a member. */
+private suspend fun competitionGoalFor(
+    userID: UUID,
+    competitionID: String,
+    integration: String,
+    metric: String,
+    period: GoalPeriod,
+): CompetitionGoal? {
+    val id =
+        runCatching { UUID.fromString(competitionID) }.getOrNull()
+            ?: Error.text("invalid competition")
+    if (!isMember(userID, id)) return null
+    return goalsForCompetition(id).find {
+        it.integration == integration && it.metric == metric && it.period == period
+    }
 }
 
 /** A goal's identity, as addressed by `/{integration}/{metric}/{period}`. */

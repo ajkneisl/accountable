@@ -10,6 +10,8 @@ import type { DayStatus } from "../streak/requests"
  */
 export interface DashboardResponse {
     goals: Goal[]
+    /** Goals from the user's competitions, each tagged with its `competition`. */
+    competitionGoals: Goal[]
     streak: number
     history: DayStatus[]
     competitions: CompetitionSummary[]

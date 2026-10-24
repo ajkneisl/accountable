@@ -7,6 +7,7 @@ import features.competition.competitionDetailView
 import features.competition.competitionsView
 import features.competition.findCompetitionByID
 import features.goals.GoalResponse
+import features.goals.competitionGoalsView
 import features.goals.goalsView
 import features.streak.DayStatus
 import features.streak.streakHistoryView
@@ -36,6 +37,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class DashboardResponse(
     val goals: List<GoalResponse>,
+    /** Goals from the user's competitions, each tagged with its [GoalResponse.competition]. */
+    val competitionGoals: List<GoalResponse>,
     val streak: Int,
     val history: List<DayStatus>,
     val competitions: List<CompetitionSummary>,
@@ -58,6 +61,7 @@ private val DASHBOARD_ROUTE: suspend RoutingContext.() -> Unit = {
 
     coroutineScope {
         val goals = async { goalsView(userID) }
+        val competitionGoals = async { competitionGoalsView(userID) }
         val streak = async { streakView(userID).streak }
         val history = async { streakHistoryView(userID, HISTORY_DAYS).days }
         val competitions = async { competitionsView(userID) }
@@ -73,6 +77,7 @@ private val DASHBOARD_ROUTE: suspend RoutingContext.() -> Unit = {
         call.respond(
             DashboardResponse(
                 goals = goals.await(),
+                competitionGoals = competitionGoals.await(),
                 streak = streak.await(),
                 history = history.await(),
                 competitions = comps,

@@ -165,7 +165,7 @@ fun Map<Long, Long>.sumInRange(start: Long, end: Long): Long =
  * Sum [goal]'s metric column over its current [GoalPeriod] window. Returns 0 if the metric is not
  * registered or no rows exist in the window.
  */
-suspend fun progressFor(userID: UUID, goal: Goal, now: Long): Long {
+suspend fun progressFor(userID: UUID, goal: GoalDefinition, now: Long): Long {
     val (start, end) = currentWindow(goal.period, now, zoneOf(userID))
     return sumMetric(userID, goal, start, end)
 }

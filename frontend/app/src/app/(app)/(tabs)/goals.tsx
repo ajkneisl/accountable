@@ -1,5 +1,5 @@
-// Goals — the goal streak and every goal with its progress for the week. Data comes from the
-// AppDataProvider mounted above the tabs.
+// Goals — the goal streak and every goal with its progress for the week, followed by the
+// goals of the user's competitions. Data comes from the AppDataProvider mounted above the tabs.
 
 import { Text, View } from "react-native"
 import { useAppData } from "../../../features/common/AppData"
@@ -24,7 +24,9 @@ export default function Goals() {
     const { data, loading, error, reload, openNewGoal, openEditGoal } =
         useAppData()
     const goals = data.goals
-    const onTrack = goals.filter((g) => isOnTrack(g)).length
+    const competitionGoals = data.competitionGoals
+    const allGoals = [...goals, ...competitionGoals]
+    const onTrack = allGoals.filter((g) => isOnTrack(g)).length
 
     return (
         <Screen
@@ -36,10 +38,10 @@ export default function Goals() {
                 <Display size={32}>Goals</Display>
                 <Text className="text-[15px] text-ink-3">
                     Week {isoWeekNumber(new Date())}
-                    {goals.length === 0
+                    {allGoals.length === 0
                         ? " · Set your first goal."
-                        : ` · ${onTrack} of ${goals.length} on track. ${
-                              onTrack === goals.length
+                        : ` · ${onTrack} of ${allGoals.length} on track. ${
+                              onTrack === allGoals.length
                                   ? "All good."
                                   : "Keep going."
                           }`}
@@ -52,13 +54,13 @@ export default function Goals() {
                 </Card>
             )}
 
-            {goals.length === 0 && loading && (
+            {allGoals.length === 0 && loading && (
                 <View className="items-center py-10">
                     <Spinner size={32} />
                 </View>
             )}
 
-            {goals.length === 0 && !loading && error === null && (
+            {allGoals.length === 0 && !loading && error === null && (
                 <Card className="gap-2 p-5">
                     <Text className="text-[15px] font-semibold text-ink">
                         No goals yet
@@ -88,9 +90,16 @@ export default function Goals() {
                 />
             ))}
 
-            {!(goals.length === 0 && loading) && (
+            {!(allGoals.length === 0 && loading) && (
                 <AddCard label="New goal" onPress={openNewGoal} />
             )}
+
+            {competitionGoals.map((g) => (
+                <GoalCard
+                    key={`${g.competition?.id}:${goalKey(g)}`}
+                    goal={g}
+                />
+            ))}
         </Screen>
     )
 }

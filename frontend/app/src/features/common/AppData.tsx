@@ -33,6 +33,8 @@ import { goalKey } from "../dashboard/types"
 
 export interface DashboardData {
     goals: Goal[]
+    /** Goals from the user's competitions, each tagged with its `competition`. */
+    competitionGoals: Goal[]
     streak: number
     history: DayStatus[]
     competitions: CompetitionSummary[]
@@ -43,6 +45,7 @@ export interface DashboardData {
 
 const EMPTY: DashboardData = {
     goals: [],
+    competitionGoals: [],
     streak: 0,
     history: [],
     competitions: [],
