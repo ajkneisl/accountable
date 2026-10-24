@@ -22,6 +22,21 @@ export async function chooseScreenTimeApps(): Promise<boolean> {
     return false
 }
 
+/** Restart the monitor if an older build started it with different events. */
+export function ensureScreenTimeMonitoring(): void {}
+
+export interface ScreenTimeStatus {
+    /** Minutes recorded today, or null if today has no total yet. */
+    todayMinutes: number | null
+    /** Ms epoch the monitor extension last reported, or null if it never has. */
+    lastEventAt: number | null
+}
+
+/** What the phone has recorded so far. */
+export function screenTimeStatus(): ScreenTimeStatus {
+    return { todayMinutes: null, lastEventAt: null }
+}
+
 /** Stop monitoring and forget the picked apps and recorded days. */
 export function forgetScreenTime(): void {}
 

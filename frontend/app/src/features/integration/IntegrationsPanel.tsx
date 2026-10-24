@@ -185,6 +185,14 @@ function ScreenTimeCard() {
             : screenTime.lastSync
               ? `Connected · synced ${formatRefreshed(screenTime.lastSync)}`
               : "Connected"
+    const { todayMinutes, lastEventAt } = screenTime.status
+    // What the phone itself has recorded, so a total that never moves can be
+    // told apart from one that isn't reaching the server.
+    const recorded = !screenTime.connected
+        ? null
+        : lastEventAt === null
+          ? "No usage recorded yet — it appears after your first minute in a tracked app."
+          : `Today ${Math.floor((todayMinutes ?? 0) / 60)}h ${(todayMinutes ?? 0) % 60}m · updated ${formatRefreshed(lastEventAt)}`
 
     return (
         <Card className="p-5">
@@ -206,6 +214,9 @@ function ScreenTimeCard() {
                         />
                     </View>
                     <Text className="text-xs text-ink-3">{status}</Text>
+                    {recorded !== null && (
+                        <Text className="text-xs text-ink-3">{recorded}</Text>
+                    )}
                 </View>
                 {screenTime.syncing && <Spinner />}
             </View>

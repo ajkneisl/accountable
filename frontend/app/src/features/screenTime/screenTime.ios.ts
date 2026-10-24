@@ -7,6 +7,7 @@
 
 import { requireOptionalNativeModule } from "expo"
 import { type ApiConfig, importScreenTime } from "@shared/index"
+import type { ScreenTimeStatus } from "./screenTime"
 
 interface BeaccScreenTime {
     authorizationStatus(): "approved" | "denied" | "notDetermined"
@@ -14,10 +15,12 @@ interface BeaccScreenTime {
     hasSelection(): boolean
     pickActivities(): Promise<boolean>
     startMonitoring(): void
+    ensureMonitoring(): void
     isMonitoring(): boolean
     stopMonitoring(): void
     /** Recorded days as local "yyyy-MM-dd" dates. */
     readDays(): { date: string; minutes: number }[]
+    lastEventAt(): number | null
     clear(): void
 }
 
@@ -59,6 +62,27 @@ export async function chooseScreenTimeApps(): Promise<boolean> {
     if (!(await native.pickActivities())) return false
     native.startMonitoring()
     return true
+}
+
+/** Restart the monitor if an older build started it with different events. */
+export function ensureScreenTimeMonitoring(): void {
+    native?.ensureMonitoring()
+}
+
+/**
+ * What the phone has recorded: today's total, and when the monitor extension
+ * last reported (null if it never has, i.e. iOS hasn't woken it yet).
+ */
+export function screenTimeStatus(): ScreenTimeStatus {
+    if (!native) return { todayMinutes: null, lastEventAt: null }
+    const now = new Date()
+    const pad = (n: number) => String(n).padStart(2, "0")
+    const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+    const day = native.readDays().find((d) => d.date === today)
+    return {
+        todayMinutes: day?.minutes ?? null,
+        lastEventAt: native.lastEventAt()
+    }
 }
 
 export function forgetScreenTime(): void {

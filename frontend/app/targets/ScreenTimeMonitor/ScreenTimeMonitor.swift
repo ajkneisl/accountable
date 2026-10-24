@@ -13,6 +13,8 @@ import Foundation
 private let GROUP_ID = "group.app.umn.acc"
 private let DAYS_KEY = "screenTime.days"
 private let EVENT_PREFIX = "minutes."
+/** Ms epoch of the last time iOS woke this extension, so the app can tell it's running. */
+private let LAST_EVENT_KEY = "screenTime.lastEventAt"
 
 /** Days older than this are dropped; the app syncs far more often. */
 private let KEEP_DAYS = 60
@@ -44,6 +46,7 @@ class ScreenTimeMonitor: DeviceActivityMonitor {
     var days = defaults.dictionary(forKey: DAYS_KEY) as? [String: Int] ?? [:]
     days[today] = max(days[today] ?? 0, minutes)
     defaults.set(days.filter { $0.key >= oldest }, forKey: DAYS_KEY)
+    defaults.set(Int(now.timeIntervalSince1970 * 1000), forKey: LAST_EVENT_KEY)
   }
 
   private func dayKey(_ date: Date) -> String {

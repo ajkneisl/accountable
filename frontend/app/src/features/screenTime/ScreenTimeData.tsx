@@ -22,10 +22,13 @@ import { useAppData } from "../common/AppData"
 import {
     chooseScreenTimeApps,
     connectScreenTime,
+    ensureScreenTimeMonitoring,
     forgetScreenTime,
     isScreenTimeConnected,
     isScreenTimeSupported,
-    syncScreenTime
+    screenTimeStatus,
+    syncScreenTime,
+    type ScreenTimeStatus
 } from "./screenTime"
 
 /** Opening the app syncs only when the last sync is older than this. */
@@ -36,6 +39,8 @@ interface ScreenTime {
     connected: boolean
     syncing: boolean
     lastSync: number | null
+    /** What the phone has recorded, as of the last sync. */
+    status: ScreenTimeStatus
     error: string | null
     connect: () => Promise<void>
     chooseApps: () => Promise<void>
@@ -62,6 +67,7 @@ export function ScreenTimeProvider({ children }: { children: ReactNode }) {
     const [connected, setConnected] = useState(() => isScreenTimeConnected())
     const [lastSync, setLastSync] = useState<number | null>(null)
     const [syncing, setSyncing] = useState(false)
+    const [status, setStatus] = useState<ScreenTimeStatus>(screenTimeStatus)
     const [error, setError] = useState<string | null>(null)
     const inFlight = useRef(false)
     const lastSyncRef = useRef<number | null>(null)
@@ -72,6 +78,7 @@ export function ScreenTimeProvider({ children }: { children: ReactNode }) {
         setSyncing(true)
         setError(null)
         try {
+            setStatus(screenTimeStatus())
             const changed = await syncScreenTime(api)
             const now = Date.now()
             setLastSync(now)
@@ -92,6 +99,15 @@ export function ScreenTimeProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         if (!connected) return
+        try {
+            ensureScreenTimeMonitoring()
+        } catch (err) {
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : "Couldn't restart Screen Time"
+            )
+        }
         syncIfStale()
         const sub = AppState.addEventListener("change", (state) => {
             if (state === "active") syncIfStale()
@@ -139,6 +155,7 @@ export function ScreenTimeProvider({ children }: { children: ReactNode }) {
             connected,
             syncing,
             lastSync,
+            status,
             error,
             connect,
             chooseApps,
@@ -150,6 +167,7 @@ export function ScreenTimeProvider({ children }: { children: ReactNode }) {
             connected,
             syncing,
             lastSync,
+            status,
             error,
             connect,
             chooseApps,
