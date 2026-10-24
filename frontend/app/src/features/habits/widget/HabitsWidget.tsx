@@ -16,6 +16,7 @@ import {
     VStack
 } from "@expo/ui/swift-ui"
 import {
+    aspectRatio,
     background,
     containerBackground,
     font,
@@ -65,15 +66,37 @@ const HabitsWidget = (
     const dark = env.colorScheme === "dark"
     const bg = dark ? "#16100c" : "#f8f5ef"
     const ink = dark ? "#f8f5ef" : "#16100c"
-    const ink3 = "#7b736c"
+    // Lifted on dark so secondary text keeps its contrast.
+    const ink3 = dark ? "#958c84" : "#7b736c"
     const empty = dark ? "#2b2520" : "#e9e4de"
+    // The palette is tuned for the light paper: on dark, the Ink accent is the
+    // background itself and Indigo nearly so, so lift both.
+    const fillFor = (hex: string) =>
+        !dark
+            ? hex
+            : hex === "#16100c"
+              ? ink
+              : hex === "#2e40a3"
+                ? "#8e9cf0"
+                : hex
+    // An accent used as text: Lime and Coral are too pale to read on the paper.
+    const textFor = (hex: string) =>
+        dark
+            ? fillFor(hex)
+            : hex === "#a2eb3c"
+              ? "#4c7a0c"
+              : hex === "#fd6a3a"
+                ? "#d9531e"
+                : hex
 
     const family = env.widgetFamily
     const cols = family === "systemSmall" ? 8 : 9
-    const cell = 11
     const gap = 3
 
+    // Fill the whole widget; without a frame the stack hugs its content and
+    // floats in the middle.
     const root = [
+        frame({ maxWidth: 1000, maxHeight: 1000, alignment: "topLeading" }),
         containerBackground(bg, "widget"),
         widgetURL("accountable://habits")
     ]
@@ -100,10 +123,21 @@ const HabitsWidget = (
     }
 
     const card = (habit: HabitsWidgetHabit, key: number) => {
-        // The Ink accent is the dark background; flip it so it stays visible.
-        const fill = dark && habit.color === "#16100c" ? ink : habit.color
+        const fill = fillFor(habit.color)
         return (
-            <VStack key={key} alignment="leading" spacing={7}>
+            <VStack
+                key={key}
+                alignment="leading"
+                spacing={7}
+                modifiers={[
+                    // Cards share the row evenly and stretch to its height.
+                    frame({
+                        maxWidth: 1000,
+                        maxHeight: 1000,
+                        alignment: "topLeading"
+                    })
+                ]}
+            >
                 <HStack spacing={4}>
                     <Text
                         modifiers={[
@@ -122,7 +156,9 @@ const HabitsWidget = (
                                 weight: "medium",
                                 design: "monospaced"
                             }),
-                            foregroundStyle(habit.doneToday ? fill : ink3)
+                            foregroundStyle(
+                                habit.doneToday ? textFor(habit.color) : ink3
+                            )
                         ]}
                     >
                         {habit.doneToday
@@ -130,7 +166,18 @@ const HabitsWidget = (
                             : `${habit.streak}d`}
                     </Text>
                 </HStack>
-                <HStack spacing={gap}>
+                {/* Cells are the largest squares the card has room for, so
+                    the heatmap fills each widget size without clipping. */}
+                <HStack
+                    spacing={gap}
+                    modifiers={[
+                        frame({
+                            maxWidth: 1000,
+                            maxHeight: 1000,
+                            alignment: "topLeading"
+                        })
+                    ]}
+                >
                     {habit.weeks.slice(-cols).map((week, c) => (
                         <VStack key={c} spacing={gap}>
                             {week.map((d, r) => (
@@ -138,9 +185,12 @@ const HabitsWidget = (
                                     key={r}
                                     cornerRadius={2.5}
                                     modifiers={[
-                                        frame({ width: cell, height: cell }),
+                                        aspectRatio({
+                                            ratio: 1,
+                                            contentMode: "fit"
+                                        }),
                                         foregroundStyle(
-                                            d < 0 ? bg : d ? fill : empty
+                                            d < 0 ? "clear" : d ? fill : empty
                                         )
                                     ]}
                                 />
@@ -215,7 +265,6 @@ const HabitsWidget = (
         return (
             <VStack alignment="leading" modifiers={root}>
                 {rows}
-                {hasHint ? null : <Spacer />}
             </VStack>
         )
     }
@@ -246,7 +295,6 @@ const HabitsWidget = (
                 </Text>
             </HStack>
             {rows}
-            {hasHint ? null : <Spacer />}
         </VStack>
     )
 }

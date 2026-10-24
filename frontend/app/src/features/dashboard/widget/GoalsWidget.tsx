@@ -24,6 +24,7 @@ import {
     foregroundStyle,
     frame,
     lineLimit,
+    minimumScaleFactor,
     multilineTextAlignment,
     padding,
     shapes,
@@ -73,14 +74,37 @@ const GoalsWidget = (
     const dark = env.colorScheme === "dark"
     const bg = dark ? "#16100c" : "#f8f5ef"
     const ink = dark ? "#f8f5ef" : "#16100c"
-    const ink3 = "#7b736c"
+    // Lifted on dark so secondary text keeps its contrast.
+    const ink3 = dark ? "#958c84" : "#7b736c"
     const empty = dark ? "#2b2520" : "#e9e4de"
     const coral = "#fd6a3a"
+    // The palette is tuned for the light paper: on dark, the Ink accent is the
+    // background itself and Indigo nearly so, so lift both.
+    const fillFor = (hex: string) =>
+        !dark
+            ? hex
+            : hex === "#16100c"
+              ? ink
+              : hex === "#2e40a3"
+                ? "#8e9cf0"
+                : hex
+    // An accent used as text: Lime and Coral are too pale to read on the paper.
+    const textFor = (hex: string) =>
+        dark
+            ? fillFor(hex)
+            : hex === "#a2eb3c"
+              ? "#4c7a0c"
+              : hex === "#fd6a3a"
+                ? "#d9531e"
+                : hex
 
     const family = env.widgetFamily
-    const barHeight = family === "systemSmall" ? 34 : 30
+    const barHeight = family === "systemLarge" ? 40 : 28
 
+    // Fill the whole widget; without a frame the stack hugs its content and
+    // floats in the middle.
     const root = [
+        frame({ maxWidth: 1000, maxHeight: 1000, alignment: "topLeading" }),
         containerBackground(bg, "widget"),
         widgetURL("accountable://goals")
     ]
@@ -110,13 +134,24 @@ const GoalsWidget = (
         font({ size, weight, design: "monospaced" })
 
     const card = (goal: GoalsWidgetGoal, key: number) => {
-        // The Ink accent is the dark background; flip it so it stays visible.
-        const accent = dark && goal.color === "#16100c" ? ink : goal.color
-        const tone = goal.status === "behind" ? coral : accent
+        const accent = fillFor(goal.color)
+        const tone = textFor(goal.status === "behind" ? coral : goal.color)
         // Headroom above the tallest bar, as on the in-app week chart.
         const max = Math.max(goal.dayTarget, ...goal.days, 1) * 1.2
         return (
-            <VStack key={key} alignment="leading" spacing={6}>
+            <VStack
+                key={key}
+                alignment="leading"
+                spacing={4}
+                modifiers={[
+                    // Cards share the row evenly and stretch to its height.
+                    frame({
+                        maxWidth: 1000,
+                        maxHeight: 1000,
+                        alignment: "topLeading"
+                    })
+                ]}
+            >
                 <HStack spacing={4}>
                     <Text
                         modifiers={[
@@ -130,20 +165,29 @@ const GoalsWidget = (
                     <Spacer />
                 </HStack>
                 <HStack alignment="lastTextBaseline" spacing={4}>
-                    <Text modifiers={[mono(24, "bold"), foregroundStyle(ink)]}>
+                    <Text
+                        modifiers={[
+                            mono(24, "bold"),
+                            foregroundStyle(ink),
+                            lineLimit(1),
+                            minimumScaleFactor(0.6)
+                        ]}
+                    >
                         {`${goal.total}`}
                     </Text>
                     <Text
                         modifiers={[
                             font({ size: 11 }),
                             foregroundStyle(ink3),
-                            lineLimit(1)
+                            lineLimit(1),
+                            minimumScaleFactor(0.8)
                         ]}
                     >
                         {`/ ${goal.target} ${goal.unit}`}
                     </Text>
                     <Spacer />
                 </HStack>
+                <Spacer minLength={0} />
                 <HStack alignment="bottom" spacing={3}>
                     {goal.days.map((v, i) => (
                         <RoundedRectangle
@@ -162,9 +206,9 @@ const GoalsWidget = (
                                 }),
                                 foregroundStyle(
                                     v < 0
-                                        ? bg
+                                        ? "clear"
                                         : v > 0 && v >= goal.dayTarget
-                                          ? tone
+                                          ? accent
                                           : empty
                                 )
                             ]}
@@ -245,7 +289,6 @@ const GoalsWidget = (
         return (
             <VStack alignment="leading" modifiers={root}>
                 {rows}
-                {hasHint ? null : <Spacer />}
             </VStack>
         )
     }
@@ -267,7 +310,6 @@ const GoalsWidget = (
                 </Text>
             </HStack>
             {rows}
-            {hasHint ? null : <Spacer />}
         </VStack>
     )
 }

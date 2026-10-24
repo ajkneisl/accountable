@@ -9,7 +9,6 @@ import { colors } from "../../../theme"
 import { GearIcon } from "../../../ui/icons"
 import {
     Card,
-    Dot,
     IntegrationIcon,
     Mono,
     SourceTile
@@ -95,8 +94,6 @@ export function GoalCard({
     // The current week is paced against the days already over; a completed past
     // week compares against the full weekly target.
     const pace = paceStatus(total, weeklyTarget, offset === 0)
-    const accent = goalFill(goal)
-    const tone = pace === "behind" ? colors.coral : accent
 
     const rangeLabel = week ? formatWeekRange(week.weekStart) : "—"
 
@@ -127,12 +124,9 @@ export function GoalCard({
                     <Text className="text-base font-semibold tracking-tight text-ink">
                         {goalTitle(goal)}
                     </Text>
-                    <View className="flex-row items-center gap-1.5">
-                        <Dot color={accent} />
-                        <Text className="text-xs text-ink-3">
-                            {visual.sourceLabel} · {goal.metric}
-                        </Text>
-                    </View>
+                    <Text className="text-xs text-ink-3">
+                        {visual.sourceLabel} · {goal.metric}
+                    </Text>
                 </View>
                 <Pressable
                     onPress={onEdit}
@@ -170,7 +164,7 @@ export function GoalCard({
                 </Text>
             </View>
 
-            <WeekChart vals={vals} target={dailyTargetFor(goal)} color={tone} />
+            <WeekChart vals={vals} target={dailyTargetFor(goal)} color={goalFill(goal)} />
 
             <View className="flex-row items-center justify-between">
                 <Pressable

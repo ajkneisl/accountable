@@ -1,14 +1,23 @@
 // Display helpers for goal data. Mirrors app/src/features/dashboard/types.ts so a
 // goal reads (and paces) the same on the billboard as it does in the app.
 
-import type { Goal, Habit } from "@shared/index"
+import type { Goal, GoalColor, Habit } from "@shared/index"
 import type { TileVariant } from "../common/primitives"
+import { HABIT_PALETTE } from "./grid"
 
-/** Resolve a {@link TileVariant} to the color its filled elements paint with. */
-export function toneColor(tone: TileVariant): string {
-    if (tone === "lime") return "var(--lime)"
-    if (tone === "coral") return "var(--coral)"
-    return "var(--ink)"
+/** Palette color matching each tile, so a goal without its own color looks as it always has. */
+const TILE_COLOR: Record<TileVariant, GoalColor> = {
+    ink: "INK",
+    lime: "LIME",
+    coral: "CORAL",
+    "": "LIME"
+}
+
+/** Fill for the goal's chosen accent, or its integration's default. */
+export function goalFill(goal: Goal): string {
+    const color =
+        goal.color ?? TILE_COLOR[integrationVisual(goal.integration).tile]
+    return HABIT_PALETTE[color].fill
 }
 
 /** "12d streak · 40 days" summary line for a habit. */

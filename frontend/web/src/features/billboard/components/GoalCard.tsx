@@ -7,10 +7,10 @@ import {
     dailyTarget,
     formatAmount,
     formatWeekRange,
+    goalFill,
     goalTitle,
     integrationVisual,
     paceStatus,
-    toneColor,
     unitLabel,
     weeklyTarget
 } from "../format"
@@ -28,7 +28,6 @@ export function GoalCard({
     const unit = unitLabel(goal.integration, goal.metric)
     const wt = weeklyTarget(goal)
     const pace = paceStatus(goal.weekTotal, wt)
-    const color = toneColor(pace === "behind" ? "coral" : visual.tile || "lime")
     const amount = (v: number) => formatAmount(goal.integration, goal.metric, v)
     const pct = Math.round((goal.weekTotal / Math.max(1, wt)) * 100)
 
@@ -62,7 +61,7 @@ export function GoalCard({
             <WeekChart
                 vals={goal.weekVals}
                 target={dailyTarget(goal)}
-                color={color}
+                color={goalFill(goal)}
                 className={fill ? "min-h-[4em] flex-1" : "h-[5.7em]"}
             />
 

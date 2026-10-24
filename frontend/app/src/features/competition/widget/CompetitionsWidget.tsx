@@ -59,7 +59,8 @@ const CompetitionsWidget = (
     const dark = env.colorScheme === "dark"
     const bg = dark ? "#16100c" : "#f8f5ef"
     const ink = dark ? "#f8f5ef" : "#16100c"
-    const ink3 = "#7b736c"
+    // Lifted on dark so secondary text keeps its contrast.
+    const ink3 = dark ? "#958c84" : "#7b736c"
     const sunken = dark ? "#2b2520" : "#efeae2"
     // Podium tints for the top three, as on the competition board.
     const medal = ["#a2eb3c", "#cfb384", "#fd6a3a"]
@@ -73,7 +74,10 @@ const CompetitionsWidget = (
     )
     const comp = picked[0] ?? props.competitions[0]
 
+    // Fill the whole widget; without a frame the stack hugs its content and
+    // floats in the middle.
     const root = [
+        frame({ maxWidth: 1000, maxHeight: 1000, alignment: "topLeading" }),
         containerBackground(bg, "widget"),
         widgetURL(
             comp
@@ -199,7 +203,12 @@ const CompetitionsWidget = (
                     <Text
                         modifiers={[
                             font({ size: 10 }),
-                            foregroundStyle(m.color)
+                            // Indigo all but vanishes on the dark background.
+                            foregroundStyle(
+                                dark && m.color === "#2e40a3"
+                                    ? "#8e9cf0"
+                                    : m.color
+                            )
                         ]}
                     >
                         ●
