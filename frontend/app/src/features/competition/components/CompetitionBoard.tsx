@@ -11,6 +11,7 @@ import { Pressable, Text, View } from "react-native"
 import {
     type CompetitionDetail,
     type CompetitionGoalBoard,
+    type CompetitionMemberWeek,
     type CompetitionWeek,
     getCompetitionWeek,
     removeCompetitionGoal,
@@ -38,6 +39,7 @@ import {
 import { FALLBACK_BAR_COLOR, MEDAL } from "../colors"
 import {
     computeStandings,
+    displayValue,
     paceTarget,
     weeklyTarget,
     type MemberStanding
@@ -198,7 +200,12 @@ function GoalProgress({
     const wt = weeklyTarget(board)
     const pace = paceTarget(board, currentWeek)
     const pacePct = Math.min(100, (pace / wt) * 100)
-    const members = [...board.members].sort((a, b) => b.total - a.total)
+    // Daily goals show per-day amounts against the daily target; pace (the
+    // status label) still scores the whole week.
+    const daily = board.period === "DAILY"
+    const shown = (m: CompetitionMemberWeek) =>
+        displayValue(board, m, currentWeek)
+    const members = [...board.members].sort((a, b) => shown(b) - shown(a))
     const amount = (v: number) =>
         formatAmount(board.integration, board.metric, v)
 
@@ -215,7 +222,12 @@ function GoalProgress({
                         {goalLabel(board)}
                     </Text>
                     <Text className="text-[11px] text-ink-3">
-                        {visual.sourceLabel} · {amount(wt)} {unit} this week
+                        {visual.sourceLabel} ·{" "}
+                        {daily
+                            ? currentWeek
+                                ? "today"
+                                : "daily avg"
+                            : `${amount(wt)} ${unit} this week`}
                     </Text>
                 </View>
                 {onRemove && (
@@ -239,7 +251,10 @@ function GoalProgress({
                     const isMe = m.userID === meID
                     const color = colorMap[m.userID] ?? FALLBACK_BAR_COLOR
                     const status = paceStatus(m.total, wt, currentWeek)
-                    const pct = Math.min(100, (m.total / wt) * 100)
+                    const pct = Math.min(
+                        100,
+                        (shown(m) / Math.max(1, board.target)) * 100
+                    )
                     return (
                         <View key={m.userID} className="gap-1.5">
                             <View className="flex-row items-center gap-2">
@@ -257,9 +272,9 @@ function GoalProgress({
                                 </Text>
                                 <Mono className="text-xs text-ink-3">
                                     <Text className="font-bold text-ink">
-                                        {amount(m.total)}
+                                        {amount(shown(m))}
                                     </Text>
-                                    /{amount(wt)}
+                                    /{amount(board.target)}
                                 </Mono>
                                 <Text
                                     className={`w-16 text-right text-[11px] font-semibold ${
@@ -278,20 +293,22 @@ function GoalProgress({
                                 </Text>
                             </View>
 
-                            {/* Progress toward the weekly target, with a pace marker. */}
+                            {/* Progress toward the target; weekly goals add a pace marker. */}
                             <Bar pct={pct} color={color} height={12}>
-                                <View
-                                    pointerEvents="none"
-                                    style={{
-                                        position: "absolute",
-                                        top: 0,
-                                        bottom: 0,
-                                        left: `${pacePct}%`,
-                                        width: 1,
-                                        backgroundColor: colors.ink3,
-                                        opacity: 0.5
-                                    }}
-                                />
+                                {!daily && (
+                                    <View
+                                        pointerEvents="none"
+                                        style={{
+                                            position: "absolute",
+                                            top: 0,
+                                            bottom: 0,
+                                            left: `${pacePct}%`,
+                                            width: 1,
+                                            backgroundColor: colors.ink3,
+                                            opacity: 0.5
+                                        }}
+                                    />
+                                )}
                             </Bar>
                         </View>
                     )

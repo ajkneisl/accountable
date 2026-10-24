@@ -5,14 +5,32 @@
 import type {
     CompetitionDetail,
     CompetitionGoalBoard,
+    CompetitionMemberWeek,
     CompetitionWeek
 } from "@shared/index"
-import { paceBar } from "../dashboard/types"
+import { localWeekday, paceBar } from "../dashboard/types"
 import { FALLBACK_BAR_COLOR } from "./colors"
 
 /** Weekly-equivalent target the weekly total is measured against. */
 export function weeklyTarget(board: CompetitionGoalBoard): number {
     return board.period === "WEEKLY" ? board.target : board.target * 7
+}
+
+/**
+ * The amount a member's row shows against [board.target]: a weekly goal's
+ * running total, or for a daily goal today's value (a past week: the daily
+ * average), so it reads per day rather than as a ×7 sum.
+ */
+export function displayValue(
+    board: CompetitionGoalBoard,
+    member: CompetitionMemberWeek,
+    currentWeek: boolean,
+    now = Date.now()
+): number {
+    if (board.period !== "DAILY") return member.total
+    return currentWeek
+        ? (member.vals[localWeekday(now)] ?? 0)
+        : member.total / 7
 }
 
 /**

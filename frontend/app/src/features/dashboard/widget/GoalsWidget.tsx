@@ -1,5 +1,6 @@
 // iOS home screen widget: one card per goal (this week's total against the
-// weekly target, on-pace status, and a Mon–Sun bar strip), fed by
+// weekly target, or today's value against a daily goal's target, on-pace
+// status, and a Mon–Sun bar strip), fed by
 // `syncGoalsWidget`. Small shows one goal, medium two side by side, large a 2×2
 // grid under an on-pace summary. Which goals is picked per widget in Edit Widget
 // (see plugins/withGoalsWidgetPicker.js); unpicked widgets show the first ones.
@@ -39,9 +40,9 @@ export interface GoalsWidgetGoal {
     source: string
     /** Accent hex while on pace; the card turns coral when behind. */
     color: string
-    /** This week's total so far. */
+    /** This week's total so far; today's value for a daily goal. */
     total: number
-    /** Weekly-equivalent target. */
+    /** The goal's own target: per week, or per day for a daily goal. */
     target: number
     unit: string
     status: "onTrack" | "atRisk" | "behind"

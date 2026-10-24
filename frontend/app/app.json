@@ -9,7 +9,7 @@
         "ios": {
             "supportsTablet": true,
             "bundleIdentifier": "app.umn.acc",
-            "buildNumber": "6",
+            "buildNumber": "7",
             "appleTeamId": "CBL6R6SP6A",
             "config": {
                 "usesNonExemptEncryption": false

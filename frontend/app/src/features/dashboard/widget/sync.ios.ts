@@ -70,7 +70,7 @@ function propsFor(
         const shown = (v: number) => Math.round((v / scale) * 10) / 10
         const weekly = g.period === "WEEKLY" ? g.target : g.target * 7
         const fresh = day > 6
-        const total = fresh ? 0 : g.weekTotal
+        const weekTotal = fresh ? 0 : g.weekTotal
         const days = Array.from({ length: 7 }, (_, i) =>
             fresh
                 ? i === 0
@@ -82,6 +82,10 @@ function propsFor(
                     ? 0
                     : -1
         )
+        // Daily goals read per day (today's value against the daily target),
+        // not as a ×7 weekly sum; pace still scores the whole week.
+        const daily = g.period === "DAILY"
+        const total = daily ? (fresh ? 0 : days[day]) : weekTotal
         return {
             id: goalKey(g),
             name: goalTitle(g),
@@ -89,10 +93,10 @@ function propsFor(
             // As on the goal card.
             color: goalFill(g),
             total: shown(total),
-            target: shown(weekly),
+            target: shown(daily ? g.target : weekly),
             unit: unitLabel(g.integration, g.metric),
             // Paced against the days already over, as on the goal card.
-            status: paceStatus(total, weekly, true, now),
+            status: paceStatus(weekTotal, weekly, true, now),
             days,
             dayTarget: g.period === "DAILY" ? g.target : g.target / 7
         }
