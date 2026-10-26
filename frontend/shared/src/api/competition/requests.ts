@@ -168,3 +168,46 @@ export function removeCompetitionGoal(
         { auth: true, expectJson: false }
     )
 }
+
+/** Changes to a competition; omitted fields are left alone. */
+export interface UpdateCompetitionRequest {
+    name?: string
+    /** A member to hand ownership to. The current owner stays a member. */
+    ownerID?: string
+}
+
+/** PATCH /api/competitions/{id} — owner renames the competition or hands it to another member. */
+export function updateCompetition(
+    config: ApiConfig,
+    id: string,
+    body: UpdateCompetitionRequest
+): Promise<CompetitionSummary> {
+    return request(config, "PATCH", `/competitions/${id}`, body, {
+        auth: true
+    })
+}
+
+/** POST /api/competitions/{id}/join-code — owner replaces the join code; the old one stops working. */
+export function resetCompetitionJoinCode(
+    config: ApiConfig,
+    id: string
+): Promise<CompetitionSummary> {
+    return request(config, "POST", `/competitions/${id}/join-code`, undefined, {
+        auth: true
+    })
+}
+
+/** DELETE /api/competitions/{id}/members/{userID} — owner removes a member. */
+export function removeCompetitionMember(
+    config: ApiConfig,
+    id: string,
+    userID: string
+): Promise<void> {
+    return request(
+        config,
+        "DELETE",
+        `/competitions/${id}/members/${userID}`,
+        undefined,
+        { auth: true, expectJson: false }
+    )
+}

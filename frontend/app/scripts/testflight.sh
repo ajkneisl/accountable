@@ -13,7 +13,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 TEAM_ID=CBL6R6SP6A
-API_URL=${EXPO_PUBLIC_API_URL:-https://acc.umn.app/api}
+API_URL=${EXPO_PUBLIC_API_URL:-https://beacc.app/api}
 
 WORK=$(mktemp -d -t accountable-testflight)
 ARCHIVE=$WORK/Beacc.xcarchive

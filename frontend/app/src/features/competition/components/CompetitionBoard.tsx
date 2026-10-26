@@ -9,6 +9,7 @@
 import { useEffect, useState } from "react"
 import { Pressable, Text, View } from "react-native"
 import {
+    addCompetitionGoal,
     type CompetitionDetail,
     type CompetitionGoalBoard,
     type CompetitionMemberWeek,
@@ -18,17 +19,18 @@ import {
     useApi
 } from "@shared/index"
 import { colors } from "../../../theme"
-import { confirm } from "../../../ui/confirm"
+import { GearIcon } from "../../../ui/icons"
 import {
     Bar,
     Button,
     Card,
     Dot,
-    ErrorList,
     Eyebrow,
+    IntegrationIcon,
     Mono,
     SourceTile
 } from "../../../ui/primitives"
+import { EditGoalSheet } from "../../dashboard/components/EditGoalSheet"
 import {
     formatAmount,
     formatWeekRange,
@@ -180,18 +182,16 @@ function GoalProgress({
     currentWeek,
     meID,
     colorMap,
-    onRemove,
-    removing
+    onEdit
 }: {
     board: CompetitionGoalBoard
     currentWeek: boolean
     meID?: string
     colorMap: Record<string, string>
-    onRemove?: () => void
-    removing?: boolean
+    /** Opens the edit sheet; owner-only. */
+    onEdit?: () => void
 }) {
     const visual = integrationVisual(board.integration)
-    const unit = unitLabel(board.integration, board.metric)
     const wt = weeklyTarget(board)
     const pace = paceTarget(board, currentWeek)
     const pacePct = Math.min(100, (pace / wt) * 100)
@@ -211,32 +211,27 @@ function GoalProgress({
                     size="sm"
                     label={visual.glyph}
                     variant={visual.tile}
+                    icon={
+                        <IntegrationIcon name={board.integration} size={18} />
+                    }
                 />
                 <View className="flex-1">
                     <Text className="text-[14px] font-semibold text-ink">
                         {goalLabel(board)}
                     </Text>
                     <Text className="text-[11px] text-ink-3">
-                        {visual.sourceLabel} ·{" "}
-                        {daily
-                            ? currentWeek
-                                ? "today"
-                                : "daily avg"
-                            : `${amount(wt)} ${unit} this week`}
+                        {visual.sourceLabel} · {board.metric}
                     </Text>
                 </View>
-                {onRemove && (
+                {onEdit && (
                     <Pressable
+                        onPress={onEdit}
                         accessibilityRole="button"
-                        accessibilityLabel="Remove goal"
-                        onPress={onRemove}
-                        disabled={removing}
-                        hitSlop={10}
-                        className={`h-7 w-7 items-center justify-center rounded-full ${
-                            removing ? "opacity-40" : ""
-                        }`}
+                        accessibilityLabel={`Edit ${goalLabel(board)}`}
+                        hitSlop={8}
+                        className="h-8 w-8 items-center justify-center rounded-[9px] border border-line bg-bg-card"
                     >
-                        <Text className="text-base text-ink-3">×</Text>
+                        <GearIcon color={colors.ink3} size={16} />
                     </Pressable>
                 )}
             </View>
@@ -334,8 +329,7 @@ export function CompetitionBoard({
     const [week, setWeek] = useState<CompetitionWeek | null>(null)
     const [loading, setLoading] = useState(true)
     const [adding, setAdding] = useState(false)
-    const [removing, setRemoving] = useState<string | null>(null)
-    const [error, setError] = useState<string | null>(null)
+    const [editing, setEditing] = useState<CompetitionGoalBoard | null>(null)
 
     useEffect(() => {
         let cancelled = false
@@ -355,32 +349,26 @@ export function CompetitionBoard({
         }
     }, [api, competition.id, offset, refreshKey])
 
+    // Adding a goal that already exists replaces its target.
+    async function save(board: CompetitionGoalBoard, target: number) {
+        await addCompetitionGoal(api, competition.id, {
+            integration: board.integration,
+            metric: board.metric,
+            period: board.period,
+            target
+        })
+        onChanged()
+    }
+
     async function remove(board: CompetitionGoalBoard) {
-        const ok = await confirm(
-            "Remove goal",
-            `Remove "${goalLabel(board)}" from this competition?`,
-            "Remove",
-            true
+        await removeCompetitionGoal(
+            api,
+            competition.id,
+            board.integration,
+            board.metric,
+            board.period
         )
-        if (!ok) return
-        setError(null)
-        setRemoving(boardKey(board))
-        try {
-            await removeCompetitionGoal(
-                api,
-                competition.id,
-                board.integration,
-                board.metric,
-                board.period
-            )
-            onChanged()
-        } catch (err) {
-            setError(
-                err instanceof Error ? err.message : "Failed to remove goal"
-            )
-        } finally {
-            setRemoving(null)
-        }
+        onChanged()
     }
 
     const currentWeek = offset === 0
@@ -455,12 +443,6 @@ export function CompetitionBoard({
                     </Pressable>
                 </View>
 
-                {error !== null && (
-                    <View className="mb-3">
-                        <ErrorList errors={[error]} />
-                    </View>
-                )}
-
                 {!week || week.goals.length === 0 ? (
                     <Text className="text-[13px] text-ink-3">
                         {loading ? "Loading…" : "No goals yet"}
@@ -479,10 +461,11 @@ export function CompetitionBoard({
                                     currentWeek={currentWeek}
                                     meID={meID}
                                     colorMap={colorMap}
-                                    onRemove={
-                                        isOwner ? () => remove(board) : undefined
+                                    onEdit={
+                                        isOwner
+                                            ? () => setEditing(board)
+                                            : undefined
                                     }
-                                    removing={removing === boardKey(board)}
                                 />
                             </View>
                         ))}
@@ -495,6 +478,17 @@ export function CompetitionBoard({
                     competitionId={competition.id}
                     onClose={() => setAdding(false)}
                     onAdded={onChanged}
+                />
+            )}
+
+            {editing && (
+                <EditGoalSheet
+                    key={boardKey(editing)}
+                    goal={editing}
+                    shared
+                    onClose={() => setEditing(null)}
+                    onSave={(target) => save(editing, target)}
+                    onDelete={() => remove(editing)}
                 />
             )}
         </View>

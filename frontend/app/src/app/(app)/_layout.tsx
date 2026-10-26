@@ -46,9 +46,10 @@ export default function AppLayout() {
                         <Stack screenOptions={{ headerShown: false }}>
                             <Stack.Screen name="(tabs)" />
                             <Stack.Screen
-                                name="competition/[id]"
+                                name="competition/[id]/index"
                                 options={{ presentation: "card" }}
                             />
+                            <Stack.Screen name="competition/[id]/settings" />
                             <Stack.Screen name="integrations/[name]" />
                             <Stack.Screen name="settings" />
                         </Stack>

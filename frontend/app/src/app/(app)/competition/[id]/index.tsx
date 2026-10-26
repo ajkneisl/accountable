@@ -1,36 +1,33 @@
-// Competition detail — standings and shared goals for one competition.
+// Competition detail — standings and shared goals for one competition. Its
+// name, members and join code are managed on the settings screen pushed from here.
 //
 // The web reads the active competition from a ?c= query param and falls back to
 // the first one in the sidebar; here the id is a real route segment, so the
 // screen always has an explicit subject.
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Share, Text, View } from "react-native"
-import { router, useLocalSearchParams } from "expo-router"
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router"
 import { useAtomValue } from "jotai"
 import {
     ApiError,
     type CompetitionDetail,
-    deleteCompetition,
     getCompetition,
-    leaveCompetition,
     useApi
 } from "@shared/index"
-import { userAtom } from "../../../auth"
-import { useAppData } from "../../../features/common/AppData"
-import { buildColorMap } from "../../../features/competition/colors"
-import { CompetitionBoard } from "../../../features/competition/components/CompetitionBoard"
-import { BackBar } from "../../../ui/BackBar"
-import { CircleButton } from "../../../ui/CircleButton"
-import { Screen } from "../../../ui/Screen"
-import { confirm } from "../../../ui/confirm"
+import { userAtom } from "../../../../auth"
+import { buildColorMap } from "../../../../features/competition/colors"
+import { CompetitionBoard } from "../../../../features/competition/components/CompetitionBoard"
+import { BackBar } from "../../../../ui/BackBar"
+import { CircleButton } from "../../../../ui/CircleButton"
+import { Screen } from "../../../../ui/Screen"
 import {
     Button,
     Card,
     Display,
     ErrorList,
     Mono
-} from "../../../ui/primitives"
+} from "../../../../ui/primitives"
 
 function messageFor(err: unknown): string {
     if (err instanceof ApiError) return err.messages.join(", ")
@@ -42,13 +39,21 @@ export default function Competition() {
     const api = useApi()
     const { id } = useLocalSearchParams<{ id: string }>()
     const user = useAtomValue(userAtom)
-    const { reload } = useAppData()
 
     const [detail, setDetail] = useState<CompetitionDetail | null>(null)
     const [loading, setLoading] = useState(true)
     const [tick, setTick] = useState(0)
-    const [actionBusy, setActionBusy] = useState(false)
     const [error, setError] = useState<string | null>(null)
+
+    // Refetch on coming back from settings, which may have renamed it or
+    // changed its members. The first focus is the initial load below.
+    const focused = useRef(false)
+    useFocusEffect(
+        useCallback(() => {
+            if (focused.current) setTick((t) => t + 1)
+            focused.current = true
+        }, [])
+    )
 
     useEffect(() => {
         if (!id) return
@@ -70,30 +75,6 @@ export default function Competition() {
     }, [api, id, tick])
 
     const isOwner = detail?.ownerID === user?.userID
-
-    async function onLeaveOrDelete() {
-        if (!detail || !user) return
-        const ok = await confirm(
-            isOwner ? "Delete competition" : "Leave competition",
-            isOwner
-                ? `Delete "${detail.name}"? This removes it for every member.`
-                : `Leave "${detail.name}"?`,
-            isOwner ? "Delete" : "Leave",
-            true
-        )
-        if (!ok) return
-        setActionBusy(true)
-        try {
-            if (isOwner) await deleteCompetition(api, detail.id)
-            else await leaveCompetition(api, detail.id)
-            reload()
-            router.replace("/competitions")
-        } catch (err) {
-            setError(messageFor(err))
-        } finally {
-            setActionBusy(false)
-        }
-    }
 
     const colors = detail
         ? buildColorMap(detail.members.map((m) => m.userID))
@@ -140,23 +121,19 @@ export default function Competition() {
 
             {detail ? (
                 <>
-                    <View className="gap-2">
-                        <Display size={32}>{detail.name}</Display>
-                        <Text className="text-[13px] text-ink-3">
-                            {detail.members.length} member
-                            {detail.members.length === 1 ? "" : "s"} ·{" "}
-                            {detail.goals.length} shared goal
-                            {detail.goals.length === 1 ? "" : "s"}
-                        </Text>
-                    </View>
+                    <Display size={32}>{detail.name}</Display>
 
                     <View className="flex-row">
                         <Button
-                            label={isOwner ? "Delete" : "Leave"}
+                            label="Settings"
                             variant="line"
                             size="sm"
-                            onPress={onLeaveOrDelete}
-                            busy={actionBusy}
+                            onPress={() =>
+                                router.push({
+                                    pathname: "/competition/[id]/settings",
+                                    params: { id: detail.id }
+                                })
+                            }
                         />
                     </View>
 

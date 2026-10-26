@@ -1,7 +1,8 @@
-// Edit sheet for a personal goal: its target and accent color, plus the delete
-// button (here rather than on the card so it can't be hit by accident). Source,
-// metric and cadence are the goal's identity on the backend, so changing those
-// means deleting the goal and creating a new one.
+// Edit sheet for a goal: its target and accent color, plus the delete button
+// (here rather than on the card so it can't be hit by accident). Source, metric
+// and cadence are the goal's identity on the backend, so changing those means
+// deleting the goal and creating a new one. A competition's shared goal uses it
+// too, without the color: members are drawn in their own colors there.
 
 import { useState } from "react"
 import { Text, View } from "react-native"
@@ -26,11 +27,17 @@ function messages(err: unknown): string[] {
 
 export function EditGoalSheet({
     goal,
+    shared = false,
     onClose,
     onSave,
     onDelete
 }: {
-    goal: Goal
+    goal: Pick<
+        Goal,
+        "integration" | "metric" | "period" | "target" | "color"
+    >
+    /** A competition's shared goal: no color, and deleting removes it for everyone. */
+    shared?: boolean
     onClose: () => void
     /** [target] is in stored units (minutes of sleep, not hours). */
     onSave: (target: number, color: GoalColor) => Promise<void>
@@ -69,12 +76,19 @@ export function EditGoalSheet({
     }
 
     async function askDelete() {
-        const ok = await confirm(
-            "Delete goal?",
-            `"${goalTitle(goal)}" will be removed. Your synced data stays put.`,
-            "Delete",
-            true
-        )
+        const ok = shared
+            ? await confirm(
+                  "Remove goal?",
+                  `"${goalTitle(goal)}" will be removed from this competition for every member.`,
+                  "Remove",
+                  true
+              )
+            : await confirm(
+                  "Delete goal?",
+                  `"${goalTitle(goal)}" will be removed. Your synced data stays put.`,
+                  "Delete",
+                  true
+              )
         if (!ok) return
         setDeleting(true)
         try {
@@ -90,8 +104,12 @@ export function EditGoalSheet({
 
     return (
         <Sheet
-            title="Edit goal"
-            description="Change its target or color. To track something else, delete it and create a new goal."
+            title={shared ? "Edit shared goal" : "Edit goal"}
+            description={
+                shared
+                    ? "Change the target every member is measured against. To track something else, remove it and add a new goal."
+                    : "Change its target or color. To track something else, delete it and create a new goal."
+            }
             onClose={onClose}
             action={{
                 label: submitting ? "Saving…" : "Save",
@@ -100,7 +118,15 @@ export function EditGoalSheet({
             }}
             footer={
                 <Button
-                    label={deleting ? "Deleting…" : "Delete goal"}
+                    label={
+                        shared
+                            ? deleting
+                                ? "Removing…"
+                                : "Remove goal"
+                            : deleting
+                              ? "Deleting…"
+                              : "Delete goal"
+                    }
                     variant="danger"
                     size="lg"
                     busy={deleting}
@@ -127,9 +153,11 @@ export function EditGoalSheet({
                 </View>
             </SheetField>
 
-            <SheetField label="Color">
-                <ColorPicker value={color} onChange={setColor} />
-            </SheetField>
+            {!shared && (
+                <SheetField label="Color">
+                    <ColorPicker value={color} onChange={setColor} />
+                </SheetField>
+            )}
 
             <ErrorList errors={errors} />
         </Sheet>

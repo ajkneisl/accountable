@@ -50,16 +50,24 @@ suspend fun upsertCompetitionGoal(
     period: GoalPeriod,
     target: Long,
 ): CompetitionGoal = suspendTransaction {
-    val createdAt = System.currentTimeMillis()
-    CompetitionGoals.upsert {
+    // An existing goal keeps its createdAt, and so its place in the newest-first order.
+    CompetitionGoals.upsert(onUpdateExclude = listOf(CompetitionGoals.createdAt)) {
         it[CompetitionGoals.competitionID] = competitionID
         it[CompetitionGoals.integration] = integration
         it[CompetitionGoals.metric] = metric
         it[CompetitionGoals.period] = period
         it[CompetitionGoals.target] = target
-        it[CompetitionGoals.createdAt] = createdAt
+        it[CompetitionGoals.createdAt] = System.currentTimeMillis()
     }
-    CompetitionGoal(competitionID, integration, metric, period, target, createdAt)
+    CompetitionGoals.selectAll()
+        .where {
+            (CompetitionGoals.competitionID eq competitionID) and
+                (CompetitionGoals.integration eq integration) and
+                (CompetitionGoals.metric eq metric) and
+                (CompetitionGoals.period eq period)
+        }
+        .single()
+        .toEntity<CompetitionGoal>()
 }
 
 /** All goals in [competitionID], newest first. */

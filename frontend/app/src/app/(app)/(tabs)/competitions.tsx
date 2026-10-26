@@ -22,7 +22,6 @@ import { useAppData } from "../../../features/common/AppData"
 import { CompetitionSheet } from "../../../features/competition/components/CompetitionSheet"
 
 type Filter = "all" | "owned" | "joined"
-type Sort = "newest" | "oldest" | "name"
 
 const FILTERS: { value: Filter; label: string }[] = [
     { value: "all", label: "All" },
@@ -30,47 +29,25 @@ const FILTERS: { value: Filter; label: string }[] = [
     { value: "joined", label: "Joined" }
 ]
 
-const SORTS: { value: Sort; label: string }[] = [
-    { value: "newest", label: "Newest" },
-    { value: "oldest", label: "Oldest" },
-    { value: "name", label: "A–Z" }
-]
-
-const DATE_FMT = new Intl.DateTimeFormat(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric"
-})
-
-const COMPARATORS: Record<
-    Sort,
-    (a: CompetitionSummary, b: CompetitionSummary) => number
-> = {
-    newest: (a, b) => b.createdAt - a.createdAt,
-    oldest: (a, b) => a.createdAt - b.createdAt,
-    name: (a, b) =>
-        a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
-}
-
 export default function Competitions() {
     const { data, loading, reload } = useAppData()
     const user = useAtomValue(userAtom)
     const [sheetOpen, setSheetOpen] = useState(false)
     const [filter, setFilter] = useState<Filter>("all")
-    const [sort, setSort] = useState<Sort>("newest")
 
     const competitions = data.competitions
     const meID = user?.userID
 
-    const visible = useMemo(() => {
-        return competitions
-            .filter((c) => {
+    // In the server's order: most recently joined first.
+    const visible = useMemo(
+        () =>
+            competitions.filter((c) => {
                 if (filter === "owned") return c.ownerID === meID
                 if (filter === "joined") return c.ownerID !== meID
                 return true
-            })
-            .sort(COMPARATORS[sort])
-    }, [competitions, filter, sort, meID])
+            }),
+        [competitions, filter, meID]
+    )
 
     const narrowed = filter !== "all"
 
@@ -85,16 +62,11 @@ export default function Competitions() {
             </View>
 
             {competitions.length > 0 && (
-                <View className="flex-row flex-wrap items-center justify-between gap-2">
+                <View className="flex-row">
                     <Segmented
                         options={FILTERS}
                         value={filter}
                         onChange={setFilter}
-                    />
-                    <Segmented
-                        options={SORTS}
-                        value={sort}
-                        onChange={setSort}
                     />
                 </View>
             )}
@@ -190,25 +162,20 @@ function CompetitionRow({
                         {(c.name[0] ?? "?").toUpperCase()}
                     </Mono>
                 </View>
-                <View className="flex-1 gap-0.5">
-                    <View className="flex-row items-center gap-2">
-                        <Text
-                            numberOfLines={1}
-                            className="shrink text-[16px] font-semibold tracking-tight text-ink"
-                        >
-                            {c.name}
-                        </Text>
-                        {owned && (
-                            <Chip>
-                                <Text className="text-[11px] font-semibold text-ink-2">
-                                    Owner
-                                </Text>
-                            </Chip>
-                        )}
-                    </View>
-                    <Mono className="text-xs uppercase text-ink-3">
-                        #{c.joinCode} · {DATE_FMT.format(new Date(c.createdAt))}
-                    </Mono>
+                <View className="flex-1 flex-row items-center gap-2">
+                    <Text
+                        numberOfLines={1}
+                        className="shrink text-[16px] font-semibold tracking-tight text-ink"
+                    >
+                        {c.name}
+                    </Text>
+                    {owned && (
+                        <Chip>
+                            <Text className="text-[11px] font-semibold text-ink-2">
+                                Owner
+                            </Text>
+                        </Chip>
+                    )}
                 </View>
                 <Text className="text-base text-ink-3">›</Text>
             </Card>
@@ -216,7 +183,7 @@ function CompetitionRow({
     )
 }
 
-/** Compact pill toggle for the filter / sort rows. */
+/** Compact pill toggle for the filter row. */
 function Segmented<T extends string>({
     options,
     value,

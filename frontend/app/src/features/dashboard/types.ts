@@ -38,7 +38,9 @@ const TILE_COLOR: Record<TileVariant, GoalColor> = {
 }
 
 /** The goal's chosen accent, or its integration's default. */
-export function goalColor(goal: Goal): GoalColor {
+export function goalColor(
+    goal: Pick<Goal, "integration" | "color">
+): GoalColor {
     return goal.color ?? TILE_COLOR[integrationVisual(goal.integration).tile]
 }
 
@@ -122,7 +124,9 @@ export function goalKey(goal: {
 }
 
 /** "Ship 5 commits / week" style label. */
-export function goalTitle(goal: Goal): string {
+export function goalTitle(
+    goal: Pick<Goal, "integration" | "metric" | "period" | "target">
+): string {
     const unit = unitLabel(goal.integration, goal.metric)
     const cadence = goal.period === "DAILY" ? "day" : "week"
     const target = formatAmount(goal.integration, goal.metric, goal.target)

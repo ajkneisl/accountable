@@ -113,10 +113,16 @@ class NotificationTest {
 
         val push = goalsStatus(user, now)!!
         assertEquals("/goals", push.path)
-        assertEquals(
-            // Newest goal first, as the app lists them.
-            "0 of 2 goals on track. Still to go: 5 commits this week and 3,100 more steps. " +
-                "Habits left: Read.",
+        // Goals are listed newest first, but both are created within the same millisecond here,
+        // so either order is right.
+        assertTrue(
+            push.body in
+                listOf(
+                    "0 of 2 goals on track. Still to go: 5 commits this week and 3,100 more steps. " +
+                        "Habits left: Read.",
+                    "0 of 2 goals on track. Still to go: 3,100 more steps and 5 commits this week. " +
+                        "Habits left: Read.",
+                ),
             push.body,
         )
     }

@@ -4,7 +4,7 @@ Pod::Spec.new do |s|
   s.summary        = 'Screen Time authorization and usage for Beacc goals.'
   s.license        = 'UNLICENSED'
   s.author         = 'Beacc'
-  s.homepage       = 'https://acc.umn.app'
+  s.homepage       = 'https://beacc.app'
   s.platforms      = { :ios => '16.4' }
   s.swift_version  = '5.9'
   s.source         = { git: '' }

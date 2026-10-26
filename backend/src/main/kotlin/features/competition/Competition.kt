@@ -13,6 +13,7 @@ import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.innerJoin
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.update
 import user.Users
 
 private const val JOIN_CODE_LENGTH = 6
@@ -183,6 +184,23 @@ suspend fun leaveCompetition(userID: UUID, competitionID: UUID): Boolean = suspe
                 (CompetitionMembers.userID eq userID)
         }
     } > 0
+}
+
+/** Rename [competitionID]. */
+suspend fun renameCompetition(competitionID: UUID, name: String) = suspendTransaction {
+    Competitions.update({ Competitions.id eq competitionID }) { it[Competitions.name] = name }
+}
+
+/** Make [userID], who must already be a member, the owner of [competitionID]. */
+suspend fun transferCompetition(competitionID: UUID, userID: UUID) = suspendTransaction {
+    Competitions.update({ Competitions.id eq competitionID }) { it[Competitions.ownerID] = userID }
+}
+
+/** Give [competitionID] a fresh join code, so the old one stops working. Returns the new code. */
+suspend fun resetJoinCode(competitionID: UUID): String = suspendTransaction {
+    val joinCode = generateUniqueJoinCode()
+    Competitions.update({ Competitions.id eq competitionID }) { it[Competitions.joinCode] = joinCode }
+    joinCode
 }
 
 /** Delete a competition. Cascades to members and goals. Returns true if a row was removed. */

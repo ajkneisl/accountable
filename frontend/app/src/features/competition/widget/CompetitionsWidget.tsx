@@ -1,5 +1,5 @@
 // iOS home screen widget: the standings for one competition, fed by
-// `syncCompetitionsWidget`. Small shows where you stand, medium the top three
+// `syncCompetitionsWidget`. Small shows where you stand, medium the top four
 // (with you swapped in if you're further down), large up to eight rows. Which
 // competition is picked per widget in Edit Widget (see
 // plugins/withCompetitionsWidgetPicker.js); unpicked widgets show the first one.
@@ -183,7 +183,7 @@ const CompetitionsWidget = (
 
     // Rows to show, leader first. If you're ranked below the cut, you take the
     // last row so the widget always says where you stand.
-    const slots = family === "systemLarge" ? 8 : 3
+    const slots = family === "systemLarge" ? 8 : 4
     const ranked = comp.members.map((m, i) => ({ ...m, rank: i + 1 }))
     const rows =
         myIndex >= slots
@@ -193,7 +193,8 @@ const CompetitionsWidget = (
     return (
         <VStack
             alignment="leading"
-            spacing={family === "systemLarge" ? 10 : 7}
+            // Medium is tight: four rows only fit under the header at 5.
+            spacing={family === "systemLarge" ? 10 : 5}
             modifiers={root}
         >
             {header}

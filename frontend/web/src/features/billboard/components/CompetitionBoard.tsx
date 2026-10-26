@@ -72,9 +72,8 @@ function Standings({
                     </div>
 
                     <div className="flex min-w-0 flex-1 items-center gap-[0.6em]">
-                        <Dot color={s.color} size="0.75em" />
                         <span className="truncate text-[1.1em] font-semibold">
-                            {s.username}
+                             {s.username}
                         </span>
                         {s.userID === meID && (
                             <span className="text-[0.8em] text-ink-3">you</span>
@@ -122,8 +121,6 @@ function GoalProgress({
     const unit = unitLabel(board.integration, board.metric)
     const wt = weeklyTarget(board)
     const pacePct = Math.min(100, (paceTarget(board) / Math.max(1, wt)) * 100)
-    // Daily goals show today's amounts against the daily target; pace (the
-    // status label) still scores the whole week.
     const daily = board.period === "DAILY"
     const shown = (m: CompetitionMemberWeek) => displayValue(board, m)
     const members = [...board.members].sort((a, b) => shown(b) - shown(a))
@@ -133,7 +130,7 @@ function GoalProgress({
     return (
         <div className="flex flex-col gap-[0.9em] py-[1.1em]">
             <div className="flex items-center gap-[0.7em]">
-                <Badge glyph={visual.glyph} variant={visual.tile} small />
+                <Badge integration={board.integration} small />
                 <div className="min-w-0">
                     <div className="truncate font-semibold">
                         {goalTitle(board)}

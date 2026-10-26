@@ -50,7 +50,7 @@ export function GoalCard({
             }`}
         >
             <div className="flex items-center gap-[0.85em]">
-                <Badge glyph={visual.glyph} variant={visual.tile} />
+                <Badge integration={goal.integration} />
                 <div className="min-w-0">
                     <div className="truncate text-[1.15em] font-semibold tracking-[-0.01em]">
                         {goalTitle(goal)}

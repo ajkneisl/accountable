@@ -35,6 +35,7 @@ import { BackBar } from "../../ui/BackBar"
 import { confirm } from "../../ui/confirm"
 import { Screen } from "../../ui/Screen"
 import { Button, Card, Display, ErrorList } from "../../ui/primitives"
+import { Row, Section } from "../../ui/SettingsList"
 
 type Tab = "general" | "integrations"
 
@@ -86,76 +87,6 @@ function Segmented({
                 )
             })}
         </View>
-    )
-}
-
-/** Titled group of rows, like an iOS grouped table section. */
-function Section({
-    title,
-    footer,
-    children
-}: {
-    title?: string
-    footer?: string
-    children: ReactNode
-}) {
-    return (
-        <View className="gap-2">
-            {title && (
-                <Text className="px-1 text-[13px] font-semibold text-ink-3">
-                    {title}
-                </Text>
-            )}
-            <Card className="px-4">{children}</Card>
-            {footer && (
-                <Text className="px-1 text-[12px] leading-[17px] text-ink-3">
-                    {footer}
-                </Text>
-            )}
-        </View>
-    )
-}
-
-function Row({
-    label,
-    value,
-    first = false,
-    destructive = false,
-    onPress
-}: {
-    label: string
-    value?: string
-    first?: boolean
-    destructive?: boolean
-    /** Makes the row tappable and adds a disclosure chevron. */
-    onPress?: () => void
-}) {
-    return (
-        <Pressable
-            disabled={!onPress}
-            accessibilityRole={onPress ? "button" : undefined}
-            onPress={onPress}
-            className={`flex-row items-center justify-between gap-4 py-3.5 ${
-                first ? "" : "border-t border-line-2"
-            }`}
-        >
-            <Text
-                className={`text-[15px] ${
-                    destructive ? "text-coral-ink" : "text-ink"
-                }`}
-            >
-                {label}
-            </Text>
-            <Text
-                numberOfLines={1}
-                className="flex-1 text-right text-[15px] text-ink-3"
-            >
-                {value}
-            </Text>
-            {onPress && !destructive && (
-                <Text className="text-[18px] text-ink-3">›</Text>
-            )}
-        </Pressable>
     )
 }
 

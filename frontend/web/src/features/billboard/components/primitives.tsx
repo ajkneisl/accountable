@@ -3,26 +3,32 @@
 // full-screen widget sets from the viewport.
 
 import type { ReactNode } from "react"
-import type { TileVariant } from "../../common/primitives"
+import { integrationVisual } from "../format"
+import { IntegrationIcon } from "./IntegrationIcon"
 
-/** Integration glyph tile — an em-sized `.source-tile`. */
+/**
+ * Integration tile — an em-sized `.source-tile`. Shows the integration's mark on
+ * the neutral surface, or its tinted text glyph if it has none.
+ */
 export function Badge({
-    glyph,
-    variant,
+    integration,
     small = false
 }: {
-    glyph: string
-    variant: TileVariant
+    integration: string
     small?: boolean
 }) {
     const size = small
         ? "h-[2.15em] w-[2.15em] rounded-[0.65em] text-[0.8em]"
         : "h-[3.15em] w-[3.15em] rounded-[0.85em] text-[1em]"
+    const icon = IntegrationIcon({ name: integration })
+    const { glyph, tile } = integrationVisual(integration)
     return (
         <div
-            className={`source-tile ${variant ? `tile-${variant}` : ""} ${size}`}
+            className={`source-tile ${
+                icon ? "has-icon" : tile ? `tile-${tile}` : ""
+            } ${size}`}
         >
-            <span>{glyph}</span>
+            {icon ?? <span>{glyph}</span>}
         </div>
     )
 }
