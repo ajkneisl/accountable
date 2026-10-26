@@ -7,7 +7,6 @@ import features.competition.membersOf
 import features.goals.GoalDefinition
 import features.goals.GoalDirection
 import features.goals.GoalPeriod
-import features.goals.currentWindow
 import features.goals.direction
 import features.goals.goalsFor
 import features.goals.isMet
@@ -81,11 +80,11 @@ suspend fun streakRisk(userID: UUID, now: Long): Push? {
 
     val goals = goalsFor(userID)
     val daily = goals.filter { it.period == GoalPeriod.DAILY }
-    if (daily.isNotEmpty() && streakFor(userID, goals, now) == 0) {
+    if (daily.isNotEmpty()) {
         val unmet = daily.filterNot { it.isMet(progressFor(userID, it, now)) }
         val fixable = unmet.isNotEmpty() && unmet.all { it.direction == GoalDirection.AT_LEAST }
-        val startOfToday = currentWindow(GoalPeriod.DAILY, now, zone).first
-        val streak = if (fixable) streakFor(userID, goals, startOfToday - 1) else 0
+        // Today is unfinished, so this is the run ending yesterday.
+        val streak = if (fixable) streakFor(userID, goals, now) else 0
         if (streak >= MIN_STREAK) {
             val missing = unmet.map { left(it, it.target - progressFor(userID, it, now), today = true) }
             lines += "Your $streak-day goal streak ends at midnight: ${listed(missing)} to go."

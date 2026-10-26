@@ -20,6 +20,10 @@ private const val MAX_STREAK_DAYS = 366
  * Count of consecutive days (in [userID]'s timezone) ending at today where they honored every
  * entry in [goals].
  *
+ * Today is still in progress, so it only adds to the streak once it passes; until then the streak
+ * is the run ending yesterday, and it breaks at midnight if today never passes. Otherwise this
+ * would read 0 every morning, however long the run before it.
+ *
  * Walks backward day by day from today. A day [D] counts iff:
  * - every daily goal's metric on [D] met its target (see [isMet]), AND
  * - if [D] is in a *completed* week (i.e. before this week), every weekly goal's metric summed
@@ -61,7 +65,11 @@ suspend fun streakFor(
 
         val dailyPassed =
             dailyGoals.all { goal -> goal.isMet(dailyValues.getValue(goal).sumInRange(dayStart, dayEnd)) }
-        if (!dailyPassed) return streak
+        if (!dailyPassed) {
+            if (day != today) return streak
+            day = day.minusDays(1)
+            return@repeat
+        }
 
         if (dayStart < currentWeekStart) {
             val (weekStart, weekEnd) = currentWindow(GoalPeriod.WEEKLY, dayStart, zone)

@@ -192,10 +192,25 @@ class StreakTest {
     }
 
     @Test
-    fun `streakFor breaks immediately when today misses the target`() = runBlocking {
+    fun `streakFor holds yesterday's run while today is unfinished`() = runBlocking {
         val user = newUser()
         seedGithub(user, 0, 1)
-        seedGithub(user, -1, 5)
+        for (offset in -1 downTo -3) seedGithub(user, offset, 5)
+        assertEquals(3, streakFor(user, listOf(dailyCommitGoal(user, target = 2)), now))
+    }
+
+    @Test
+    fun `streakFor counts today once it passes`() = runBlocking {
+        val user = newUser()
+        for (offset in 0 downTo -3) seedGithub(user, offset, 5)
+        assertEquals(4, streakFor(user, listOf(dailyCommitGoal(user, target = 2)), now))
+    }
+
+    @Test
+    fun `streakFor is 0 when neither today nor yesterday passed`() = runBlocking {
+        val user = newUser()
+        seedGithub(user, 0, 1)
+        seedGithub(user, -2, 5)
         assertEquals(0, streakFor(user, listOf(dailyCommitGoal(user, target = 2)), now))
     }
 
@@ -209,11 +224,13 @@ class StreakTest {
     }
 
     @Test
-    fun `streakFor breaks today once screen time goes over the limit`() = runBlocking {
+    fun `streakFor leaves today out once screen time goes over the limit`() = runBlocking {
         val user = newUser()
         seedScreenTime(user, 0, 200)
         seedScreenTime(user, -1, 30)
-        assertEquals(0, streakFor(user, listOf(dailyScreenTimeLimit(user, target = 120)), now))
+        seedScreenTime(user, -2, 121)
+        // The day isn't over, so yesterday's run stands until midnight.
+        assertEquals(1, streakFor(user, listOf(dailyScreenTimeLimit(user, target = 120)), now))
     }
 
     @Test
