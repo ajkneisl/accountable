@@ -27,13 +27,7 @@ import { Screen } from "../../../../ui/Screen"
 import { Sheet, SheetField } from "../../../../ui/Sheet"
 import { Row, Section } from "../../../../ui/SettingsList"
 import { confirm } from "../../../../ui/confirm"
-import {
-    Card,
-    Display,
-    Dot,
-    ErrorList,
-    Input
-} from "../../../../ui/primitives"
+import { Card, Display, Dot, ErrorList, Input } from "../../../../ui/primitives"
 
 /** Longest name the server accepts. */
 const NAME_MAX_LENGTH = 64
@@ -269,7 +263,9 @@ export default function CompetitionSettings() {
                     first
                     label="Name"
                     value={detail.name}
-                    onPress={isOwner && !busy ? () => setRenaming(true) : undefined}
+                    onPress={
+                        isOwner && !busy ? () => setRenaming(true) : undefined
+                    }
                 />
                 <Row
                     label="Created"
@@ -277,9 +273,7 @@ export default function CompetitionSettings() {
                 />
             </Section>
 
-            <Section
-                title="Join code"
-            >
+            <Section title="Join code">
                 <Row
                     first
                     label="Share code"
@@ -294,14 +288,7 @@ export default function CompetitionSettings() {
                 )}
             </Section>
 
-            <Section
-                title={`Members · ${detail.members.length}`}
-                footer={
-                    isOwner && detail.members.length > 1
-                        ? "Tap a member to remove them or make them the owner."
-                        : undefined
-                }
-            >
+            <Section title={`Members · ${detail.members.length}`}>
                 {detail.members.map((m, i) => {
                     const isMe = m.userID === user?.userID
                     const tappable =
@@ -321,19 +308,15 @@ export default function CompetitionSettings() {
                                       ? "You"
                                       : `Joined ${DATE_FMT.format(new Date(m.joinedAt))}`
                             }
-                            onPress={tappable ? () => manageMember(m) : undefined}
+                            onPress={
+                                tappable ? () => manageMember(m) : undefined
+                            }
                         />
                     )
                 })}
             </Section>
 
-            <Section
-                footer={
-                    isOwner && detail.members.length > 1
-                        ? "To leave instead, make another member the owner first."
-                        : undefined
-                }
-            >
+            <Section>
                 <Row
                     first
                     destructive
