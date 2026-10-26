@@ -18,7 +18,8 @@ export function Screen({
      * under the translucent tab bar.
      */
     edges = ["top"],
-    topRight
+    topRight,
+    bottomRight
 }: {
     children: ReactNode
     refreshing?: boolean
@@ -26,11 +27,16 @@ export function Screen({
     edges?: ("top" | "bottom" | "left" | "right")[]
     /** Pinned to the top-right of the content, beside the screen's eyebrow. */
     topRight?: ReactNode
+    /** Floats over the bottom-right corner, e.g. an add button; stays put while the content scrolls. */
+    bottomRight?: ReactNode
 }) {
     // Inside native tabs the bottom inset includes the floating tab bar, so
-    // padding by it lets the last card scroll clear of the bar.
+    // padding by it lets the last card scroll clear of the bar. A floating
+    // button needs room too, so the last card can scroll out from under it.
     const insets = useSafeAreaInsets()
-    const bottom = edges.includes("bottom") ? 40 : insets.bottom + 40
+    const bottom =
+        (edges.includes("bottom") ? 40 : insets.bottom + 40) +
+        (bottomRight !== undefined ? 64 : 0)
 
     // Only show the native spinner for a pull started on this screen. Loading
     // state is shared across tabs, and iOS leaves a RefreshControl stuck
@@ -70,6 +76,13 @@ export function Screen({
                     <View className="absolute right-5 top-3">{topRight}</View>
                 )}
             </ScrollView>
+            {bottomRight !== undefined && (
+                <View
+                    style={{ position: "absolute", right: 20, bottom: insets.bottom + 12 }}
+                >
+                    {bottomRight}
+                </View>
+            )}
         </SafeAreaView>
     )
 }

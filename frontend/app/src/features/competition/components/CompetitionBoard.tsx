@@ -19,10 +19,9 @@ import {
     useApi
 } from "@shared/index"
 import { colors } from "../../../theme"
-import { GearIcon } from "../../../ui/icons"
+import { BackChevronIcon, ChevronIcon, GearIcon } from "../../../ui/icons"
 import {
     Bar,
-    Button,
     Card,
     Eyebrow,
     IntegrationIcon,
@@ -44,7 +43,6 @@ import {
     weeklyTarget,
     type MemberStanding
 } from "../standings"
-import { AddCompetitionGoalSheet } from "./AddCompetitionGoalSheet"
 
 function boardKey(b: {
     integration: string
@@ -284,6 +282,46 @@ function GoalProgress({
     )
 }
 
+/** The ‹ week › control at the foot of the standings. */
+function WeekSwitcher({
+    label,
+    canGoForward,
+    onBack,
+    onForward
+}: {
+    label: string
+    canGoForward: boolean
+    onBack: () => void
+    onForward: () => void
+}) {
+    return (
+        <View className="-mx-2 -mb-2 mt-3 flex-row items-center justify-between border-t border-line-2 pt-2">
+            <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Previous week"
+                onPress={onBack}
+                hitSlop={8}
+                className="h-9 w-9 items-center justify-center rounded-full"
+            >
+                <BackChevronIcon color={colors.ink2} size={18} />
+            </Pressable>
+            <Mono className="text-[12px] text-ink-2">{label}</Mono>
+            <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Next week"
+                onPress={onForward}
+                disabled={!canGoForward}
+                hitSlop={8}
+                className={`h-9 w-9 items-center justify-center rounded-full ${
+                    canGoForward ? "" : "opacity-25"
+                }`}
+            >
+                <ChevronIcon color={colors.ink2} size={18} />
+            </Pressable>
+        </View>
+    )
+}
+
 export function CompetitionBoard({
     competition,
     isOwner,
@@ -304,7 +342,6 @@ export function CompetitionBoard({
     const [offset, setOffset] = useState(0)
     const [week, setWeek] = useState<CompetitionWeek | null>(null)
     const [loading, setLoading] = useState(true)
-    const [adding, setAdding] = useState(false)
     const [editing, setEditing] = useState<CompetitionGoalBoard | null>(null)
 
     useEffect(() => {
@@ -356,9 +393,10 @@ export function CompetitionBoard({
 
     return (
         <View className="gap-4">
-            {/* Standings — the at-a-glance "who's winning". */}
+            {/* Standings — the at-a-glance "who's winning", with the week
+                switcher along its foot; it picks the week for both cards. */}
             <Card className="p-5">
-                <View className="mb-4 flex-row items-center justify-between">
+                <View className="mb-4">
                     <Eyebrow>Standings</Eyebrow>
                 </View>
                 {standings ? (
@@ -371,8 +409,24 @@ export function CompetitionBoard({
                     <Text className="text-[13px] text-ink-3">
                         {loading
                             ? "Loading…"
-                            : "Add a shared goal below to start ranking members."}
+                            : isOwner
+                              ? "Tap + to add a shared goal and start ranking members."
+                              : "No shared goals yet."}
                     </Text>
+                )}
+                {(goalCount > 0 || !currentWeek) && (
+                    <WeekSwitcher
+                        label={
+                            currentWeek
+                                ? "This week"
+                                : week
+                                  ? formatWeekRange(week.weekStart)
+                                  : "—"
+                        }
+                        canGoForward={!currentWeek}
+                        onBack={() => setOffset((o) => o + 1)}
+                        onForward={() => setOffset((o) => Math.max(0, o - 1))}
+                    />
                 )}
             </Card>
 
@@ -380,43 +434,12 @@ export function CompetitionBoard({
             <Card className="p-5">
                 <View className="mb-2 flex-row items-center justify-between">
                     <Eyebrow>Shared goals</Eyebrow>
-                    {isOwner && (
-                        <Button
-                            label="+ Add goal"
-                            variant="line"
-                            size="sm"
-                            onPress={() => setAdding(true)}
-                        />
+                    {/* Past weeks are named, so it's clear what's shown. */}
+                    {!currentWeek && week && (
+                        <Mono className="text-[11px] text-ink-3">
+                            {formatWeekRange(week.weekStart)}
+                        </Mono>
                     )}
-                </View>
-
-                <View className="mb-2 flex-row items-center justify-between">
-                    <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel="Previous week"
-                        onPress={() => setOffset((o) => o + 1)}
-                        hitSlop={12}
-                        className="px-2"
-                    >
-                        <Text className="text-base text-ink-3">‹</Text>
-                    </Pressable>
-                    <Mono className="text-[11px] text-ink-3">
-                        {currentWeek
-                            ? "This week"
-                            : week
-                              ? formatWeekRange(week.weekStart)
-                              : "—"}
-                    </Mono>
-                    <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel="Next week"
-                        onPress={() => setOffset((o) => Math.max(0, o - 1))}
-                        disabled={currentWeek}
-                        hitSlop={12}
-                        className={`px-2 ${currentWeek ? "opacity-30" : ""}`}
-                    >
-                        <Text className="text-base text-ink-3">›</Text>
-                    </Pressable>
                 </View>
 
                 {!week || week.goals.length === 0 ? (
@@ -448,14 +471,6 @@ export function CompetitionBoard({
                     </View>
                 )}
             </Card>
-
-            {adding && (
-                <AddCompetitionGoalSheet
-                    competitionId={competition.id}
-                    onClose={() => setAdding(false)}
-                    onAdded={onChanged}
-                />
-            )}
 
             {editing && (
                 <EditGoalSheet

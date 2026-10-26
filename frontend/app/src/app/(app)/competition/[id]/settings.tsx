@@ -279,7 +279,6 @@ export default function CompetitionSettings() {
 
             <Section
                 title="Join code"
-                footer="Anyone with the code can join."
             >
                 <Row
                     first

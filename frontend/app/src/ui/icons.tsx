@@ -69,6 +69,15 @@ export function RefreshIcon({ color, size = 24 }: IconProps) {
     )
 }
 
+/** Plus for "add". */
+export function PlusIcon({ color, size = 24 }: IconProps) {
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+            <Path d="M12 5v14M5 12h14" {...stroke(color)} strokeWidth={2.4} />
+        </Svg>
+    )
+}
+
 /** Left chevron for "go back". */
 export function BackChevronIcon({ color, size = 24 }: IconProps) {
     return (

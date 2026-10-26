@@ -17,11 +17,12 @@ import {
 } from "@shared/index"
 import { userAtom } from "../../../../auth"
 import { buildColorMap } from "../../../../features/competition/colors"
+import { AddCompetitionGoalSheet } from "../../../../features/competition/components/AddCompetitionGoalSheet"
 import { CompetitionBoard } from "../../../../features/competition/components/CompetitionBoard"
 import { BackBar } from "../../../../ui/BackBar"
 import { CircleButton } from "../../../../ui/CircleButton"
 import { Screen } from "../../../../ui/Screen"
-import { GearIcon } from "../../../../ui/icons"
+import { GearIcon, PlusIcon } from "../../../../ui/icons"
 import { Card, Display, ErrorList, Mono } from "../../../../ui/primitives"
 import { colors as theme } from "../../../../theme"
 
@@ -39,6 +40,7 @@ export default function Competition() {
     const [detail, setDetail] = useState<CompetitionDetail | null>(null)
     const [loading, setLoading] = useState(true)
     const [tick, setTick] = useState(0)
+    const [adding, setAdding] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
     // Refetch on coming back from settings, which may have renamed it or
@@ -87,6 +89,22 @@ export default function Competition() {
     return (
         <Screen
             edges={["top", "bottom"]}
+            bottomRight={
+                detail && isOwner ? (
+                    <CircleButton
+                        size={56}
+                        label="Add shared goal"
+                        onPress={() => setAdding(true)}
+                    >
+                        {(glass) => (
+                            <PlusIcon
+                                color={glass ? theme.ink : theme.ink2}
+                                size={26}
+                            />
+                        )}
+                    </CircleButton>
+                ) : undefined
+            }
             topRight={
                 detail ? (
                     <View className="flex-row gap-2.5">
@@ -153,6 +171,14 @@ export default function Competition() {
                         {loading ? "Loading…" : "Competition not found."}
                     </Text>
                 </Card>
+            )}
+
+            {adding && detail && (
+                <AddCompetitionGoalSheet
+                    competitionId={detail.id}
+                    onClose={() => setAdding(false)}
+                    onAdded={() => setTick((t) => t + 1)}
+                />
             )}
         </Screen>
     )
