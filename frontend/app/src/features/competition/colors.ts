@@ -1,37 +1,29 @@
-// Per-participant colors, shared by the standings and every goal board so a given
-// person reads as the same color everywhere in a competition.
-//
-// Ported from web/src/features/competition/colors.ts; the oklch() literals there
-// are pre-converted to sRGB hex for React Native.
+// Per-member colors, shared by the standings and every goal board. Each user
+// picks theirs in Settings (the server hands out a default until they do), so a
+// person reads as the same color in every competition.
 
+import type { CompetitionMember, HabitColor } from "@shared/index"
 import { colors } from "../../theme"
-
-// Distinct, evenly-spaced hues.
-export const BAR_COLORS = [
-    colors.lime,
-    colors.coral,
-    colors.indigo,
-    "#00a6db", // sky
-    "#dfb100", // amber
-    "#c849c1", // magenta
-    "#00ba87", // teal
-    "#d64651" // brick
-]
+import { HABIT_PALETTE } from "../habits/grid"
 
 export const FALLBACK_BAR_COLOR = colors.ink3
 
-/** Podium tints for the top three standings rows. */
-export const MEDAL = [colors.lime, "#cfb384", colors.coral]
+/** Fill for a member's [color]. */
+export function memberFill(color: HabitColor): string {
+    return HABIT_PALETTE[color]?.fill ?? FALLBACK_BAR_COLOR
+}
 
-/**
- * Build a stable participant→color map keyed by member order, so each person
- * keeps one color across the standings and all goal boards regardless of how a
- * particular view happens to sort them.
- */
-export function buildColorMap(userIDs: string[]): Record<string, string> {
+/** Text that reads on top of a member's fill, e.g. their rank number. */
+export function onMemberFill(fill: string): string {
+    const entry = Object.values(HABIT_PALETTE).find((p) => p.fill === fill)
+    return entry?.dark ? colors.bg : colors.ink
+}
+
+/** Member id → fill, for views that only have the id to hand. */
+export function buildColorMap(
+    members: Pick<CompetitionMember, "userID" | "color">[]
+): Record<string, string> {
     const map: Record<string, string> = {}
-    userIDs.forEach((id, i) => {
-        map[id] = BAR_COLORS[i % BAR_COLORS.length]
-    })
+    for (const m of members) map[m.userID] = memberFill(m.color)
     return map
 }

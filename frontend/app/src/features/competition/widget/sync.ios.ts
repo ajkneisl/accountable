@@ -15,7 +15,7 @@ import {
     getCompetition,
     getCompetitionWeek
 } from "@shared/index"
-import { buildColorMap } from "../colors"
+import { buildColorMap, onMemberFill } from "../colors"
 import { computeStandings } from "../standings"
 import type {
     CompetitionsWidgetCompetition,
@@ -71,9 +71,7 @@ function propsFor(
     return {
         competitions: loaded.map(
             ({ detail, week }): CompetitionsWidgetCompetition => {
-                const colors = buildColorMap(
-                    detail.members.map((m) => m.userID)
-                )
+                const colors = buildColorMap(detail.members)
                 return {
                     id: detail.id,
                     name: detail.name,
@@ -87,6 +85,7 @@ function propsFor(
                     ).map((s) => ({
                         username: s.username,
                         color: s.color,
+                        onColor: onMemberFill(s.color),
                         goalsHit: s.goalsHit,
                         streak: s.streak,
                         me: s.userID === meID

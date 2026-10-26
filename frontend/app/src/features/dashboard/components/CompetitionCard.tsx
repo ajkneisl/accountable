@@ -5,8 +5,8 @@
 import { Pressable, Text, View } from "react-native"
 import { router } from "expo-router"
 import type { CompetitionDetail } from "@shared/index"
-import { Card, Dot, Eyebrow, Mono } from "../../../ui/primitives"
-import { buildColorMap } from "../../competition/colors"
+import { Card, Eyebrow, Mono } from "../../../ui/primitives"
+import { buildColorMap, onMemberFill } from "../../competition/colors"
 import { CardFigure } from "./CardFigure"
 
 /** Members shown before collapsing the rest into "+N more". */
@@ -22,7 +22,7 @@ export function CompetitionCard({
     total: number
     meID: string | undefined
 }) {
-    const colorMap = buildColorMap(competition.members.map((m) => m.userID))
+    const colorMap = buildColorMap(competition.members)
     const ranked = [...competition.members].sort((a, b) => b.streak - a.streak)
     const shown = ranked.slice(0, MAX_ROWS)
     const hidden = ranked.length - shown.length
@@ -74,10 +74,25 @@ export function CompetitionCard({
                                 key={m.userID}
                                 className="flex-row items-center gap-2.5"
                             >
-                                <Mono className="w-5 text-xs text-ink-3">
-                                    {i + 1}
-                                </Mono>
-                                <Dot color={colorMap[m.userID]} />
+                                {/* Rank, in the member's color */}
+                                <View
+                                    style={{
+                                        width: 20,
+                                        height: 20,
+                                        borderRadius: 10,
+                                        backgroundColor: colorMap[m.userID]
+                                    }}
+                                    className="items-center justify-center"
+                                >
+                                    <Text
+                                        style={{
+                                            color: onMemberFill(colorMap[m.userID])
+                                        }}
+                                        className="text-[11px] font-bold"
+                                    >
+                                        {i + 1}
+                                    </Text>
+                                </View>
                                 <Text
                                     numberOfLines={1}
                                     className={`flex-1 text-[14px] ${

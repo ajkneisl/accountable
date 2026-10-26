@@ -1,5 +1,6 @@
 // Sheets for the account actions in Settings: change email, change password,
-// and delete account. Each one asks for the current password.
+// and delete account, which each ask for the current password, plus the color
+// that stands for the user in competitions.
 
 import { useState } from "react"
 import { useSetAtom } from "jotai"
@@ -9,9 +10,13 @@ import {
     changePassword,
     deleteAccount,
     getSelf,
+    type HabitColor,
+    updateColor,
     useApi
 } from "@shared/index"
 import { tokenStore, useSignOut, userAtom } from "../../auth"
+import { useAppData } from "../common/AppData"
+import { ColorPicker } from "../habits/components/ColorPicker"
 import { Sheet, SheetField } from "../../ui/Sheet"
 import { ErrorList, Input } from "../../ui/primitives"
 
@@ -199,6 +204,38 @@ export function DeleteAccountSheet({ onClose }: { onClose: () => void }) {
                 onSubmit={submit}
                 autoFocus
             />
+            <ErrorList errors={errors} />
+        </Sheet>
+    )
+}
+
+export function ChangeColorSheet({
+    current,
+    onClose
+}: {
+    current: HabitColor
+    onClose: () => void
+}) {
+    const api = useApi()
+    const setUser = useSetAtom(userAtom)
+    const { reload } = useAppData()
+    const [color, setColor] = useState<HabitColor>(current)
+    const { busy, errors, submit } = useSubmit(async () => {
+        await updateColor(api, color)
+        setUser(await getSelf(api))
+        // The dashboard's competition card shows it too.
+        reload()
+        onClose()
+    })
+
+    return (
+        <Sheet
+            title="Your color"
+            description="Stands for you in every competition: your rank, your bars and your progress."
+            onClose={onClose}
+            action={{ label: busy ? "Saving…" : "Save", onPress: submit, busy }}
+        >
+            <ColorPicker value={color} onChange={setColor} />
             <ErrorList errors={errors} />
         </Sheet>
     )

@@ -1,4 +1,5 @@
 import type { GoalPeriod } from "../goals/requests"
+import type { HabitColor } from "../habits/requests"
 import { request, type ApiConfig } from "../http"
 
 /** Summary returned by list/create/join. */
@@ -16,6 +17,8 @@ export interface CompetitionMember {
     joinedAt: number
     /** Member's current streak inside this competition. */
     streak: number
+    /** The color the member picked to stand for them (or their default), the same in every competition. */
+    color: HabitColor
 }
 
 export interface CompetitionGoal {

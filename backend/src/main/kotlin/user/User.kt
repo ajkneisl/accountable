@@ -5,6 +5,7 @@ import api.toEntity
 import api.verify.VerificationScope
 import api.verify.Verifiable
 import api.verify.Verifier
+import features.habits.HabitColor
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.util.UUID
@@ -36,6 +37,9 @@ object Users : Table("users") {
     /** [User.timezone] */
     val timezone = varchar("timezone", 64).default("UTC")
 
+    /** [User.color] */
+    val color = enumerationByName("color", 16, HabitColor::class).nullable()
+
     override val primaryKey = PrimaryKey(id)
 }
 
@@ -48,6 +52,7 @@ object Users : Table("users") {
  * @param email The user's unique email.
  * @param createdAt The ms epoch when the account was created.
  * @param timezone The user's IANA timezone id, used to bucket their data by local day.
+ * @param color The color they picked to stand for them in competitions, or null for [defaultColor].
  */
 @MappedTable(Users::class)
 @Verifiable(UserVerifier::class)
@@ -58,7 +63,18 @@ data class User(
     val email: String,
     val createdAt: Long,
     val timezone: String = "UTC",
+    val color: HabitColor? = null,
 )
+
+/** Colors a user is given before picking one. Ink is left out: it reads as no color at all. */
+private val DEFAULT_COLORS = HabitColor.entries.filter { it != HabitColor.INK }
+
+/** The color [id] gets until they pick one: fixed per user, so it's the same in every competition. */
+fun defaultColor(id: UUID): HabitColor = DEFAULT_COLORS[Math.floorMod(id.hashCode(), DEFAULT_COLORS.size)]
+
+/** The color that stands for this user in competitions. */
+val User.displayColor: HabitColor
+    get() = color ?: defaultColor(id)
 
 private val USERNAME_PATTERN = Regex("^[A-Za-z0-9_-]+$")
 
@@ -109,6 +125,11 @@ fun zoneOf(id: UUID): ZoneId =
     zoneCache.getOrPut(id) {
         findUserByID(id)?.timezone?.let { runCatching { ZoneId.of(it) }.getOrNull() } ?: ZoneOffset.UTC
     }
+
+/** Set [id]'s [color]. Returns false if the user does not exist. */
+fun updateColor(id: UUID, color: HabitColor): Boolean = transaction {
+    Users.update({ Users.id eq id }) { it[Users.color] = color } > 0
+}
 
 /** Set [id]'s [email]. Returns false if the user does not exist. */
 fun updateEmail(id: UUID, email: String): Boolean = transaction {

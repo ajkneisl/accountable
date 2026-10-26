@@ -4,9 +4,11 @@
 import type {
     CompetitionDetail,
     CompetitionGoalBoard,
+    CompetitionMember,
     CompetitionMemberWeek,
     CompetitionWeek
 } from "@shared/index"
+import { HABIT_PALETTE } from "./grid"
 import {
     isLimit,
     localWeekday,
@@ -15,32 +17,24 @@ import {
     weeklyTarget
 } from "./format"
 
-// Distinct, evenly-spaced hues.
-const BAR_COLORS = [
-    "var(--lime)",
-    "var(--coral)",
-    "var(--indigo)",
-    "oklch(0.68 0.16 230)", // sky
-    "oklch(0.78 0.16 90)", // amber
-    "oklch(0.62 0.21 330)", // magenta
-    "oklch(0.7 0.15 165)", // teal
-    "oklch(0.6 0.18 20)" // brick
-]
-
 export const FALLBACK_BAR_COLOR = "var(--ink-3)"
 
-/** Podium tints for the top three standings rows. */
-export const MEDAL = ["var(--lime)", "#cfb384", "var(--coral)"]
+/** Text that reads on top of a member's fill, e.g. their rank number. */
+export function onMemberFill(fill: string): string {
+    const entry = Object.values(HABIT_PALETTE).find((p) => p.fill === fill)
+    return entry?.dark ? "var(--bg)" : "var(--ink)"
+}
 
 /**
- * Stable participant→color map keyed by member order, so each person keeps one
- * color across the standings and every goal board.
+ * Member id → the color they picked in the app (or the server's default for
+ * them), so each person reads as the same color everywhere.
  */
-export function buildColorMap(userIDs: string[]): Record<string, string> {
+export function buildColorMap(
+    members: Pick<CompetitionMember, "userID" | "color">[]
+): Record<string, string> {
     const map: Record<string, string> = {}
-    userIDs.forEach((id, i) => {
-        map[id] = BAR_COLORS[i % BAR_COLORS.length]
-    })
+    for (const m of members)
+        map[m.userID] = HABIT_PALETTE[m.color]?.fill ?? FALLBACK_BAR_COLOR
     return map
 }
 

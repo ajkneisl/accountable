@@ -13,28 +13,18 @@ import {
     goalKey,
     goalTitle,
     integrationVisual,
-    paceStatusFor,
-    unitLabel,
     weeklyTarget
 } from "../format"
 import {
     FALLBACK_BAR_COLOR,
-    MEDAL,
     type MemberStanding,
     buildColorMap,
     computeStandings,
     displayValue,
+    onMemberFill,
     paceTarget
 } from "../standings"
-import { Badge, Dot } from "./primitives"
-
-const STATUS_LABEL = { onTrack: "on pace", atRisk: "at risk", behind: "behind" }
-
-const STATUS_CLASS = {
-    onTrack: "text-lime-ink",
-    atRisk: "text-ink-2",
-    behind: "text-coral-ink"
-}
+import { Badge } from "./primitives"
 
 function Standings({
     standings,
@@ -63,9 +53,10 @@ function Standings({
                 >
                     <div
                         className="flex h-[1.75em] w-[1.75em] shrink-0 items-center justify-center rounded-full text-[0.85em] font-bold"
+                        // The rank number in the member's own color.
                         style={{
-                            background: i < 3 ? MEDAL[i] : "var(--bg-sunken)",
-                            color: i < 3 ? "var(--ink)" : "var(--ink-3)"
+                            background: s.color,
+                            color: onMemberFill(s.color)
                         }}
                     >
                         {i + 1}
@@ -88,7 +79,7 @@ function Standings({
                                     className="h-[0.6em] w-[1em] rounded-full"
                                     style={{
                                         background: hit
-                                            ? "var(--lime)"
+                                            ? s.color
                                             : "var(--line)"
                                     }}
                                 />
@@ -118,7 +109,6 @@ function GoalProgress({
     colorMap: Record<string, string>
 }) {
     const visual = integrationVisual(board.integration)
-    const unit = unitLabel(board.integration, board.metric)
     const wt = weeklyTarget(board)
     const pacePct = Math.min(100, (paceTarget(board) / Math.max(1, wt)) * 100)
     const daily = board.period === "DAILY"
@@ -136,15 +126,13 @@ function GoalProgress({
                         {goalTitle(board)}
                     </div>
                     <div className="text-[0.8em] text-ink-3">
-                        {visual.sourceLabel} ·{" "}
-                        {daily ? "today" : `${amount(wt)} ${unit} this week`}
+                        {visual.sourceLabel} · {board.metric}
                     </div>
                 </div>
             </div>
 
             {members.map((m) => {
                 const color = colorMap[m.userID] ?? FALLBACK_BAR_COLOR
-                const status = paceStatusFor(board)(m.total, wt)
                 const pct = Math.min(
                     100,
                     (shown(m) / Math.max(1, board.target)) * 100
@@ -155,7 +143,6 @@ function GoalProgress({
                         className="flex items-center gap-[0.75em]"
                     >
                         <div className="flex w-[9em] min-w-0 shrink-0 items-center gap-[0.5em]">
-                            <Dot color={color} />
                             <span className="truncate text-[0.95em] font-medium">
                                 {m.username}
                             </span>
@@ -180,11 +167,6 @@ function GoalProgress({
                             <b className="text-ink">{amount(shown(m))}</b>/
                             {amount(board.target)}
                         </span>
-                        <span
-                            className={`w-[4.5em] text-right text-[0.8em] font-semibold ${STATUS_CLASS[status]}`}
-                        >
-                            {STATUS_LABEL[status]}
-                        </span>
                     </div>
                 )
             })}
@@ -201,7 +183,7 @@ export function CompetitionBoard({
     meID?: string
     split?: boolean
 }) {
-    const colorMap = buildColorMap(detail.members.map((m) => m.userID))
+    const colorMap = buildColorMap(detail.members)
     const standings =
         week.goals.length > 0 ? computeStandings(detail, week, colorMap) : null
     const card = `card p-[1.4em] ${split ? "min-h-0 overflow-hidden" : ""}`

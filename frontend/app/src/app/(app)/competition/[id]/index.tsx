@@ -73,7 +73,7 @@ export default function Competition() {
     const isOwner = detail?.ownerID === user?.userID
 
     const colors = detail
-        ? buildColorMap(detail.members.map((m) => m.userID))
+        ? buildColorMap(detail.members)
         : {}
 
     /** Hand the join code to the share sheet, ready to send. */

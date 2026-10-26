@@ -1,6 +1,7 @@
 import { request, type ApiConfig } from "../http"
 import type { User } from "../model/user"
 import type { TokenResponse } from "../auth/requests"
+import type { HabitColor } from "../habits/requests"
 
 /**
  * A response to retrieving yourself.
@@ -11,6 +12,8 @@ export interface SelfResponse extends User {
     email: string
     /** The user's IANA timezone id, used to bucket their data by local day. */
     timezone: string
+    /** The color that stands for them in competitions; a default until they pick one. */
+    color: HabitColor
 }
 
 /**
@@ -122,6 +125,17 @@ export function deleteAccount(
         "DELETE",
         "/user",
         { currentPassword },
+        { auth: true, expectJson: false }
+    )
+}
+
+/** PUT /api/user/color — set the color that stands for the authenticated user in competitions. */
+export function updateColor(config: ApiConfig, color: HabitColor): Promise<void> {
+    return request(
+        config,
+        "PUT",
+        "/user/color",
+        { color },
         { auth: true, expectJson: false }
     )
 }

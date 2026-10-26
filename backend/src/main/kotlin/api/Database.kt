@@ -79,6 +79,7 @@ fun initDb() {
         )
         // create() skips tables that already exist, so columns added later need adding by hand.
         exec("ALTER TABLE goals ADD COLUMN IF NOT EXISTS color VARCHAR(16)")
+        exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS color VARCHAR(16)")
     }
 }
 

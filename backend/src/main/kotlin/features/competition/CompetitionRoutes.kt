@@ -9,6 +9,7 @@ import features.streak.streakFor
 import integrations.api.Integrations
 import integrations.api.startOfDay
 import features.goals.GoalMetrics
+import features.habits.HabitColor
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.auth.authenticate
@@ -26,6 +27,8 @@ import io.ktor.server.routing.route
 import java.util.UUID
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
+import user.defaultColor
+import user.displayColor
 import user.findUserByID
 import user.zoneOf
 
@@ -62,13 +65,14 @@ data class CompetitionSummary(
     val createdAt: Long,
 )
 
-/** Member entry with their current streak inside the competition. */
+/** Member entry with their current streak inside the competition, and the color they're shown in. */
 @Serializable
 data class CompetitionMemberView(
     val userID: String,
     val username: String,
     val joinedAt: Long,
     val streak: Int,
+    val color: HabitColor,
 )
 
 /** Competition goal payload. */
@@ -182,8 +186,8 @@ suspend fun competitionDetailView(competition: Competition): CompetitionDetailRe
 
         val memberViews =
             members.map { member ->
-                val username =
-                    findUserByID(member.userID)?.username ?: member.userID.toString()
+                val user = findUserByID(member.userID)
+                val username = user?.username ?: member.userID.toString()
                 val streak =
                     streakFor(
                         userID = member.userID,
@@ -196,6 +200,7 @@ suspend fun competitionDetailView(competition: Competition): CompetitionDetailRe
                     username = username,
                     joinedAt = member.joinedAt,
                     streak = streak,
+                    color = user?.displayColor ?: defaultColor(member.userID),
                 )
             }
 

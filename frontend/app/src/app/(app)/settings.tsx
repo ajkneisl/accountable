@@ -19,10 +19,12 @@ import {
 import { apiConfig, useSignOut, userAtom } from "../../auth"
 import { useAppData } from "../../features/common/AppData"
 import {
+    ChangeColorSheet,
     ChangeEmailSheet,
     ChangePasswordSheet,
     DeleteAccountSheet
 } from "../../features/account/AccountSheets"
+import { HABIT_PALETTE } from "../../features/habits/grid"
 import { IntegrationsPanel } from "../../features/integration/IntegrationsPanel"
 import {
     enablePushes,
@@ -332,11 +334,13 @@ function AboutSection() {
 function GeneralTab() {
     const [user] = useAtom(userAtom)
     const signOut = useSignOut()
-    const [sheet, setSheet] = useState<"email" | "password" | "delete" | null>(
-        null
-    )
+    const [sheet, setSheet] = useState<
+        "email" | "password" | "color" | "delete" | null
+    >(null)
     const close = () => setSheet(null)
     const initial = (user?.username[0] ?? "?").toUpperCase()
+    // A user signed in before colors existed has none until the next refresh.
+    const palette = HABIT_PALETTE[user?.color ?? "LIME"]
 
     async function onSignOut() {
         const ok = await confirm(
@@ -351,8 +355,14 @@ function GeneralTab() {
     return (
         <>
             <Card className="flex-row items-center gap-4 p-4">
-                <View className="h-14 w-14 items-center justify-center rounded-full bg-lime">
-                    <Text className="text-[22px] font-bold text-ink">
+                <View
+                    style={{ backgroundColor: palette.fill }}
+                    className="h-14 w-14 items-center justify-center rounded-full"
+                >
+                    <Text
+                        style={{ color: palette.dark ? colors.bg : colors.ink }}
+                        className="text-[22px] font-bold"
+                    >
                         {initial}
                     </Text>
                 </View>
@@ -374,6 +384,11 @@ function GeneralTab() {
 
             <Section title="Account">
                 <Row first label="Username" value={user?.username ?? "—"} />
+                <Row
+                    label="Color"
+                    value={palette.label}
+                    onPress={() => setSheet("color")}
+                />
                 <Row
                     label="Email"
                     value={user?.email ?? "—"}
@@ -417,6 +432,12 @@ function GeneralTab() {
                 <ChangeEmailSheet current={user?.email ?? ""} onClose={close} />
             )}
             {sheet === "password" && <ChangePasswordSheet onClose={close} />}
+            {sheet === "color" && (
+                <ChangeColorSheet
+                    current={user?.color ?? "LIME"}
+                    onClose={close}
+                />
+            )}
             {sheet === "delete" && <DeleteAccountSheet onClose={close} />}
         </>
     )

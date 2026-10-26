@@ -1,7 +1,10 @@
 package user
 
+import api.Cache
 import api.Error
 import auth.Auth
+import features.competition.competitionsFor
+import features.habits.HabitColor
 import integrations.api.realignDayBuckets
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate
@@ -24,6 +27,7 @@ import kotlinx.serialization.Serializable
  * @param username The user's username.
  * @param email The user's email.
  * @param createdAt When the user created their account.
+ * @param color The color that stands for them in competitions; a default until they pick one.
  */
 @Serializable
 data class SelfResponse(
@@ -32,10 +36,14 @@ data class SelfResponse(
     val email: String,
     val createdAt: Long,
     val timezone: String,
+    val color: HabitColor,
 )
 
 /** Request body for [PUT /user/timezone]. */
 @Serializable data class UpdateTimezoneRequest(val timezone: String)
+
+/** Request body for [PUT /user/color]. */
+@Serializable data class UpdateColorRequest(val color: HabitColor)
 
 /** Request body for [PUT /user/password]. */
 @Serializable data class ChangePasswordRequest(val currentPassword: String, val newPassword: String)
@@ -72,6 +80,7 @@ fun Route.userRoutes() {
                         email = user.email,
                         createdAt = user.createdAt,
                         timezone = user.timezone,
+                        color = user.displayColor,
                     )
                 )
             }
@@ -116,6 +125,19 @@ fun Route.userRoutes() {
                 }
                 // The zone defines day boundaries, so re-bucket existing per-day data to it.
                 realignDayBuckets(userID)
+                call.respond(HttpStatusCode.NoContent)
+            }
+
+            put("/color") {
+                val principal = call.principal<JWTPrincipal>()!!
+                val userID =
+                    principal.subject?.let(UUID::fromString) ?: Error.text("invalid token")
+
+                val req = call.receive<UpdateColorRequest>()
+                if (!updateColor(userID, req.color)) Error.notFound("user")
+                // Every competition they're in shows it, and so does their dashboard.
+                competitionsFor(userID).forEach { Cache.invalidateCompetition(it.id) }
+                Cache.invalidateUser(userID)
                 call.respond(HttpStatusCode.NoContent)
             }
 

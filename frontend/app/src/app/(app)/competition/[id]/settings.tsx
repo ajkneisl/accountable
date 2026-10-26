@@ -160,7 +160,7 @@ export default function CompetitionSettings() {
         )
     }
 
-    const colors = buildColorMap(detail.members.map((m) => m.userID))
+    const colors = buildColorMap(detail.members)
 
     function shareJoinCode() {
         if (!detail) return

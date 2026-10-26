@@ -24,8 +24,10 @@ import { createWidget, type WidgetEnvironment } from "expo-widgets"
 
 export interface CompetitionsWidgetMember {
     username: string
-    /** This member's participant color, as on the competition board. */
+    /** This member's color, as on the competition board. */
     color: string
+    /** Text that reads on [color], for their rank number. */
+    onColor: string
     goalsHit: number
     streak: number
     me: boolean
@@ -61,9 +63,6 @@ const CompetitionsWidget = (
     const ink = dark ? "#f8f5ef" : "#16100c"
     // Lifted on dark so secondary text keeps its contrast.
     const ink3 = dark ? "#958c84" : "#7b736c"
-    const sunken = dark ? "#2b2520" : "#efeae2"
-    // Podium tints for the top three, as on the competition board.
-    const medal = ["#a2eb3c", "#cfb384", "#fd6a3a"]
 
     const family = env.widgetFamily
 
@@ -110,16 +109,18 @@ const CompetitionsWidget = (
     const mono = (size: number, weight: "medium" | "bold" = "medium") =>
         font({ size, weight, design: "monospaced" })
 
-    const rankBadge = (rank: number, size: number) => (
+    // The rank number in the member's own color, as on the competition board.
+    const rankBadge = (
+        rank: number,
+        member: CompetitionsWidgetMember,
+        size: number
+    ) => (
         <Text
             modifiers={[
                 font({ size: size * 0.55, weight: "bold" }),
-                foregroundStyle(rank <= 3 ? "#16100c" : ink3),
+                foregroundStyle(member.onColor),
                 frame({ width: size, height: size }),
-                background(
-                    rank <= 3 ? medal[rank - 1] : sunken,
-                    shapes.circle()
-                )
+                background(member.color, shapes.circle())
             ]}
         >
             {`${rank}`}
@@ -156,7 +157,7 @@ const CompetitionsWidget = (
                 <Spacer />
                 {me ? (
                     <HStack spacing={8}>
-                        {rankBadge(myIndex + 1, 34)}
+                        {rankBadge(myIndex + 1, me, 34)}
                         <Text
                             modifiers={[
                                 font({ size: 13, weight: "medium" }),
@@ -200,20 +201,7 @@ const CompetitionsWidget = (
             {header}
             {rows.map((m) => (
                 <HStack key={m.rank} spacing={8}>
-                    {rankBadge(m.rank, 20)}
-                    <Text
-                        modifiers={[
-                            font({ size: 10 }),
-                            // Indigo all but vanishes on the dark background.
-                            foregroundStyle(
-                                dark && m.color === "#2e40a3"
-                                    ? "#8e9cf0"
-                                    : m.color
-                            )
-                        ]}
-                    >
-                        ●
-                    </Text>
+                    {rankBadge(m.rank, m, 20)}
                     <Text
                         modifiers={[
                             font({ size: 14, weight: m.me ? "bold" : "semibold" }),

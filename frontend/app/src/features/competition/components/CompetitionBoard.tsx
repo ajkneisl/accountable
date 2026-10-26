@@ -24,7 +24,6 @@ import {
     Bar,
     Button,
     Card,
-    Dot,
     Eyebrow,
     IntegrationIcon,
     Mono,
@@ -35,10 +34,9 @@ import {
     formatAmount,
     formatWeekRange,
     integrationVisual,
-    paceStatusFor,
     unitLabel
 } from "../../dashboard/types"
-import { FALLBACK_BAR_COLOR, MEDAL } from "../colors"
+import { FALLBACK_BAR_COLOR, onMemberFill } from "../colors"
 import {
     computeStandings,
     displayValue,
@@ -97,21 +95,18 @@ function Standings({
                             isMe ? "bg-bg-sunken" : ""
                         }`}
                     >
-                        {/* Rank */}
+                        {/* Rank, in the member's color */}
                         <View
                             style={{
                                 width: 24,
                                 height: 24,
                                 borderRadius: 12,
-                                backgroundColor:
-                                    i < 3 ? MEDAL[i] : colors.bgSunken
+                                backgroundColor: s.color
                             }}
                             className="items-center justify-center"
                         >
                             <Text
-                                style={{
-                                    color: i < 3 ? colors.ink : colors.ink3
-                                }}
+                                style={{ color: onMemberFill(s.color) }}
                                 className="text-xs font-bold"
                             >
                                 {i + 1}
@@ -120,7 +115,6 @@ function Standings({
 
                         {/* Identity */}
                         <View className="flex-1 flex-row items-center gap-2">
-                            <Dot color={s.color} size={10} />
                             <Text
                                 numberOfLines={1}
                                 className="flex-shrink text-[15px] font-semibold text-ink"
@@ -146,7 +140,7 @@ function Standings({
                                                 height: 8,
                                                 borderRadius: 4,
                                                 backgroundColor: hit
-                                                    ? colors.lime
+                                                    ? s.color
                                                     : colors.line
                                             }}
                                         />
@@ -195,8 +189,7 @@ function GoalProgress({
     const wt = weeklyTarget(board)
     const pace = paceTarget(board, currentWeek)
     const pacePct = Math.min(100, (pace / wt) * 100)
-    // Daily goals show per-day amounts against the daily target; pace (the
-    // status label) still scores the whole week.
+    // Daily goals show per-day amounts against the daily target.
     const daily = board.period === "DAILY"
     const shown = (m: CompetitionMemberWeek) =>
         displayValue(board, m, currentWeek)
@@ -240,7 +233,6 @@ function GoalProgress({
                 {members.map((m) => {
                     const isMe = m.userID === meID
                     const color = colorMap[m.userID] ?? FALLBACK_BAR_COLOR
-                    const status = paceStatusFor(board)(m.total, wt, currentWeek)
                     const pct = Math.min(
                         100,
                         (shown(m) / Math.max(1, board.target)) * 100
@@ -248,7 +240,6 @@ function GoalProgress({
                     return (
                         <View key={m.userID} className="gap-1.5">
                             <View className="flex-row items-center gap-2">
-                                <Dot color={color} />
                                 <Text
                                     numberOfLines={1}
                                     className="flex-1 text-[13px] font-medium text-ink"
@@ -266,21 +257,6 @@ function GoalProgress({
                                     </Text>
                                     /{amount(board.target)}
                                 </Mono>
-                                <Text
-                                    className={`w-16 text-right text-[11px] font-semibold ${
-                                        status === "onTrack"
-                                            ? "text-lime-ink"
-                                            : status === "atRisk"
-                                              ? "text-ink-2"
-                                              : "text-coral-ink"
-                                    }`}
-                                >
-                                    {status === "onTrack"
-                                        ? "on pace"
-                                        : status === "atRisk"
-                                          ? "at risk"
-                                          : "behind"}
-                                </Text>
                             </View>
 
                             {/* Progress toward the target; weekly goals add a pace marker. */}
