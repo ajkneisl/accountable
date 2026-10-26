@@ -11,8 +11,8 @@ const SOURCES = ["LeetCode", "GitHub", "Apple Health"]
  */
 export function Features() {
     return (
-        <section className="px-16 pb-24">
-            <div className="mx-auto grid max-w-[1000px] grid-cols-3 gap-12">
+        <section className="px-6 pb-16 md:px-16 md:pb-24">
+            <div className="mx-auto grid max-w-[1000px] grid-cols-1 gap-8 md:grid-cols-3 md:gap-12">
                 {FEATURES.map((f) => (
                     <div key={f.title}>
                         <h3 className="m-0 mb-2 text-2xl tracking-[-0.02em]">
@@ -25,7 +25,7 @@ export function Features() {
                 ))}
             </div>
 
-            <p className="mt-16 text-center text-[17px] text-ink-2">
+            <p className="mt-12 text-center text-[15px] text-ink-2 md:mt-16 md:text-[17px]">
                 Tracks {SOURCES.slice(0, -1).join(", ")}, and {SOURCES.at(-1)}.
             </p>
         </section>

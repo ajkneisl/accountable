@@ -8,7 +8,7 @@ import { LogoLink } from "../../common/primitives"
 export function NavBar() {
     const signedIn = useAtomValue(isAuthenticatedAtom)
     return (
-        <nav className="flex items-center justify-between px-16 py-6">
+        <nav className="flex items-center justify-between px-6 py-6 md:px-16">
             <LogoLink />
             <Link
                 to={signedIn ? "/billboard" : "/login"}

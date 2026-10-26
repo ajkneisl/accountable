@@ -65,8 +65,6 @@ export default function Login() {
 
             <div className="grid flex-1 grid-cols-1 items-stretch pt-5 md:grid-cols-2">
                 <div className="flex flex-col justify-center px-6 py-10 md:pl-[88px] md:pr-9">
-                    <div className="eyebrow mb-3.5">WELCOME BACK</div>
-
                     <h1 className="display mb-5 mt-0 max-w-[560px] text-[44px] leading-[1.08] md:text-[56px]">
                         Put your goals somewhere{" "}
                         <span className="underline decoration-lime decoration-[6px] underline-offset-[6px]">

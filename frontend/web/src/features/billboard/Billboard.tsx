@@ -91,8 +91,8 @@ export default function Billboard() {
                 </div>
             </header>
 
-            <div className="pb-12 pt-8">
-                <h1 className="display m-0 max-w-[820px] text-[48px] leading-[1.05]">
+            <div className="pb-10 pt-4 md:pb-12 md:pt-8">
+                <h1 className="display m-0 max-w-[820px] text-[34px] leading-[1.05] md:text-[48px]">
                     Everything you&apos;re working on, at a glance.
                 </h1>
                 <p className="mb-0 mt-4 max-w-[620px] text-[16px] leading-[1.5] text-ink-2">
@@ -147,7 +147,7 @@ export default function Billboard() {
                     <div className="flex flex-col gap-10">
                         {data.map((c) => (
                             <div key={c.detail.id}>
-                                <div className="mb-3 flex items-center gap-3">
+                                <div className="mb-3 flex flex-wrap items-center gap-3">
                                     <h3 className="m-0 text-[18px] font-semibold tracking-[-0.01em]">
                                         {c.detail.name}
                                     </h3>

@@ -142,7 +142,7 @@ function GoalProgress({
                         key={m.userID}
                         className="flex items-center gap-[0.75em]"
                     >
-                        <div className="flex w-[9em] min-w-0 shrink-0 items-center gap-[0.5em]">
+                        <div className="flex w-[6em] min-w-0 shrink-0 items-center gap-[0.5em] sm:w-[9em]">
                             <span className="truncate text-[0.95em] font-medium">
                                 {m.username}
                             </span>
@@ -192,7 +192,7 @@ export function CompetitionBoard({
         <div
             className={
                 split
-                    ? "grid h-full min-h-0 grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] gap-[1.4em]"
+                    ? "grid h-full min-h-0 grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] gap-[1.4em] portrait:grid-cols-1 portrait:grid-rows-[minmax(0,1fr)_minmax(0,1.35fr)]"
                     : "grid grid-cols-1 gap-[1.1em] lg:grid-cols-2"
             }
         >

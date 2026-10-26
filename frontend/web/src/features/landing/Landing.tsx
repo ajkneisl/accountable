@@ -7,7 +7,7 @@ import { Features } from "./components/Features"
  */
 export default function Landing() {
     return (
-        <div className="acc mx-auto w-[1440px]">
+        <div className="acc mx-auto w-full max-w-[1440px]">
             <NavBar />
             <Hero />
             <Features />

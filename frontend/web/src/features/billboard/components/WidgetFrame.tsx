@@ -41,7 +41,7 @@ export function WidgetFrame<T>({
             // Everything inside is em-sized, so this one value scales the widget.
             style={{ fontSize: "clamp(12px, 1.75vmin, 56px)" }}
         >
-            <header className="flex items-center gap-[1em]">
+            <header className="flex flex-wrap items-center gap-x-[1em] gap-y-[0.6em]">
                 <span className="acc-logo text-[1.5em]">
                     <span className="dot" />
                     Beacc
