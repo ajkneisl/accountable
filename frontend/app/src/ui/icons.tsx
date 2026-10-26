@@ -68,3 +68,12 @@ export function RefreshIcon({ color, size = 24 }: IconProps) {
         </Svg>
     )
 }
+
+/** Right chevron for "opens another screen". */
+export function ChevronIcon({ color, size = 24 }: IconProps) {
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+            <Path d="M9.5 6l6 6-6 6" {...stroke(color)} />
+        </Svg>
+    )
+}

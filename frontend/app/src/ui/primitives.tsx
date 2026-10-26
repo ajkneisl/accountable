@@ -253,11 +253,17 @@ export function IconButton({
 export function ChoiceButton({
     selected,
     onPress,
+    muted = false,
     children,
     className = ""
 }: {
     selected: boolean
     onPress: () => void
+    /**
+     * Greyed out but still pressable, e.g. a source that isn't connected yet,
+     * whose press leads to where it can be connected.
+     */
+    muted?: boolean
     children: ReactNode
     className?: string
 }) {
@@ -268,7 +274,7 @@ export function ChoiceButton({
             accessibilityState={{ selected }}
             className={`rounded-[14px] border-[1.5px] px-4 py-3.5 ${
                 selected ? "border-ink bg-bg-sunken" : "border-line bg-bg-card"
-            } ${className}`}
+            } ${muted ? "opacity-40" : ""} ${className}`}
         >
             {children}
         </Pressable>

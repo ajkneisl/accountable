@@ -5,7 +5,8 @@
 // Sources are limited to the metrics the backend actually supports.
 
 import { useState } from "react"
-import { Text, View } from "react-native"
+import { Pressable, Text, View } from "react-native"
+import { router } from "expo-router"
 import { ApiError, createGoal, type GoalPeriod, useApi } from "@shared/index"
 import { Sheet, SheetField } from "../../../ui/Sheet"
 import {
@@ -16,6 +17,7 @@ import {
     SourceTile,
     type TileVariant
 } from "../../../ui/primitives"
+import { useAppData } from "../../common/AppData"
 import { isLimit, unitLabel, unitScale } from "../types"
 
 type Source = {
@@ -119,10 +121,28 @@ export function GoalSheet({
     onSubmit: (draft: GoalDraft) => Promise<void>
     onClose: () => void
 }) {
-    const [sourceIdx, setSourceIdx] = useState(0)
-    const [metric, setMetric] = useState(SOURCES[0].metrics[0].metric)
-    const [period, setPeriod] = useState<GoalPeriod>("WEEKLY")
-    const [target, setTarget] = useState("5")
+    const { data } = useAppData()
+    // A source is pickable once its integration is connected. Workouts can
+    // always be logged by hand, so Workout never needs one.
+    const paired = (integration: string) =>
+        integration === "apple_fitness" ||
+        data.integrations.some((it) => it.name === integration && it.enabled)
+
+    // Start on the first source that's connected, with its own defaults.
+    const [initial] = useState(() =>
+        Math.max(
+            0,
+            SOURCES.findIndex((s) => paired(s.integration))
+        )
+    )
+    const [sourceIdx, setSourceIdx] = useState(initial)
+    const [metric, setMetric] = useState(SOURCES[initial].metrics[0].metric)
+    const [period, setPeriod] = useState<GoalPeriod>(
+        SOURCES[initial].defaults?.period ?? "WEEKLY"
+    )
+    const [target, setTarget] = useState(
+        SOURCES[initial].defaults?.target ?? "5"
+    )
     const [submitting, setSubmitting] = useState(false)
     const [errors, setErrors] = useState<string[]>([])
 
@@ -132,6 +152,12 @@ export function GoalSheet({
     // Targets are typed in display units (hours of sleep) but stored as counted.
     const scale = unitScale(source.integration, metric)
     const cadence = period === "DAILY" ? "day" : "week"
+
+    /** Close the sheet and open Settings on its Integrations tab. */
+    function openIntegrations() {
+        onClose()
+        router.push({ pathname: "/settings", params: { tab: "integrations" } })
+    }
 
     function pickSource(i: number) {
         setSourceIdx(i)
@@ -184,7 +210,12 @@ export function GoalSheet({
                         <ChoiceButton
                             key={s.integration}
                             selected={sourceIdx === i}
-                            onPress={() => pickSource(i)}
+                            muted={!paired(s.integration)}
+                            onPress={() =>
+                                paired(s.integration)
+                                    ? pickSource(i)
+                                    : openIntegrations()
+                            }
                         >
                             <View className="flex-row items-center gap-3.5">
                                 <SourceTile
@@ -199,15 +230,27 @@ export function GoalSheet({
                                         {s.label}
                                     </Text>
                                     <Text className="text-[14px] text-ink-3">
-                                        {s.metrics.length === 1
-                                            ? s.metrics[0].label.toLowerCase()
-                                            : `${s.metrics.length} options`}
+                                        {!paired(s.integration)
+                                            ? "Not connected · Connect ›"
+                                            : s.metrics.length === 1
+                                              ? s.metrics[0].label.toLowerCase()
+                                              : `${s.metrics.length} options`}
                                     </Text>
                                 </View>
                             </View>
                         </ChoiceButton>
                     ))}
                 </View>
+                <Pressable
+                    onPress={openIntegrations}
+                    accessibilityRole="link"
+                    hitSlop={8}
+                    className="mt-3 self-start"
+                >
+                    <Text className="text-[14px] font-medium text-ink-2">
+                        Manage integrations ›
+                    </Text>
+                </Pressable>
             </SheetField>
 
             {source.metrics.length > 1 && (

@@ -171,11 +171,6 @@ function Standings({
                     </View>
                 )
             })}
-
-            <Text className="mt-2 px-2 text-xs leading-4 text-ink-3">
-                Streak is days in a row hitting every shared goal, counted from the
-                day each member joined. Today counts once its goals are met.
-            </Text>
         </View>
     )
 }
@@ -401,9 +396,6 @@ export function CompetitionBoard({
             <Card className="p-5">
                 <View className="mb-4 flex-row items-center justify-between">
                     <Eyebrow>Standings</Eyebrow>
-                    <Text className="text-[11px] text-ink-3">
-                        ranked by goals on pace
-                    </Text>
                 </View>
                 {standings ? (
                     <Standings
@@ -471,11 +463,7 @@ export function CompetitionBoard({
 
                 {!week || week.goals.length === 0 ? (
                     <Text className="text-[13px] text-ink-3">
-                        {loading
-                            ? "Loading…"
-                            : isOwner
-                              ? "No goals yet. Add one to start the competition."
-                              : "No goals yet. The owner can add them."}
+                        {loading ? "Loading…" : "No goals yet"}
                     </Text>
                 ) : (
                     <View>

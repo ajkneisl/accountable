@@ -37,6 +37,8 @@ import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import notifications.NotificationWorker
+import notifications.notificationRoutes
 import user.userRoutes
 
 private const val APP_VERSION = "1.0.0-SNAPSHOT"
@@ -51,6 +53,8 @@ fun Application.rootModule() {
     configureModule()
     // Daily 11pm (per-user-local) refresh of integrations; tied to the application lifecycle.
     IntegrationRefreshWorker.start(this)
+    // Scheduled per-user-local notifications; a no-op unless APNs is configured.
+    NotificationWorker.start(this)
 }
 
 fun Application.configureModule() {
@@ -146,6 +150,7 @@ fun Application.configureModule() {
             streakRoutes()
             competitionRoutes()
             dashboardRoutes()
+            notificationRoutes()
         }
     }
 }

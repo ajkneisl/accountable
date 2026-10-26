@@ -1,17 +1,15 @@
 // A labelled headline statistic.
 
-import { Text, View } from "react-native"
+import { View } from "react-native"
 import { Eyebrow, Mono } from "../../../ui/primitives"
 
 export function Stat({
     label,
     value,
-    sub,
     tone
 }: {
     label: string
     value: string
-    sub: string
     tone?: "lime" | "coral"
 }) {
     const toneClass =
@@ -29,7 +27,6 @@ export function Stat({
             >
                 {value}
             </Mono>
-            <Text className="mt-1.5 text-xs text-ink-3">{sub}</Text>
         </View>
     )
 }

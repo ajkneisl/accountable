@@ -220,9 +220,6 @@ export function CompetitionBoard({
             <div className={card}>
                 <div className="mb-[1em] flex items-center justify-between">
                     <span className="eyebrow text-[0.85em]">Standings</span>
-                    <span className="text-[0.8em] text-ink-3">
-                        ranked by goals on pace
-                    </span>
                 </div>
                 {standings ? (
                     <Standings

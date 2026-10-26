@@ -21,6 +21,7 @@ import {
 import { router } from "expo-router"
 import { forgetAppleHealth } from "./features/health/AppleHealthData"
 import { forgetScreenTime } from "./features/screenTime/screenTime"
+import { disablePushes } from "./features/notifications/notifications"
 import { clearCompetitionsWidget } from "./features/competition/widget/sync"
 import { clearGoalsWidget } from "./features/dashboard/widget/sync"
 import { clearHabitsWidget } from "./features/habits/widget/sync"
@@ -173,6 +174,8 @@ export const isAuthenticatedAtom = atom((get) => get(userAtom) !== null)
  * authenticated layout back to the welcome screen.
  */
 async function endSession(): Promise<void> {
+    // Before anything else, so this device stops getting the old account's notifications.
+    await disablePushes(apiConfig)
     await tokenStore.clear()
     clearHabitsWidget()
     clearCompetitionsWidget()

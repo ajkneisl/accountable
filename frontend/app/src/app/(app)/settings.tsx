@@ -1,16 +1,19 @@
 // Settings — pushed from the gear on each tab. Two tabs: General (account,
-// security, time zone, app info, sign out, delete) and Integrations (data sources).
+// security, notifications, time zone, app info, sign out, delete) and Integrations (data sources).
 
 import { type ReactNode, useEffect, useState } from "react"
-import { Pressable, Text, View } from "react-native"
+import { AppState, Linking, Pressable, Switch, Text, View } from "react-native"
 import { router, useLocalSearchParams } from "expo-router"
 import Constants from "expo-constants"
 import { useAtom } from "jotai"
 import {
     browserTimezone,
     getSelf,
-    getVersion,
     updateTimezone,
+    getNotificationSettings,
+    type NotificationKind,
+    type NotificationSettings,
+    updateNotificationSettings,
     useApi
 } from "@shared/index"
 import { apiConfig, useSignOut, userAtom } from "../../auth"
@@ -21,6 +24,13 @@ import {
     DeleteAccountSheet
 } from "../../features/account/AccountSheets"
 import { IntegrationsPanel } from "../../features/integration/IntegrationsPanel"
+import {
+    enablePushes,
+    pushPermission,
+    pushSupported,
+    type PushPermission
+} from "../../features/notifications/notifications"
+import { colors } from "../../theme"
 import { BackBar } from "../../ui/BackBar"
 import { confirm } from "../../ui/confirm"
 import { Screen } from "../../ui/Screen"
@@ -149,6 +159,181 @@ function Row({
     )
 }
 
+function SwitchRow({
+    label,
+    detail,
+    value,
+    disabled = false,
+    first = false,
+    onChange
+}: {
+    label: string
+    detail: string
+    value: boolean
+    disabled?: boolean
+    first?: boolean
+    onChange: (on: boolean) => void
+}) {
+    return (
+        <View
+            className={`flex-row items-center justify-between gap-4 py-2.5 ${
+                first ? "" : "border-t border-line-2"
+            }`}
+        >
+            <View className="flex-1">
+                <Text className="text-[15px] text-ink">{label}</Text>
+                <Text className="text-[12px] text-ink-3">{detail}</Text>
+            </View>
+            <Switch
+                accessibilityLabel={label}
+                value={value}
+                disabled={disabled}
+                onValueChange={onChange}
+                trackColor={{ true: colors.lime }}
+            />
+        </View>
+    )
+}
+
+const NOTIFICATIONS: {
+    kind: NotificationKind
+    label: string
+    detail: string
+}[] = [
+    {
+        kind: "GOALS_STATUS",
+        label: "Goals check-in",
+        detail: "5 PM · how today's goals and habits stand"
+    },
+    {
+        kind: "STREAK_RISK",
+        label: "Streak reminder",
+        detail: "9 PM · only when a streak would end tonight"
+    },
+    {
+        kind: "COMPETITION_RECAP",
+        label: "Competition recap",
+        detail: "Mondays 9 AM · where you finished last week"
+    }
+]
+
+function NotificationsSection() {
+    const api = useApi()
+    const [permission, setPermission] = useState<PushPermission | null>(null)
+    const [settings, setSettings] = useState<NotificationSettings | null>(null)
+    const [busy, setBusy] = useState(false)
+    const [errors, setErrors] = useState<string[]>([])
+
+    useEffect(() => {
+        if (!pushSupported) return
+        const check = () => void pushPermission().then(setPermission)
+        check()
+        // Coming back from iOS Settings may have changed it.
+        const sub = AppState.addEventListener("change", (state) => {
+            if (state === "active") check()
+        })
+        return () => sub.remove()
+    }, [])
+
+    useEffect(() => {
+        if (permission !== "granted") return
+        getNotificationSettings(api)
+            .then(setSettings)
+            .catch(() => setErrors(["Couldn't load notification settings"]))
+    }, [api, permission])
+
+    if (!pushSupported || permission === null) return null
+
+    async function turnOn() {
+        // iOS only asks once; after a "no" it's a switch in Settings.
+        if (permission === "denied") {
+            void Linking.openSettings()
+            return
+        }
+        setErrors([])
+        setBusy(true)
+        try {
+            await enablePushes(api, true)
+            setPermission(await pushPermission())
+        } catch (err) {
+            setErrors([
+                err instanceof Error
+                    ? err.message
+                    : "Couldn't turn on notifications"
+            ])
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    async function toggle(kind: NotificationKind, on: boolean) {
+        const set = (value: boolean) =>
+            setSettings(
+                (s) => s && { enabled: { ...s.enabled, [kind]: value } }
+            )
+        setErrors([])
+        set(on)
+        try {
+            setSettings(await updateNotificationSettings(api, { [kind]: on }))
+        } catch (err) {
+            set(!on)
+            setErrors([
+                err instanceof Error ? err.message : "Couldn't save that change"
+            ])
+        }
+    }
+
+    return (
+        <Section
+            title="Notifications"
+            footer={
+                permission === "granted"
+                    ? "Times are in your account's time zone."
+                    : undefined
+            }
+        >
+            {permission === "granted" ? (
+                NOTIFICATIONS.map((n, i) => (
+                    <SwitchRow
+                        key={n.kind}
+                        first={i === 0}
+                        label={n.label}
+                        detail={n.detail}
+                        value={settings?.enabled[n.kind] ?? true}
+                        disabled={settings === null}
+                        onChange={(on) => void toggle(n.kind, on)}
+                    />
+                ))
+            ) : (
+                <View className="gap-3 py-3.5">
+                    <Text className="text-[15px] leading-[21px] text-ink">
+                        {permission === "denied"
+                            ? "Notifications are off for Beacc in iOS Settings."
+                            : "Get an evening check-in on your goals, a heads-up before a streak ends, and weekly competition results."}
+                    </Text>
+                    <Button
+                        label={
+                            permission === "denied"
+                                ? "Open Settings"
+                                : "Turn on notifications"
+                        }
+                        variant="line"
+                        size="sm"
+                        busy={busy}
+                        onPress={turnOn}
+                        className="self-start"
+                    />
+                </View>
+            )}
+            {errors.length > 0 && (
+                <View className="border-t border-line-2 py-3.5">
+                    <ErrorList errors={errors} />
+                </View>
+            )}
+        </Section>
+    )
+}
+
 function TimezoneSection() {
     const api = useApi()
     const [user, setUser] = useAtom(userAtom)
@@ -173,10 +358,7 @@ function TimezoneSection() {
     }
 
     return (
-        <Section
-            title="Time zone"
-            footer="Goals, habits, and streaks are counted by day in your account's time zone."
-        >
+        <Section title="Time zone">
             <Row first label="Account" value={user?.timezone ?? "—"} />
             <Row label="This device" value={device} />
             {mismatch && (
@@ -197,19 +379,6 @@ function TimezoneSection() {
 }
 
 function AboutSection() {
-    const api = useApi()
-    const [server, setServer] = useState<string | null>(null)
-
-    useEffect(() => {
-        let cancelled = false
-        getVersion(api)
-            .then((v) => !cancelled && setServer(v.version))
-            .catch(() => !cancelled && setServer("Unreachable"))
-        return () => {
-            cancelled = true
-        }
-    }, [api])
-
     const version = Constants.expoConfig?.version ?? "—"
     const build = Constants.nativeBuildVersion
 
@@ -220,7 +389,7 @@ function AboutSection() {
                 label="App version"
                 value={build ? `${version} (${build})` : version}
             />
-            <Row label="Server version" value={server ?? "…"} />
+
             <Row
                 label="Server"
                 value={apiConfig.baseUrl.replace(/^https?:\/\//, "")}
@@ -264,6 +433,12 @@ function GeneralTab() {
                         {user?.email ?? "—"}
                     </Text>
                 </View>
+                <Button
+                    label="Sign out"
+                    variant="line"
+                    size="sm"
+                    onPress={onSignOut}
+                />
             </Card>
 
             <Section title="Account">
@@ -275,20 +450,21 @@ function GeneralTab() {
                 />
                 <Row
                     label="Member since"
-                    value={user ? DATE_FMT.format(new Date(user.createdAt)) : "—"}
+                    value={
+                        user ? DATE_FMT.format(new Date(user.createdAt)) : "—"
+                    }
                 />
             </Section>
 
-            <Section
-                title="Security"
-                footer="Changing your password signs you out on your other devices."
-            >
+            <Section title="Security">
                 <Row
                     first
                     label="Change password"
                     onPress={() => setSheet("password")}
                 />
             </Section>
+
+            <NotificationsSection />
 
             <TimezoneSection />
 
@@ -297,22 +473,13 @@ function GeneralTab() {
             <Section>
                 <Pressable
                     accessibilityRole="button"
-                    onPress={onSignOut}
+                    onPress={() => setSheet("delete")}
                     className="items-center py-3.5"
                 >
                     <Text className="text-[15px] font-medium text-coral-ink">
-                        Sign out
+                        Delete account
                     </Text>
                 </Pressable>
-            </Section>
-
-            <Section footer="Permanently deletes your account and everything in it.">
-                <Row
-                    first
-                    destructive
-                    label="Delete account"
-                    onPress={() => setSheet("delete")}
-                />
             </Section>
 
             {sheet === "email" && (

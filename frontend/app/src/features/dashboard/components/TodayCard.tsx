@@ -1,20 +1,11 @@
 // Goals card — today's progress ring, on-track breakdown, and the goal streak count.
+// Renders nothing until there's a goal.
 
 import { Text, View } from "react-native"
-import { router } from "expo-router"
 import type { Goal } from "@shared/index"
-import { Button, Card, Eyebrow, RingChart } from "../../../ui/primitives"
+import { Card, Eyebrow, RingChart } from "../../../ui/primitives"
 import { goalPace, goalTitle, onTrackFraction } from "../types"
-import { StreakChip } from "./StreaksCard"
-
-function Header({ streak }: { streak: number }) {
-    return (
-        <View className="mb-3.5 flex-row items-center justify-between">
-            <Eyebrow>Goals</Eyebrow>
-            <StreakChip streak={streak} />
-        </View>
-    )
-}
+import { StreakFigure } from "./StreaksCard"
 
 export function TodayCard({
     goals,
@@ -25,28 +16,8 @@ export function TodayCard({
 }) {
     const total = goals.length
 
-    if (total === 0) {
-        return (
-            <Card className="p-5">
-                <Header streak={streak} />
-                <View className="flex-row items-center gap-5">
-                    <RingChart pct={0} label="of today" tone="lime" />
-                    <View className="flex-1">
-                        <Text className="mb-3 text-[15px] text-ink-2">
-                            Set a goal to start tracking your day.
-                        </Text>
-                        <Button
-                            label="Go to goals"
-                            variant="line"
-                            size="sm"
-                            onPress={() => router.push("/goals")}
-                            className="self-start"
-                        />
-                    </View>
-                </View>
-            </Card>
-        )
-    }
+    // Hidden until there's a goal; the dashboard shows onboarding instead.
+    if (total === 0) return null
 
     const onTrack = goals.filter((g) => goalPace(g) === "onTrack")
     const behind = goals.filter((g) => goalPace(g) === "behind")
@@ -69,7 +40,12 @@ export function TodayCard({
 
     return (
         <Card className="p-5">
-            <Header streak={streak} />
+            <Eyebrow className="mb-1.5">Goals</Eyebrow>
+            {/* Pinned to the corner, where the other cards' figures sit, so it
+                doesn't heighten the header and push the ring down. */}
+            <View className="absolute right-5 top-5">
+                <StreakFigure streak={streak} />
+            </View>
             <View className="flex-row items-center gap-5">
                 <RingChart pct={pct} label="of today" tone={tone} />
                 <View className="flex-1">

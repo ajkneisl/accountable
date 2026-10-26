@@ -5,11 +5,8 @@ import { Text, View } from "react-native"
 import { useAppData } from "../../../features/common/AppData"
 import { GoalCard } from "../../../features/dashboard/components/GoalCard"
 import { StreakSection } from "../../../features/dashboard/components/StreaksCard"
-import {
-    goalKey,
-    isOnTrack,
-    isoWeekNumber
-} from "../../../features/dashboard/types"
+import { goalKey } from "../../../features/dashboard/types"
+import { EmptyState } from "../../../ui/EmptyState"
 import { Screen } from "../../../ui/Screen"
 import { SettingsButton } from "../../../ui/SettingsButton"
 import {
@@ -26,7 +23,6 @@ export default function Goals() {
     const goals = data.goals
     const competitionGoals = data.competitionGoals
     const allGoals = [...goals, ...competitionGoals]
-    const onTrack = allGoals.filter((g) => isOnTrack(g)).length
 
     return (
         <Screen
@@ -36,16 +32,6 @@ export default function Goals() {
         >
             <View className="gap-1.5 pr-12">
                 <Display size={32}>Goals</Display>
-                <Text className="text-[15px] text-ink-3">
-                    Week {isoWeekNumber(new Date())}
-                    {allGoals.length === 0
-                        ? " · Set your first goal."
-                        : ` · ${onTrack} of ${allGoals.length} on track. ${
-                              onTrack === allGoals.length
-                                  ? "All good."
-                                  : "Keep going."
-                          }`}
-                </Text>
             </View>
 
             {error !== null && (
@@ -61,15 +47,11 @@ export default function Goals() {
             )}
 
             {allGoals.length === 0 && !loading && error === null && (
-                <Card className="gap-2 p-5">
-                    <Text className="text-[15px] font-semibold text-ink">
-                        No goals yet
-                    </Text>
-                    <Text className="text-[13px] text-ink-3">
-                        Set a daily or weekly target, tracked automatically from
-                        the apps you already use.
-                    </Text>
-                </Card>
+                <EmptyState
+                    framed
+                    title="No goals yet"
+                    action={{ label: "New goal", onPress: openNewGoal }}
+                />
             )}
 
             {goals.length > 0 && (
@@ -90,7 +72,7 @@ export default function Goals() {
                 />
             ))}
 
-            {!(allGoals.length === 0 && loading) && (
+            {allGoals.length > 0 && (
                 <AddCard label="New goal" onPress={openNewGoal} />
             )}
 

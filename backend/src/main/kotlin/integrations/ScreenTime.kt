@@ -104,30 +104,32 @@ data class ImportedScreenTimeDay(
 )
 
 /**
- * Store screen time totals for [userID], replacing whatever each day held before — the app always
- * sends a day's total so far, so re-sending an overlapping window is safe. Auto-enables the
- * integration. Returns how many days' totals changed, so a re-send of the same data reports 0.
+ * Store screen time totals for [userID]. A day's total only grows, so each day keeps the larger of
+ * what's stored and what's posted: a phone whose record was reset (reconnected, reinstalled, a new
+ * phone) can't lower a total it already reported, and re-sending an overlapping window is safe.
+ * Auto-enables the integration. Returns how many days' totals rose, so a re-send reports 0.
  */
 suspend fun importScreenTime(userID: UUID, days: List<ImportedScreenTimeDay>): Int {
     if (days.isEmpty()) return 0
     val zone = zoneOf(userID)
     // Each posted day is already a total so far, so a repeat of a day keeps the larger one.
-    val byDay =
+    val posted =
         days.groupBy { startOfDay(it.day, zone) }.mapValues { (_, d) -> d.maxOf { it.minutes } }
     val now = System.currentTimeMillis()
     return suspendTransaction {
         val stored =
             ScreenTimeTable.selectAll()
                 .where {
-                    (ScreenTimeTable.userID eq userID) and (ScreenTimeTable.date inList byDay.keys)
+                    (ScreenTimeTable.userID eq userID) and (ScreenTimeTable.date inList posted.keys)
                 }
                 .associate { it[ScreenTimeTable.date] to it[ScreenTimeTable.minutes] }
+        val raised = posted.filter { (day, minutes) -> minutes > (stored[day] ?: -1) }
         UserIntegrations.upsert {
             it[UserIntegrations.userID] = userID
             it[UserIntegrations.integration] = ScreenTime.name
             it[UserIntegrations.externalID] = ScreenTime.SCREEN_TIME_SOURCE
         }
-        byDay.forEach { (day, minutes) ->
+        raised.forEach { (day, minutes) ->
             ScreenTimeTable.upsert {
                 it[ScreenTimeTable.userID] = userID
                 it[ScreenTimeTable.date] = day
@@ -135,6 +137,6 @@ suspend fun importScreenTime(userID: UUID, days: List<ImportedScreenTimeDay>): I
                 it[ScreenTimeTable.fetchedAt] = now
             }
         }
-        byDay.count { (day, minutes) -> stored[day] != minutes }
+        raised.size
     }
 }

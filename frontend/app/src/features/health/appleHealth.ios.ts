@@ -220,19 +220,46 @@ function localDayStart(ms: number): number {
     return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
 }
 
+/** Local midnight of the day after [day]; calendar-based, so DST-safe. */
+function nextDay(day: number): number {
+    const d = new Date(day)
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime()
+}
+
 /**
- * Minutes per local day across [spans], keyed by local midnight. Each span counts
- * toward the day it ended on, so a night's sleep belongs to the morning after.
+ * Sleep separated by a longer wake than this is a separate sleep (an evening
+ * nap, then the night); anything shorter is waking up during the night.
+ */
+const SLEEP_GAP_MS = 3 * 60 * 60_000
+
+/**
+ * Minutes per local day across [spans], keyed by local midnight. Spans are
+ * grouped into sleeps first, and each sleep counts toward the day it ended on,
+ * so a night belongs to the morning after — including the part before a brief
+ * wake-up before midnight, which on its own would land on the day before.
  */
 function minutesByDay(spans: Span[]): Map<number, ImportedSleepDay> {
     const days = new Map<number, ImportedSleepDay>()
-    for (const [start, end] of mergeSpans(spans)) {
+    const addSleep = (end: number, minutes: number) => {
         const day = localDayStart(end)
         const total = days.get(day) ?? { endedAt: end, minutes: 0 }
-        total.minutes += (end - start) / 60_000
+        total.minutes += minutes
         total.endedAt = Math.max(total.endedAt, end)
         days.set(day, total)
     }
+
+    // The sleep being built: when its latest span ended, and its minutes so far.
+    let sleepEnd: number | null = null
+    let sleepMinutes = 0
+    for (const [start, end] of mergeSpans(spans)) {
+        if (sleepEnd !== null && start - sleepEnd > SLEEP_GAP_MS) {
+            addSleep(sleepEnd, sleepMinutes)
+            sleepMinutes = 0
+        }
+        sleepEnd = end
+        sleepMinutes += (end - start) / 60_000
+    }
+    if (sleepEnd !== null) addSleep(sleepEnd, sleepMinutes)
     return days
 }
 
@@ -270,13 +297,18 @@ export async function syncAppleHealthSleep(
 
     // Asleep totals win over in-bed ones for any day that has both.
     const totals = new Map([...minutesByDay(inBed), ...minutesByDay(asleep)])
-    const firstDay = localDayStart(since)
-    const days = [...totals]
-        .filter(([day]) => day >= firstDay)
-        .map(([, t]) => ({
-            endedAt: t.endedAt,
-            minutes: Math.min(24 * 60, Math.round(t.minutes))
-        }))
+    // Every day in the window is sent, 0 where Health has no sleep, so a day
+    // whose sleep was deleted (or moved to another day) is corrected too.
+    const days: ImportedSleepDay[] = []
+    const today = localDayStart(Date.now())
+    for (let day = localDayStart(since); day <= today; day = nextDay(day)) {
+        const t = totals.get(day)
+        days.push({
+            // Local noon for an empty day, which files it under the same date.
+            endedAt: t?.endedAt ?? day + DAY_MS / 2,
+            minutes: Math.min(24 * 60, Math.round(t?.minutes ?? 0))
+        })
+    }
 
     let imported = 0
     for (let i = 0; i < days.length; i += SLEEP_IMPORT_PAGE) {

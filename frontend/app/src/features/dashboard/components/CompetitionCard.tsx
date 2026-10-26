@@ -5,8 +5,9 @@
 import { Pressable, Text, View } from "react-native"
 import { router } from "expo-router"
 import type { CompetitionDetail } from "@shared/index"
-import { Card, Chip, Dot, Eyebrow, Mono } from "../../../ui/primitives"
+import { Card, Dot, Eyebrow, Mono } from "../../../ui/primitives"
 import { buildColorMap } from "../../competition/colors"
+import { CardFigure } from "./CardFigure"
 
 /** Members shown before collapsing the rest into "+N more". */
 const MAX_ROWS = 4
@@ -27,10 +28,9 @@ export function CompetitionCard({
     const hidden = ranked.length - shown.length
     const myRank = ranked.findIndex((m) => m.userID === meID)
 
-    const subtitle =
-        competition.members.length === 1
-            ? `Just you so far · share #${competition.joinCode}`
-            : `${competition.members.length} members · ${competition.goals.length} goals`
+    const members = competition.members.length
+    const goals = competition.goals.length
+    const subtitle = `${members} member${members === 1 ? "" : "s"} · ${goals} goal${goals === 1 ? "" : "s"}`
 
     return (
         <Pressable
@@ -43,26 +43,28 @@ export function CompetitionCard({
             }
         >
             <Card className="p-5">
-                <View className="mb-3.5 flex-row items-center justify-between">
-                    <Eyebrow>Competition</Eyebrow>
-                    {myRank >= 0 && competition.members.length > 1 && (
-                        <Chip>
-                            <Mono className="text-[11px] font-semibold text-ink-2">
-                                #{myRank + 1} of {ranked.length}
-                            </Mono>
-                        </Chip>
+                {/* Laid out like the Habits card: the figure sits beside the
+                    eyebrow, name and subtitle rather than heightening a header. */}
+                <View className="mb-3.5 flex-row items-start justify-between gap-3">
+                    <View className="flex-1">
+                        <Eyebrow className="mb-1.5">Competition</Eyebrow>
+                        <Text
+                            numberOfLines={1}
+                            className="text-[18px] font-semibold tracking-tight text-ink"
+                        >
+                            {competition.name}
+                        </Text>
+                        <Text className="mt-0.5 text-[13px] text-ink-3">
+                            {subtitle}
+                        </Text>
+                    </View>
+                    {myRank >= 0 && members > 1 && (
+                        <CardFigure
+                            value={`#${myRank + 1}`}
+                            caption={`of ${ranked.length}`}
+                        />
                     )}
                 </View>
-
-                <Text
-                    numberOfLines={1}
-                    className="text-[18px] font-semibold tracking-tight text-ink"
-                >
-                    {competition.name}
-                </Text>
-                <Text className="mb-3.5 mt-0.5 text-[13px] text-ink-3">
-                    {subtitle}
-                </Text>
 
                 <View className="gap-2 border-t border-line-2 pt-3.5">
                     {shown.map((m, i) => {

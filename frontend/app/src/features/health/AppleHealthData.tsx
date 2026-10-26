@@ -6,7 +6,8 @@
 // background delivery wakes the app (even if it was closed) whenever either is saved,
 // the app boots, this provider mounts, and the change listener runs a sync. It
 // also syncs on launch and on return to the foreground, once the last sync is
-// more than a few minutes old.
+// more than a few minutes old. The periodic background task (see
+// integration/backgroundSync) syncs too, through syncAppleHealthInBackground.
 
 import {
     createContext,
@@ -20,8 +21,9 @@ import {
 } from "react"
 import { AppState } from "react-native"
 import * as SecureStore from "expo-secure-store"
-import { useApi } from "@shared/index"
+import { type ApiConfig, useApi } from "@shared/index"
 import { useAppData } from "../common/AppData"
+import { requestScreenTimeSync } from "../screenTime/ScreenTimeData"
 import {
     disableBackgroundSync,
     enableBackgroundSync,
@@ -42,9 +44,11 @@ const CONNECTED_KEY = "accountable_apple_health"
 const LAST_SYNC_KEY = "accountable_apple_health_synced"
 /**
  * Sleep's own last sync. Kept apart from workouts' so links made before sleep
- * was read still get a full backfill of it.
+ * was read still get a full backfill of it. Renamed (v2) when nights stopped
+ * splitting at a wake-up before midnight, so every device re-sends its last
+ * month of sleep once with the corrected totals.
  */
-const SLEEP_SYNC_KEY = "accountable_apple_health_sleep_synced"
+const SLEEP_SYNC_KEY = "accountable_apple_health_sleep_synced_v2"
 /** Steps' own last sync, for the same reason as sleep's. */
 const STEPS_SYNC_KEY = "accountable_apple_health_steps_synced"
 
@@ -116,6 +120,48 @@ export async function forgetAppleHealth(): Promise<void> {
     ])
 }
 
+/**
+ * Import workouts since [from] (the last sync, or null for a first sync), and
+ * sleep and steps since their own last syncs, then record [now] as the last
+ * sync of all three. Resolves to whether anything changed.
+ */
+async function importSince(
+    api: ApiConfig,
+    from: number | null,
+    now: number
+): Promise<boolean> {
+    const since = from === null ? now - BACKFILL_MS : from - OVERLAP_MS
+    const imported = await syncAppleHealthWorkouts(api, since)
+    const [sleepSynced, stepsSynced] = await Promise.all([
+        readKey(SLEEP_SYNC_KEY),
+        readKey(STEPS_SYNC_KEY)
+    ])
+    const sinceLast = (synced: string | null) =>
+        synced === null ? now - BACKFILL_MS : Number(synced) - OVERLAP_MS
+    const sleepChanged = await syncAppleHealthSleep(api, sinceLast(sleepSynced))
+    const stepsChanged = await syncAppleHealthSteps(api, sinceLast(stepsSynced))
+    await Promise.all([
+        writeKey(LAST_SYNC_KEY, String(now)),
+        writeKey(SLEEP_SYNC_KEY, String(now)),
+        writeKey(STEPS_SYNC_KEY, String(now))
+    ])
+    return imported > 0 || sleepChanged > 0 || stepsChanged > 0
+}
+
+/**
+ * Sync from the stored last sync if Health is linked, for the background task,
+ * which runs without the provider. Only an explicit link counts: the permission
+ * fallback is left to the provider, which records it.
+ */
+export async function syncAppleHealthInBackground(
+    api: ApiConfig
+): Promise<void> {
+    if (!isAppleHealthSupported()) return
+    if ((await readKey(CONNECTED_KEY)) !== "1") return
+    const synced = await readKey(LAST_SYNC_KEY)
+    await importSince(api, synced ? Number(synced) : null, Date.now())
+}
+
 export function AppleHealthProvider({ children }: { children: ReactNode }) {
     const api = useApi()
     const { reload } = useAppData()
@@ -136,34 +182,10 @@ export function AppleHealthProvider({ children }: { children: ReactNode }) {
             setError(null)
             try {
                 const now = Date.now()
-                const since =
-                    from === null ? now - BACKFILL_MS : from - OVERLAP_MS
-                const imported = await syncAppleHealthWorkouts(api, since)
-                const [sleepSynced, stepsSynced] = await Promise.all([
-                    readKey(SLEEP_SYNC_KEY),
-                    readKey(STEPS_SYNC_KEY)
-                ])
-                const sinceLast = (synced: string | null) =>
-                    synced === null
-                        ? now - BACKFILL_MS
-                        : Number(synced) - OVERLAP_MS
-                const sleepChanged = await syncAppleHealthSleep(
-                    api,
-                    sinceLast(sleepSynced)
-                )
-                const stepsChanged = await syncAppleHealthSteps(
-                    api,
-                    sinceLast(stepsSynced)
-                )
+                const changed = await importSince(api, from, now)
                 setLastSync(now)
                 lastSyncRef.current = now
-                await Promise.all([
-                    writeKey(LAST_SYNC_KEY, String(now)),
-                    writeKey(SLEEP_SYNC_KEY, String(now)),
-                    writeKey(STEPS_SYNC_KEY, String(now))
-                ])
-                if (imported > 0 || sleepChanged > 0 || stepsChanged > 0)
-                    reload()
+                if (changed) reload()
             } catch (err) {
                 setError(err instanceof Error ? err.message : "Sync failed")
             } finally {
@@ -214,9 +236,13 @@ export function AppleHealthProvider({ children }: { children: ReactNode }) {
         const sub = AppState.addEventListener("change", (state) => {
             if (state === "active") syncIfStale()
         })
-        const unsubscribe = onHealthDataChanged(
-            () => void sync(lastSyncRef.current)
-        )
+        // A Health change may be the only time iOS wakes the app in the
+        // background, so it brings Screen Time along too. HealthKit keeps a
+        // single callback per type, so Screen Time can't subscribe itself.
+        const unsubscribe = onHealthDataChanged(() => {
+            void sync(lastSyncRef.current)
+            requestScreenTimeSync()
+        })
         return () => {
             sub.remove()
             unsubscribe()

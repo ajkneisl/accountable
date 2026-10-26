@@ -4,6 +4,7 @@
 import { Text, View } from "react-native"
 import { HabitCard } from "../../../features/habits/components/HabitCard"
 import { useHabits } from "../../../features/habits/HabitsData"
+import { EmptyState } from "../../../ui/EmptyState"
 import { Screen } from "../../../ui/Screen"
 import { SettingsButton } from "../../../ui/SettingsButton"
 import { AddCard, Card, Display, Spinner } from "../../../ui/primitives"
@@ -19,8 +20,6 @@ export default function Habits() {
         openEditHabit
     } = useHabits()
     const habits = data?.habits ?? []
-    const last = habits[0]?.done.length ?? 0
-    const doneToday = habits.filter((h) => h.done[last - 1]).length
 
     return (
         <Screen
@@ -30,15 +29,6 @@ export default function Habits() {
         >
             <View className="gap-1.5 pr-12">
                 <Display size={32}>Habits</Display>
-                <Text className="text-[15px] text-ink-3">
-                    {habits.length === 0
-                        ? "Build something daily."
-                        : `${doneToday} of ${habits.length} done today. ${
-                              doneToday === habits.length
-                                  ? "Clean sweep."
-                                  : "Keep going."
-                          }`}
-                </Text>
             </View>
 
             {error !== null && (
@@ -54,15 +44,11 @@ export default function Habits() {
             )}
 
             {data !== null && habits.length === 0 && (
-                <Card className="gap-2 p-5">
-                    <Text className="text-[15px] font-semibold text-ink">
-                        No habits yet
-                    </Text>
-                    <Text className="text-[13px] text-ink-3">
-                        Add one, check it off each day, and add the Habits
-                        widget to your home screen to keep the heatmap in sight.
-                    </Text>
-                </Card>
+                <EmptyState
+                    framed
+                    title="No habits yet"
+                    action={{ label: "New habit", onPress: openNewHabit }}
+                />
             )}
 
             {data !== null &&
@@ -77,7 +63,7 @@ export default function Habits() {
                     />
                 ))}
 
-            {data !== null && (
+            {data !== null && habits.length > 0 && (
                 <AddCard label="New habit" onPress={openNewHabit} />
             )}
         </Screen>

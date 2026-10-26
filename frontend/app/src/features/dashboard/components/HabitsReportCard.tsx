@@ -1,11 +1,13 @@
 // Dashboard summary of habits: today's check-offs, the last seven days against
 // the seven before, and a per-habit week strip. Tapping it opens the Habits tab.
+// Renders nothing until there's a habit.
 
 import { Pressable, Text, View } from "react-native"
 import { router } from "expo-router"
 import type { Habit, HabitsResponse } from "@shared/index"
 import { colors } from "../../../theme"
-import { Button, Card, Eyebrow, Mono, Spinner } from "../../../ui/primitives"
+import { Card, Eyebrow, Mono, Spinner } from "../../../ui/primitives"
+import { CardFigure } from "./CardFigure"
 import { HABIT_PALETTE } from "../../habits/grid"
 import { useHabits } from "../../habits/HabitsData"
 
@@ -139,22 +141,8 @@ export function HabitsReportCard() {
     }
 
     const habits = data.habits
-    if (habits.length === 0) {
-        return (
-            <Card className="items-start gap-3 p-5">
-                <Eyebrow>Habits</Eyebrow>
-                <Text className="text-[15px] text-ink-2">
-                    No habits yet. Add one and check it off each day.
-                </Text>
-                <Button
-                    label="Go to habits"
-                    variant="line"
-                    size="sm"
-                    onPress={openHabits}
-                />
-            </Card>
-        )
-    }
+    // Hidden until there's a habit; the dashboard shows onboarding instead.
+    if (habits.length === 0) return null
 
     const len = habits[0].done.length
     const doneToday = habits.filter((h) => h.done[len - 1]).length
@@ -183,18 +171,16 @@ export function HabitsReportCard() {
                         )}
                     </View>
                     {thisWeek !== null && (
-                        <View className="items-end">
-                            <Mono className="text-[22px] font-bold text-ink">
-                                {Math.round(thisWeek * 100)}%
-                            </Mono>
-                            <Text className="text-[12px] text-ink-3">
-                                {delta === null
+                        <CardFigure
+                            value={`${Math.round(thisWeek * 100)}%`}
+                            caption={
+                                delta === null
                                     ? "last 7 days"
                                     : delta === 0
                                       ? "same as last week"
-                                      : `${delta > 0 ? "+" : ""}${delta}% vs last week`}
-                            </Text>
-                        </View>
+                                      : `${delta > 0 ? "+" : ""}${delta}% vs last week`
+                            }
+                        />
                     )}
                 </View>
 

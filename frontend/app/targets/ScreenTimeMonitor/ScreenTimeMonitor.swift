@@ -34,17 +34,33 @@ class ScreenTimeMonitor: DeviceActivityMonitor {
     guard event.rawValue.hasPrefix(EVENT_PREFIX),
       let minutes = Int(event.rawValue.dropFirst(EVENT_PREFIX.count))
     else { return }
-    record(minutes: minutes)
+    record(minutes: minutes, on: dayOf(threshold: minutes, at: Date()))
   }
 
-  /** Raise today's total to [minutes]; thresholds only ever grow within a day. */
-  private func record(minutes: Int) {
+  /**
+   * The day a [threshold] of minutes reported at [now] belongs to. Each day's
+   * interval starts at midnight, so today can't have more use than minutes
+   * since midnight: a bigger threshold is yesterday's, delivered late.
+   */
+  private func dayOf(threshold minutes: Int, at now: Date) -> Date {
+    let calendar = Calendar.current
+    let midnight = calendar.startOfDay(for: now)
+    // A minute's slack for the threshold being crossed right at the boundary.
+    let sinceMidnight = Int(now.timeIntervalSince(midnight) / 60) + 1
+    guard minutes > sinceMidnight,
+      let yesterday = calendar.date(byAdding: .day, value: -1, to: midnight)
+    else { return now }
+    return yesterday
+  }
+
+  /** Raise [day]'s total to [minutes]; thresholds only ever grow within a day. */
+  private func record(minutes: Int, on day: Date = Date()) {
     guard let defaults = UserDefaults(suiteName: GROUP_ID) else { return }
     let now = Date()
-    let today = dayKey(now)
+    let key = dayKey(day)
     let oldest = dayKey(now.addingTimeInterval(-Double(KEEP_DAYS) * 86_400))
     var days = defaults.dictionary(forKey: DAYS_KEY) as? [String: Int] ?? [:]
-    days[today] = max(days[today] ?? 0, minutes)
+    days[key] = max(days[key] ?? 0, minutes)
     defaults.set(days.filter { $0.key >= oldest }, forKey: DAYS_KEY)
     defaults.set(Int(now.timeIntervalSince1970 * 1000), forKey: LAST_EVENT_KEY)
   }

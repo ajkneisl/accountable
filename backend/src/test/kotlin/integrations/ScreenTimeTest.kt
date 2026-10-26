@@ -65,11 +65,25 @@ class ScreenTimeTest {
     }
 
     @Test
-    fun `re-importing a day replaces its total`() = runBlocking {
+    fun `re-importing a day raises its total`() = runBlocking {
         importScreenTime(testUserID, listOf(ImportedScreenTimeDay(day = noon, minutes = 45)))
         importScreenTime(testUserID, listOf(ImportedScreenTimeDay(day = noon, minutes = 120)))
 
         assertEquals(120L, ScreenTime.getDay(testUserID, noon)?.data?.minutes)
+    }
+
+    @Test
+    fun `a lower total from a reset phone doesn't lower the day`() = runBlocking {
+        importScreenTime(testUserID, listOf(ImportedScreenTimeDay(day = noon, minutes = 180)))
+
+        assertEquals(0, importScreenTime(testUserID, listOf(ImportedScreenTimeDay(day = noon, minutes = 0))))
+        assertEquals(180L, ScreenTime.getDay(testUserID, noon)?.data?.minutes)
+    }
+
+    @Test
+    fun `a first import of zero still records the day`() = runBlocking {
+        assertEquals(1, importScreenTime(testUserID, listOf(ImportedScreenTimeDay(day = noon, minutes = 0))))
+        assertEquals(0L, ScreenTime.getDay(testUserID, noon)?.data?.minutes)
     }
 
     @Test

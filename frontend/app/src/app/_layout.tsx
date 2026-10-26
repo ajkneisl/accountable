@@ -14,6 +14,8 @@ import { ApiProvider, syncTimezone, useApi } from "@shared/index"
 import { apiConfig, restoreSession, userAtom } from "../auth"
 import { Spinner } from "../ui/primitives"
 import { colors } from "../theme"
+// Defines the background sync task, which iOS may run before anything renders.
+import "../features/integration/backgroundSync"
 import "../../global.css"
 
 function Bootstrap({ children }: { children: React.ReactNode }) {

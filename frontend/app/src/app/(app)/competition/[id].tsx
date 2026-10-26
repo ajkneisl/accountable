@@ -5,7 +5,7 @@
 // screen always has an explicit subject.
 
 import { useEffect, useState } from "react"
-import { Text, View } from "react-native"
+import { Share, Text, View } from "react-native"
 import { router, useLocalSearchParams } from "expo-router"
 import { useAtomValue } from "jotai"
 import {
@@ -21,6 +21,7 @@ import { useAppData } from "../../../features/common/AppData"
 import { buildColorMap } from "../../../features/competition/colors"
 import { CompetitionBoard } from "../../../features/competition/components/CompetitionBoard"
 import { BackBar } from "../../../ui/BackBar"
+import { CircleButton } from "../../../ui/CircleButton"
 import { Screen } from "../../../ui/Screen"
 import { confirm } from "../../../ui/confirm"
 import {
@@ -98,8 +99,41 @@ export default function Competition() {
         ? buildColorMap(detail.members.map((m) => m.userID))
         : {}
 
+    /** Hand the join code to the share sheet, ready to send. */
+    function shareJoinCode() {
+        if (!detail) return
+        void Share.share({
+            message: `Join "${detail.name}" on Beacc with code ${detail.joinCode}`
+        }).catch(() => {})
+    }
+
     return (
-        <Screen edges={["top", "bottom"]}>
+        <Screen
+            edges={["top", "bottom"]}
+            topRight={
+                detail ? (
+                    <CircleButton
+                        pill
+                        label={`Share join code ${detail.joinCode}`}
+                        onPress={shareJoinCode}
+                    >
+                        {() => (
+                            <>
+                                <Text className="mr-1.5 text-[13px] text-ink-3">
+                                    #
+                                </Text>
+                                <Mono
+                                    style={{ letterSpacing: 2 }}
+                                    className="text-[16px] font-bold text-ink"
+                                >
+                                    {detail.joinCode}
+                                </Mono>
+                            </>
+                        )}
+                    </CircleButton>
+                ) : undefined
+            }
+        >
             <BackBar label="Competitions" />
 
             {error !== null && <ErrorList errors={[error]} />}
@@ -116,18 +150,7 @@ export default function Competition() {
                         </Text>
                     </View>
 
-                    <View className="flex-row items-center gap-3">
-                        <Card className="flex-1 flex-row items-center justify-between px-4 py-2.5">
-                            <Text className="text-[13px] text-ink-3">
-                                Join code
-                            </Text>
-                            <Mono
-                                style={{ letterSpacing: 2 }}
-                                className="text-[18px] font-bold text-ink"
-                            >
-                                {detail.joinCode}
-                            </Mono>
-                        </Card>
+                    <View className="flex-row">
                         <Button
                             label={isOwner ? "Delete" : "Leave"}
                             variant="line"

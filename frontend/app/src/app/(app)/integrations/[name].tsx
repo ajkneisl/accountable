@@ -117,18 +117,18 @@ function ConfigCard({
                 </Text>
             ) : name === APPLE_SLEEP ? (
                 <Text className="text-[13px] text-ink-3">
-                    Sleep comes from Apple Health — connect it on the
+                    Sleep comes from Apple Health, connect it on the
                     Integrations tab. Each night counts toward the day you wake
                     up.
                 </Text>
             ) : name === APPLE_STEPS ? (
                 <Text className="text-[13px] text-ink-3">
-                    Steps come from Apple Health — connect it on the
+                    Steps come from Apple Health, connect it on the
                     Integrations tab.
                 </Text>
             ) : name === SCREEN_TIME ? (
                 <Text className="text-[13px] text-ink-3">
-                    Screen time is recorded on your iPhone — connect it on the
+                    Screen time is recorded on your iPhone, connect it on the
                     Integrations tab. Totals are rounded down to the last 15
                     minutes and sync whenever you open Beacc.
                 </Text>

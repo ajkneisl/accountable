@@ -1,11 +1,11 @@
-// Goal streak: a compact chip for the dashboard's Goals card, and the full stats +
-// recent-days strip for the Goals tab.
+// Goal streak: the headline figure for the dashboard's Goals card, and the full
+// stats + recent-days strip for the Goals tab.
 
 import { Alert, Pressable, Text, View } from "react-native"
 import type { DayStatus } from "@shared/index"
 import { colors } from "../../../theme"
 import { InfoIcon } from "../../../ui/icons"
-import { Chip, Mono } from "../../../ui/primitives"
+import { CardFigure } from "./CardFigure"
 import { Stat } from "./Stat"
 
 const STREAK_EXPLANATION =
@@ -13,7 +13,7 @@ const STREAK_EXPLANATION =
     "the week ends."
 
 /** Streak count with an info button that explains how days are counted. */
-export function StreakChip({ streak }: { streak: number }) {
+export function StreakFigure({ streak }: { streak: number }) {
     return (
         <Pressable
             accessibilityRole="button"
@@ -21,12 +21,11 @@ export function StreakChip({ streak }: { streak: number }) {
             hitSlop={8}
             onPress={() => Alert.alert("Streaks", STREAK_EXPLANATION)}
         >
-            <Chip>
-                <Mono className="text-[12px] font-semibold text-ink">
-                    {streak}d streak
-                </Mono>
-                <InfoIcon color={colors.ink3} size={14} />
-            </Chip>
+            <CardFigure
+                value={String(streak)}
+                caption="day streak"
+                icon={<InfoIcon color={colors.ink3} size={12} />}
+            />
         </Pressable>
     )
 }
@@ -86,19 +85,6 @@ export function StreakSection({
     history: DayStatus[]
 }) {
     const perfect = history.filter((s) => s === "ON" || s === "TODAY").length
-    const totalRated = history.filter((s) => s !== "NONE").length
-    const todayPending = history[history.length - 1] === "MISS"
-    // Today only joins the streak once its goals are met, so a run through yesterday
-    // still reads 0 until then.
-    const yesterdayOn = history[history.length - 2] === "ON"
-    const sub =
-        streak > 0
-            ? "days in a row, every goal hit"
-            : todayPending && yesterdayOn
-              ? "finish today's goals to keep your run"
-              : todayPending
-                ? "hit all of today's goals to start"
-                : "no streak yet"
 
     return (
         <View>
@@ -106,13 +92,11 @@ export function StreakSection({
                 <Stat
                     label="Current"
                     value={`${streak}d`}
-                    sub={sub}
                     tone="lime"
                 />
                 <Stat
                     label="Perfect"
                     value={`${perfect}`}
-                    sub={`of the last ${totalRated || history.length} days`}
                 />
             </View>
 

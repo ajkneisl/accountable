@@ -1,4 +1,5 @@
-// The round top-right button shared by the gear and the sync button.
+// The round top-right button shared by the gear and the sync button, or with
+// [pill] a capsule that sizes to its content (the join code).
 //
 // On iOS 26+ it's an interactive Liquid Glass circle; older systems fall back
 // to the flat card circle.
@@ -14,12 +15,15 @@ export function CircleButton({
     label,
     onPress,
     disabled = false,
+    pill = false,
     children
 }: {
     /** Accessibility label. */
     label: string
     onPress: () => void
     disabled?: boolean
+    /** A capsule as wide as its content instead of a fixed circle. */
+    pill?: boolean
     /** The glyph; [glass] tells it which tint the circle wants. */
     children: (glass: boolean) => ReactNode
 }) {
@@ -37,9 +41,10 @@ export function CircleButton({
                     isInteractive
                     glassEffectStyle="regular"
                     style={{
-                        width: SIZE,
+                        ...(pill ? { paddingHorizontal: 14 } : { width: SIZE }),
                         height: SIZE,
                         borderRadius: SIZE / 2,
+                        flexDirection: "row",
                         alignItems: "center",
                         justifyContent: "center"
                     }}
@@ -48,8 +53,11 @@ export function CircleButton({
                 </GlassView>
             ) : (
                 <View
-                    style={{ width: SIZE, height: SIZE }}
-                    className="items-center justify-center rounded-full border border-line-2 bg-bg-card"
+                    style={{
+                        ...(pill ? { paddingHorizontal: 14 } : { width: SIZE }),
+                        height: SIZE
+                    }}
+                    className="flex-row items-center justify-center rounded-full border border-line-2 bg-bg-card"
                 >
                     {children(false)}
                 </View>

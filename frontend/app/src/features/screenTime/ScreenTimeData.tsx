@@ -4,7 +4,9 @@
 //
 // The monitor extension records usage on its own; while connected, the app
 // posts what it recorded on launch and whenever it returns to the foreground,
-// once the last sync is more than a few minutes old.
+// once the last sync is more than a few minutes old. It also posts when a
+// HealthKit change wakes the app (see AppleHealthData), and from the periodic
+// background task (see integration/backgroundSync).
 
 import {
     createContext,
@@ -17,7 +19,7 @@ import {
     type ReactNode
 } from "react"
 import { AppState } from "react-native"
-import { useApi } from "@shared/index"
+import { type ApiConfig, useApi } from "@shared/index"
 import { useAppData } from "../common/AppData"
 import {
     chooseScreenTimeApps,
@@ -33,6 +35,24 @@ import {
 
 /** Opening the app syncs only when the last sync is older than this. */
 const STALE_MS = 5 * 60_000
+
+/** The mounted provider's sync, if any. */
+const syncListeners = new Set<() => void>()
+
+/**
+ * Sync now if the provider is mounted, e.g. when a HealthKit change has woken
+ * the app in the background. Without it, the provider syncs once it mounts.
+ */
+export function requestScreenTimeSync(): void {
+    syncListeners.forEach((listener) => listener())
+}
+
+/** Post what the monitor recorded if connected, for the background task. */
+export async function syncScreenTimeInBackground(
+    api: ApiConfig
+): Promise<void> {
+    if (isScreenTimeConnected()) await syncScreenTime(api)
+}
 
 interface ScreenTime {
     supported: boolean
@@ -112,8 +132,14 @@ export function ScreenTimeProvider({ children }: { children: ReactNode }) {
         const sub = AppState.addEventListener("change", (state) => {
             if (state === "active") syncIfStale()
         })
-        return () => sub.remove()
-    }, [connected, syncIfStale])
+        // Not gated on staleness: a background wake is a rare chance to post.
+        const listener = () => void sync()
+        syncListeners.add(listener)
+        return () => {
+            sub.remove()
+            syncListeners.delete(listener)
+        }
+    }, [connected, sync, syncIfStale])
 
     const connect = useCallback(async () => {
         setError(null)

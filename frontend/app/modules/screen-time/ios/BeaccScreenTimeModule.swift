@@ -26,7 +26,7 @@ private let EVENT_PREFIX = "minutes."
  * Bump when the schedule or events change, so devices already monitoring
  * restart with the new ones (see ensureMonitoring).
  */
-private let MONITOR_VERSION = 2
+private let MONITOR_VERSION = 3
 
 /** Threshold step, so recorded totals are accurate to this many minutes. */
 private let STEP_MINUTES = 15
@@ -47,6 +47,21 @@ private func loadSelection() -> FamilyActivitySelection? {
 
 private func saveSelection(_ selection: FamilyActivitySelection) {
   shared?.set(try? PropertyListEncoder().encode(selection), forKey: SELECTION_KEY)
+}
+
+/**
+ * [selection] (or an empty one) set to include whole categories, so a picked
+ * category also covers apps installed into it later. Picks saved before this
+ * keep their apps and categories.
+ */
+private func withEntireCategories(_ selection: FamilyActivitySelection?) -> FamilyActivitySelection {
+  var full = FamilyActivitySelection(includeEntireCategory: true)
+  if let selection {
+    full.applicationTokens = selection.applicationTokens
+    full.categoryTokens = selection.categoryTokens
+    full.webDomainTokens = selection.webDomainTokens
+  }
+  return full
 }
 
 private func isEmpty(_ selection: FamilyActivitySelection) -> Bool {
@@ -71,12 +86,26 @@ private func startMonitoring() throws {
   }
   var events: [DeviceActivityEvent.Name: DeviceActivityEvent] = [:]
   for minutes in THRESHOLDS {
-    events[DeviceActivityEvent.Name("\(EVENT_PREFIX)\(minutes)")] = DeviceActivityEvent(
-      applications: selection.applicationTokens,
-      categories: selection.categoryTokens,
-      webDomains: selection.webDomainTokens,
-      threshold: DateComponents(hour: minutes / 60, minute: minutes % 60)
-    )
+    let threshold = DateComponents(hour: minutes / 60, minute: minutes % 60)
+    let name = DeviceActivityEvent.Name("\(EVENT_PREFIX)\(minutes)")
+    if #available(iOS 17.4, *) {
+      // Count the whole day, not just use since monitoring (re)started, so
+      // connecting or re-picking apps mid-day doesn't drop earlier use.
+      events[name] = DeviceActivityEvent(
+        applications: selection.applicationTokens,
+        categories: selection.categoryTokens,
+        webDomains: selection.webDomainTokens,
+        threshold: threshold,
+        includesPastActivity: true
+      )
+    } else {
+      events[name] = DeviceActivityEvent(
+        applications: selection.applicationTokens,
+        categories: selection.categoryTokens,
+        webDomains: selection.webDomainTokens,
+        threshold: threshold
+      )
+    }
   }
   let schedule = DeviceActivitySchedule(
     intervalStart: DateComponents(hour: 0, minute: 0),
@@ -89,11 +118,14 @@ private func startMonitoring() throws {
   shared?.set(MONITOR_VERSION, forKey: VERSION_KEY)
 
   // iOS only calls intervalDidStart at the next midnight, so give today a
-  // total now; the extension raises it as thresholds are crossed.
+  // total now; the extension raises it as thresholds are crossed. Only when
+  // it's missing, so this never rewrites a total the extension just raised.
   var days = shared?.dictionary(forKey: DAYS_KEY) as? [String: Int] ?? [:]
   let today = dayKey(Date())
-  days[today] = days[today] ?? 0
-  shared?.set(days, forKey: DAYS_KEY)
+  if days[today] == nil {
+    days[today] = 0
+    shared?.set(days, forKey: DAYS_KEY)
+  }
 }
 
 public class BeaccScreenTimeModule: Module {
@@ -124,7 +156,7 @@ public class BeaccScreenTimeModule: Module {
         return
       }
       var host: UIViewController?
-      let picker = ActivityPicker(initial: loadSelection() ?? FamilyActivitySelection()) {
+      let picker = ActivityPicker(initial: withEntireCategories(loadSelection())) {
         selection in
         host?.dismiss(animated: true)
         if let selection { saveSelection(selection) }

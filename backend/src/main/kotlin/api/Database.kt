@@ -10,6 +10,8 @@ import integrations.AppleFitnessWorkouts
 import integrations.AppleHealthImports
 import integrations.api.IntegrationTables
 import integrations.api.UserIntegrations
+import notifications.NotificationOptOuts
+import notifications.PushDevices
 import user.RefreshTokens
 import user.Users
 import com.zaxxer.hikari.HikariConfig
@@ -71,6 +73,8 @@ fun initDb() {
             CompetitionGoals,
             AppleFitnessWorkouts,
             AppleHealthImports,
+            PushDevices,
+            NotificationOptOuts,
             *IntegrationTables.all.toTypedArray(),
         )
         // create() skips tables that already exist, so columns added later need adding by hand.

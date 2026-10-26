@@ -7,6 +7,7 @@ import { router } from "expo-router"
 import { useAtomValue } from "jotai"
 import type { CompetitionSummary } from "@shared/index"
 import { userAtom } from "../../../auth"
+import { EmptyState } from "../../../ui/EmptyState"
 import { Screen } from "../../../ui/Screen"
 import { SettingsButton } from "../../../ui/SettingsButton"
 import {
@@ -60,7 +61,6 @@ export default function Competitions() {
 
     const competitions = data.competitions
     const meID = user?.userID
-    const ownedCount = competitions.filter((c) => c.ownerID === meID).length
 
     const visible = useMemo(() => {
         return competitions
@@ -82,9 +82,6 @@ export default function Competitions() {
         >
             <View className="gap-2 pr-12">
                 <Display size={32}>Competitions</Display>
-                <Text className="text-[13px] text-ink-3">
-                    {competitions.length} total · {ownedCount} created by you
-                </Text>
             </View>
 
             {competitions.length > 0 && (
@@ -103,13 +100,20 @@ export default function Competitions() {
             )}
 
             {competitions.length === 0 ? (
-                <Card className="p-5">
-                    <Text className="text-[13px] text-ink-3">
-                        {loading
-                            ? "Loading…"
-                            : "You're not in any competitions yet."}
-                    </Text>
-                </Card>
+                loading ? (
+                    <Card className="p-5">
+                        <Text className="text-[13px] text-ink-3">Loading…</Text>
+                    </Card>
+                ) : (
+                    <EmptyState
+                        framed
+                        title="No competitions yet"
+                        action={{
+                            label: "Create or join",
+                            onPress: () => setSheetOpen(true)
+                        }}
+                    />
+                )
             ) : visible.length === 0 ? (
                 <Card className="gap-3 p-5">
                     <Text className="text-[13px] text-ink-3">
@@ -139,7 +143,7 @@ export default function Competitions() {
                 </View>
             )}
 
-            {!(competitions.length === 0 && loading) && (
+            {competitions.length > 0 && (
                 <AddCard
                     label="Create or join competition"
                     onPress={() => setSheetOpen(true)}

@@ -3,6 +3,7 @@ package integrations.api
 import api.Cache
 import io.ktor.util.logging.KtorSimpleLogger
 import java.time.Instant
+import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -47,14 +48,25 @@ object IntegrationRefreshWorker {
     suspend fun refreshUsersAtRefreshHour(now: Long = System.currentTimeMillis()) {
         for ((userID, names) in allEnabledIntegrations()) {
             if (Instant.ofEpochMilli(now).atZone(zoneOf(userID)).hour != REFRESH_HOUR) continue
-            for (name in names) {
-                val integration = Integrations.byName[name] ?: continue
-                runCatching { integration.refresh(userID, now) }
-                    .onFailure { log.warn("refresh failed: user=$userID integration=$name", it) }
-            }
-            // Fresh upstream data invalidates the user's cached goals, streak, and integrations.
-            Cache.invalidateUser(userID)
+            refresh(userID, names, now)
         }
+    }
+
+    /**
+     * Refresh every integration [userID] has enabled for the day containing [now], e.g. so a
+     * notification about their goals reads current numbers. Failures are logged and skipped.
+     */
+    suspend fun refreshUser(userID: UUID, now: Long = System.currentTimeMillis()) =
+        refresh(userID, integrationsFor(userID), now)
+
+    private suspend fun refresh(userID: UUID, names: List<String>, now: Long) {
+        for (name in names) {
+            val integration = Integrations.byName[name] ?: continue
+            runCatching { integration.refresh(userID, now) }
+                .onFailure { log.warn("refresh failed: user=$userID integration=$name", it) }
+        }
+        // Fresh upstream data invalidates the user's cached goals, streak, and integrations.
+        Cache.invalidateUser(userID)
     }
 }
 

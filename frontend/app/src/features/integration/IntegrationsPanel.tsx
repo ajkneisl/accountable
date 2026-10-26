@@ -6,7 +6,6 @@ import { useState } from "react"
 import { Text, View } from "react-native"
 import { router } from "expo-router"
 import {
-    getIntegration,
     type IntegrationStatus,
     refreshAllIntegrations,
     useApi
@@ -18,11 +17,13 @@ import {
 } from "../dashboard/types"
 import { useAppleHealth } from "../health/AppleHealthData"
 import { useScreenTime } from "../screenTime/ScreenTimeData"
+import { colors } from "../../theme"
+import { BoxButton } from "../../ui/BoxButton"
+import { RefreshIcon } from "../../ui/icons"
 import {
     Button,
     Card,
     Eyebrow,
-    IconButton,
     IntegrationIcon,
     SourceTile,
     Spinner
@@ -39,21 +40,13 @@ function openIntegration(name: string) {
     router.push({ pathname: "/integrations/[name]", params: { name } })
 }
 
-function IntegrationRow({
-    integration,
-    busy,
-    onRefresh
-}: {
-    integration: IntegrationStatus
-    busy: boolean
-    onRefresh: () => void
-}) {
+function IntegrationRow({ integration }: { integration: IntegrationStatus }) {
     const visual = integrationVisual(integration.name)
     const sub = !integration.enabled
         ? "Not connected"
         : integration.lastFetched
-          ? `${integration.externalID ?? "Connected"} · ${formatRefreshed(integration.lastFetched)}`
-          : `${integration.externalID ?? "Connected"} · never refreshed`
+          ? `Last synced ${formatRefreshed(integration.lastFetched)}`
+          : `Never synced`
 
     return (
         <View className="flex-row items-center gap-3 border-t border-line-2 py-3">
@@ -67,24 +60,11 @@ function IntegrationRow({
                     <Text className="text-[14px] font-semibold text-ink">
                         {visual.sourceLabel}
                     </Text>
-                    <View
-                        className={`h-1.5 w-1.5 rounded-full ${
-                            integration.enabled ? "bg-lime" : "bg-line"
-                        }`}
-                    />
                 </View>
                 <Text numberOfLines={1} className="text-xs text-ink-3">
                     {sub}
                 </Text>
             </View>
-            {integration.enabled && (
-                <IconButton
-                    glyph="↻"
-                    label={`Refresh ${visual.sourceLabel}`}
-                    busy={busy}
-                    onPress={onRefresh}
-                />
-            )}
             <Button
                 label={integration.enabled ? "Manage" : "Connect"}
                 variant={integration.enabled ? "line" : "primary"}
@@ -99,14 +79,14 @@ function AppleHealthCard() {
     const health = useAppleHealth()
 
     const status = !health.supported
-        ? "Needs the Beacc iOS app — not available in Expo Go or on this device."
+        ? "Unavailable"
         : !health.connected
           ? "Import your workouts, sleep and steps automatically."
           : health.syncing
             ? "Syncing workouts, sleep and steps…"
             : health.lastSync
-              ? `Connected · synced ${formatRefreshed(health.lastSync)}`
-              : "Connected"
+              ? `Synced ${formatRefreshed(health.lastSync)}`
+              : "Never synced"
 
     return (
         <Card className="p-5">
@@ -121,11 +101,6 @@ function AppleHealthCard() {
                         <Text className="text-[14px] font-semibold text-ink">
                             Apple Health
                         </Text>
-                        <View
-                            className={`h-1.5 w-1.5 rounded-full ${
-                                health.connected ? "bg-lime" : "bg-line"
-                            }`}
-                        />
                     </View>
                     <Text className="text-xs text-ink-3">{status}</Text>
                 </View>
@@ -138,7 +113,7 @@ function AppleHealthCard() {
                 </Text>
             )}
 
-            <View className="mt-4 flex-row flex-wrap gap-2">
+            <View className="mt-4 flex-row flex-wrap gap-2 justify-between">
                 {health.supported && !health.connected && (
                     <Button
                         label="Connect Apple Health"
@@ -146,21 +121,23 @@ function AppleHealthCard() {
                         onPress={() => void health.connect()}
                     />
                 )}
+
                 {health.connected && (
-                    <>
+                    <View className="flex-row flex-wrap gap-2">
                         <Button
                             label="Sync now"
                             size="sm"
                             busy={health.syncing}
                             onPress={() => void health.syncNow()}
                         />
+
                         <Button
                             label="Disconnect"
                             variant="line"
                             size="sm"
                             onPress={() => void health.disconnect()}
                         />
-                    </>
+                    </View>
                 )}
                 <Button
                     label="View data"
@@ -177,21 +154,20 @@ function ScreenTimeCard() {
     const screenTime = useScreenTime()
 
     const status = !screenTime.supported
-        ? "Needs the Beacc iOS app — not available in Expo Go or on this device."
+        ? "Unavailable"
         : !screenTime.connected
           ? "Track your screen time against a daily or weekly limit."
           : screenTime.syncing
             ? "Syncing screen time…"
             : screenTime.lastSync
-              ? `Connected · synced ${formatRefreshed(screenTime.lastSync)}`
-              : "Connected"
+              ? `Last synced ${formatRefreshed(screenTime.lastSync)}`
+              : "Never synced"
+
     const { todayMinutes, lastEventAt } = screenTime.status
-    // What the phone itself has recorded, so a total that never moves can be
-    // told apart from one that isn't reaching the server.
     const recorded = !screenTime.connected
         ? null
         : lastEventAt === null
-          ? "No usage recorded yet — it appears after your first minute in a tracked app."
+          ? "No usage recorded yet, it appears after your first minute in a tracked app."
           : `Today ${Math.floor((todayMinutes ?? 0) / 60)}h ${(todayMinutes ?? 0) % 60}m · updated ${formatRefreshed(lastEventAt)}`
 
     return (
@@ -202,22 +178,21 @@ function ScreenTimeCard() {
                     variant="coral"
                     icon={<IntegrationIcon name={SCREEN_TIME} />}
                 />
+
                 <View className="flex-1">
                     <View className="flex-row items-center gap-2">
                         <Text className="text-[14px] font-semibold text-ink">
                             Screen Time
                         </Text>
-                        <View
-                            className={`h-1.5 w-1.5 rounded-full ${
-                                screenTime.connected ? "bg-lime" : "bg-line"
-                            }`}
-                        />
                     </View>
+
                     <Text className="text-xs text-ink-3">{status}</Text>
+
                     {recorded !== null && (
                         <Text className="text-xs text-ink-3">{recorded}</Text>
                     )}
                 </View>
+
                 {screenTime.syncing && <Spinner />}
             </View>
 
@@ -227,7 +202,7 @@ function ScreenTimeCard() {
                 </Text>
             )}
 
-            <View className="mt-4 flex-row flex-wrap gap-2">
+            <View className="mt-4 flex-row flex-wrap gap-2 justify-between">
                 {screenTime.supported && !screenTime.connected && (
                     <Button
                         label="Connect Screen Time"
@@ -236,7 +211,7 @@ function ScreenTimeCard() {
                     />
                 )}
                 {screenTime.connected && (
-                    <>
+                    <View className="flex-row flex-wrap gap-2">
                         <Button
                             label="Sync now"
                             size="sm"
@@ -255,7 +230,7 @@ function ScreenTimeCard() {
                             size="sm"
                             onPress={screenTime.disconnect}
                         />
-                    </>
+                    </View>
                 )}
                 <Button
                     label="View data"
@@ -271,25 +246,12 @@ function ScreenTimeCard() {
 export function IntegrationsPanel() {
     const api = useApi()
     const { data, loading, reload } = useAppData()
-    const [refreshing, setRefreshing] = useState<string | null>(null)
     const [refreshingAll, setRefreshingAll] = useState(false)
 
     const sources = data.integrations.filter(
         (it) => !DEVICE_SOURCES.includes(it.name)
     )
     const connected = sources.filter((it) => it.enabled).length
-
-    async function refresh(name: string) {
-        setRefreshing(name)
-        try {
-            await getIntegration(api, name)
-            reload()
-        } catch {
-            // best-effort; the integration screen surfaces detailed errors
-        } finally {
-            setRefreshing(null)
-        }
-    }
 
     async function refreshAll() {
         setRefreshingAll(true)
@@ -306,38 +268,34 @@ export function IntegrationsPanel() {
     return (
         <>
             <Card className="p-5">
-                <View className="mb-1 flex-row items-center justify-between gap-2">
+                <View className="mb-3 flex-row items-center justify-between gap-2">
                     <View className="flex-row items-center gap-2">
                         <Eyebrow>Accounts</Eyebrow>
-                        {loading && <Spinner />}
+                        {/* A refresh shows its own spinner in the button. */}
+                        {loading && !refreshingAll && <Spinner />}
                     </View>
+
+                    {/* Overhangs the header row rather than heightening it, so
+                        the eyebrow sits where it does on every card. */}
                     {connected > 0 && (
-                        <Button
-                            label={
-                                refreshingAll ? "Refreshing…" : "↻ Refresh all"
-                            }
-                            variant="line"
-                            size="sm"
+                        <BoxButton
+                            label="Refresh all accounts"
                             onPress={refreshAll}
                             busy={refreshingAll}
-                        />
+                            className="-my-1.5"
+                        >
+                            <RefreshIcon color={colors.ink2} size={17} />
+                        </BoxButton>
                     )}
                 </View>
-                <Text className="mb-3.5 text-[13px] text-ink-3">
-                    Link by username; activity is pulled in daily.
-                </Text>
+
                 {sources.length === 0 ? (
                     <Text className="text-[13px] text-ink-3">
                         {loading ? "Loading…" : "No integrations available."}
                     </Text>
                 ) : (
                     sources.map((it) => (
-                        <IntegrationRow
-                            key={it.name}
-                            integration={it}
-                            busy={refreshing === it.name}
-                            onRefresh={() => refresh(it.name)}
-                        />
+                        <IntegrationRow key={it.name} integration={it} />
                     ))
                 )}
             </Card>
