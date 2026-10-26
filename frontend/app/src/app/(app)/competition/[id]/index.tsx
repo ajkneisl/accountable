@@ -21,13 +21,9 @@ import { CompetitionBoard } from "../../../../features/competition/components/Co
 import { BackBar } from "../../../../ui/BackBar"
 import { CircleButton } from "../../../../ui/CircleButton"
 import { Screen } from "../../../../ui/Screen"
-import {
-    Button,
-    Card,
-    Display,
-    ErrorList,
-    Mono
-} from "../../../../ui/primitives"
+import { GearIcon } from "../../../../ui/icons"
+import { Card, Display, ErrorList, Mono } from "../../../../ui/primitives"
+import { colors as theme } from "../../../../theme"
 
 function messageFor(err: unknown): string {
     if (err instanceof ApiError) return err.messages.join(", ")
@@ -93,25 +89,44 @@ export default function Competition() {
             edges={["top", "bottom"]}
             topRight={
                 detail ? (
-                    <CircleButton
-                        pill
-                        label={`Share join code ${detail.joinCode}`}
-                        onPress={shareJoinCode}
-                    >
-                        {() => (
-                            <>
-                                <Text className="mr-1.5 text-[13px] text-ink-3">
-                                    #
-                                </Text>
-                                <Mono
-                                    style={{ letterSpacing: 2 }}
-                                    className="text-[16px] font-bold text-ink"
-                                >
-                                    {detail.joinCode}
-                                </Mono>
-                            </>
-                        )}
-                    </CircleButton>
+                    <View className="flex-row gap-2.5">
+                        <CircleButton
+                            pill
+                            label={`Share join code ${detail.joinCode}`}
+                            onPress={shareJoinCode}
+                        >
+                            {() => (
+                                <>
+                                    <Text className="mr-1.5 text-[13px] text-ink-3">
+                                        #
+                                    </Text>
+                                    <Mono
+                                        style={{ letterSpacing: 2 }}
+                                        className="text-[16px] font-bold text-ink"
+                                    >
+                                        {detail.joinCode}
+                                    </Mono>
+                                </>
+                            )}
+                        </CircleButton>
+                        <CircleButton
+                            label="Competition settings"
+                            onPress={() =>
+                                router.push({
+                                    pathname: "/competition/[id]/settings",
+                                    params: { id: detail.id }
+                                })
+                            }
+                        >
+                            {(glass) =>
+                                glass ? (
+                                    <GearIcon color={theme.ink} size={21} />
+                                ) : (
+                                    <GearIcon color={theme.ink2} size={20} />
+                                )
+                            }
+                        </CircleButton>
+                    </View>
                 ) : undefined
             }
         >
@@ -122,20 +137,6 @@ export default function Competition() {
             {detail ? (
                 <>
                     <Display size={32}>{detail.name}</Display>
-
-                    <View className="flex-row">
-                        <Button
-                            label="Settings"
-                            variant="line"
-                            size="sm"
-                            onPress={() =>
-                                router.push({
-                                    pathname: "/competition/[id]/settings",
-                                    params: { id: detail.id }
-                                })
-                            }
-                        />
-                    </View>
 
                     <CompetitionBoard
                         competition={detail}
