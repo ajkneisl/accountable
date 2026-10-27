@@ -18,7 +18,7 @@ import {
     removeCompetitionGoal,
     useApi
 } from "@shared/index"
-import { colors } from "../../../theme"
+import { useColors, useScheme } from "../../../theme"
 import { BackChevronIcon, ChevronIcon, GearIcon } from "../../../ui/icons"
 import {
     Bar,
@@ -69,6 +69,8 @@ function Standings({
     goalCount: number
     meID?: string
 }) {
+    const colors = useColors()
+    const scheme = useScheme()
     return (
         <View>
             <View className="flex-row items-center gap-3 px-2 pb-2">
@@ -104,7 +106,7 @@ function Standings({
                             className="items-center justify-center"
                         >
                             <Text
-                                style={{ color: onMemberFill(s.color) }}
+                                style={{ color: onMemberFill(s.color, scheme) }}
                                 className="text-xs font-bold"
                             >
                                 {i + 1}
@@ -183,6 +185,7 @@ function GoalProgress({
     /** Opens the edit sheet; owner-only. */
     onEdit?: () => void
 }) {
+    const colors = useColors()
     const visual = integrationVisual(board.integration)
     const wt = weeklyTarget(board)
     const pace = paceTarget(board, currentWeek)
@@ -294,6 +297,7 @@ function WeekSwitcher({
     onBack: () => void
     onForward: () => void
 }) {
+    const colors = useColors()
     return (
         <View className="-mx-2 -mb-2 mt-3 flex-row items-center justify-between border-t border-line-2 pt-2">
             <Pressable

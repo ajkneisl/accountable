@@ -1,28 +1,31 @@
 /** @type {import('tailwindcss').Config} */
 
-// Design tokens mirrored from web/src/features/common/theme.css. The web sheet
-// defines them in oklch(), which React Native's color parser doesn't accept, so
-// they're pre-converted to their sRGB hex equivalents here.
-const colors = {
-    bg: "#f8f5ef",
-    "bg-card": "#ffffff",
-    "bg-sunken": "#efeae2",
-    ink: "#16100c",
-    "ink-2": "#423c37",
-    "ink-3": "#7b736c",
-    line: "#ddd6cf",
-    "line-2": "#e9e4de",
+// Design tokens. Each reads a CSS variable that the root layout sets from the
+// light or dark palette in src/theme.ts (see `themeVars`), so every color class
+// follows the appearance picked in Settings.
+const TOKENS = [
+    "bg",
+    "bg-card",
+    "bg-sunken",
+    "ink",
+    "ink-2",
+    "ink-3",
+    "line",
+    "line-2",
+    "lime",
+    "lime-ink",
+    "lime-soft",
+    "coral",
+    "coral-soft",
+    "coral-ink",
+    "indigo"
+]
 
-    lime: "#a2eb3c",
-    "lime-ink": "#243b00",
-    "lime-soft": "#d5f9b2",
-
-    coral: "#fd6a3a",
-    "coral-soft": "#ffe5dc",
-    "coral-ink": "#7f2400",
-
-    indigo: "#2e40a3"
-}
+const colors = Object.fromEntries(
+    TOKENS.map((t) => [t, `rgb(var(--${t}) / <alpha-value>)`])
+)
+// Text on a bright fill (lime, coral) stays dark in both appearances.
+colors["on-fill"] = "#16100c"
 
 module.exports = {
     content: [

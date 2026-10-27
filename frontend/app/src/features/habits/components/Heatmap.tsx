@@ -3,7 +3,7 @@
 
 import { useState } from "react"
 import { Pressable, View } from "react-native"
-import { colors } from "../../../theme"
+import { useColors } from "../../../theme"
 import { buildGrid } from "../grid"
 
 const CELL = 13
@@ -22,6 +22,7 @@ export function Heatmap({
     fill: string
     onToggle: (date: string, done: boolean) => void
 }) {
+    const colors = useColors()
     const [width, setWidth] = useState(0)
     const cols = Math.max(1, Math.floor((width + GAP) / (CELL + GAP)))
     const grid = width > 0 ? buildGrid(start, today, cols) : []

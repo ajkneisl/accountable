@@ -3,7 +3,7 @@
 import { Text, View } from "react-native"
 import type { HabitColor } from "@shared/index"
 import { ChoiceButton, Dot } from "../../../ui/primitives"
-import { HABIT_COLORS, HABIT_PALETTE } from "../grid"
+import { HABIT_COLORS, useHabitPalette } from "../grid"
 
 /** Colors per row in the picker; more than this gets too cramped on a phone. */
 const COLORS_PER_ROW = 4
@@ -19,6 +19,7 @@ export function ColorPicker({
     value: HabitColor
     onChange: (color: HabitColor) => void
 }) {
+    const palette = useHabitPalette()
     return (
         <View className="gap-2.5">
             {COLOR_ROWS.map((row) => (
@@ -31,9 +32,9 @@ export function ColorPicker({
                             className="flex-1"
                         >
                             <View className="items-center gap-2">
-                                <Dot color={HABIT_PALETTE[c].fill} size={22} />
+                                <Dot color={palette[c].fill} size={22} />
                                 <Text className="text-[14px] font-medium text-ink">
-                                    {HABIT_PALETTE[c].label}
+                                    {palette[c].label}
                                 </Text>
                             </View>
                         </ChoiceButton>

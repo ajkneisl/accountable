@@ -22,6 +22,7 @@ import {
 import { userAtom } from "../../../../auth"
 import { useAppData } from "../../../../features/common/AppData"
 import { buildColorMap } from "../../../../features/competition/colors"
+import { useScheme } from "../../../../theme"
 import { BackBar } from "../../../../ui/BackBar"
 import { Screen } from "../../../../ui/Screen"
 import { Sheet, SheetField } from "../../../../ui/Sheet"
@@ -98,6 +99,7 @@ function RenameSheet({
 
 export default function CompetitionSettings() {
     const api = useApi()
+    const scheme = useScheme()
     const { id } = useLocalSearchParams<{ id: string }>()
     const user = useAtomValue(userAtom)
     const { reload } = useAppData()
@@ -154,7 +156,7 @@ export default function CompetitionSettings() {
         )
     }
 
-    const colors = buildColorMap(detail.members)
+    const colors = buildColorMap(detail.members, scheme)
 
     function shareJoinCode() {
         if (!detail) return

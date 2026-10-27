@@ -5,10 +5,10 @@
 import { Pressable, Text, View } from "react-native"
 import { router } from "expo-router"
 import type { Habit, HabitsResponse } from "@shared/index"
-import { colors } from "../../../theme"
+import { useColors } from "../../../theme"
 import { Card, Eyebrow, Mono, Spinner } from "../../../ui/primitives"
 import { CardFigure } from "./CardFigure"
-import { HABIT_PALETTE } from "../../habits/grid"
+import { useHabitPalette } from "../../habits/grid"
 import { useHabits } from "../../habits/HabitsData"
 
 const WEEK = 7
@@ -54,6 +54,7 @@ function completion(
 }
 
 function DayBars({ data }: { data: HabitsResponse }) {
+    const colors = useColors()
     const len = data.habits[0]?.done.length ?? 0
     const days = Array.from({ length: WEEK }, (_, k) => len - WEEK + k)
 
@@ -65,14 +66,19 @@ function DayBars({ data }: { data: HabitsResponse }) {
                 return (
                     <View key={i} className="flex-1 items-center gap-1.5">
                         <View
-                            style={{ height: 48, backgroundColor: colors.bgSunken }}
+                            style={{
+                                height: 48,
+                                backgroundColor: colors.bgSunken
+                            }}
                             className="w-full justify-end overflow-hidden rounded-[6px]"
                         >
                             <View
                                 style={{
                                     height: `${Math.round(frac * 100)}%`,
                                     backgroundColor:
-                                        frac === 1 ? colors.lime : colors.limeSoft
+                                        frac === 1
+                                            ? colors.lime
+                                            : colors.limeSoft
                                 }}
                             />
                         </View>
@@ -91,7 +97,8 @@ function DayBars({ data }: { data: HabitsResponse }) {
 }
 
 function HabitRow({ habit }: { habit: Habit }) {
-    const palette = HABIT_PALETTE[habit.color]
+    const colors = useColors()
+    const palette = useHabitPalette()[habit.color]
     const week = habit.done.slice(-WEEK)
 
     return (
@@ -110,7 +117,9 @@ function HabitRow({ habit }: { habit: Habit }) {
                             width: 12,
                             height: 12,
                             borderRadius: 3,
-                            backgroundColor: done ? palette.fill : colors.bgSunken
+                            backgroundColor: done
+                                ? palette.fill
+                                : colors.bgSunken
                         }}
                     />
                 ))}

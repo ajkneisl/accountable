@@ -3,7 +3,7 @@
 
 import { Alert, Pressable, Text, View } from "react-native"
 import type { DayStatus } from "@shared/index"
-import { colors } from "../../../theme"
+import { Palette, useColors } from "../../../theme"
 import { InfoIcon } from "../../../ui/icons"
 import { CardFigure } from "./CardFigure"
 import { Stat } from "./Stat"
@@ -14,6 +14,7 @@ const STREAK_EXPLANATION =
 
 /** Streak count with an info button that explains how days are counted. */
 export function StreakFigure({ streak }: { streak: number }) {
+    const colors = useColors()
     return (
         <Pressable
             accessibilityRole="button"
@@ -35,7 +36,7 @@ export function StreakFigure({ streak }: { streak: number }) {
  * Today is reported as MISS until its goals are met, but the day isn't over — so it
  * renders as an empty outline instead of a miss.
  */
-function dotStyle(s: DayStatus, isToday: boolean) {
+function dotStyle(colors: Palette, s: DayStatus, isToday: boolean) {
     if (isToday && s === "MISS") {
         return { borderWidth: 2, borderColor: colors.ink }
     }
@@ -64,12 +65,13 @@ function LegendItem({
     today?: boolean
     label: string
 }) {
+    const colors = useColors()
     return (
         <View className="flex-row items-center gap-1.5">
             <View
                 style={[
                     { width: 10, height: 10, borderRadius: 2 },
-                    dotStyle(status, today)
+                    dotStyle(colors, status, today)
                 ]}
             />
             <Text className="text-xs text-ink-3">{label}</Text>
@@ -84,20 +86,14 @@ export function StreakSection({
     streak: number
     history: DayStatus[]
 }) {
+    const colors = useColors()
     const perfect = history.filter((s) => s === "ON" || s === "TODAY").length
 
     return (
         <View>
             <View className="flex-row gap-4">
-                <Stat
-                    label="Current"
-                    value={`${streak}d`}
-                    tone="lime"
-                />
-                <Stat
-                    label="Perfect"
-                    value={`${perfect}`}
-                />
+                <Stat label="Current" value={`${streak}d`} tone="lime" />
+                <Stat label="Perfect" value={`${perfect}`} />
             </View>
 
             <View className="mt-4 border-t border-line-2 pt-3.5">
@@ -110,7 +106,7 @@ export function StreakSection({
                             key={i}
                             style={[
                                 { height: 22, borderRadius: 4 },
-                                dotStyle(s, i === history.length - 1)
+                                dotStyle(colors, s, i === history.length - 1)
                             ]}
                             className="flex-1"
                         />

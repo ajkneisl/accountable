@@ -1,7 +1,8 @@
 // Root layout — the native equivalent of web's main.tsx + App.tsx bootstrap.
 //
 // Restores the session from the stored tokens before rendering any route, so the
-// first screen the user sees is already the right one.
+// first screen the user sees is already the right one. Also applies the light or
+// dark theme to everything below it.
 
 import { useEffect, useState } from "react"
 import { View } from "react-native"
@@ -13,10 +14,25 @@ import { useSetAtom } from "jotai"
 import { ApiProvider, syncTimezone, useApi } from "@shared/index"
 import { apiConfig, restoreSession, userAtom } from "../auth"
 import { Spinner } from "../ui/primitives"
-import { colors } from "../theme"
+import {
+    type Palette,
+    restoreAppearance,
+    themeVars,
+    useColors,
+    useScheme
+} from "../theme"
 // Defines the background sync task, which iOS may run before anything renders.
 import "../features/integration/backgroundSync"
 import "../../global.css"
+
+// Re-apply the appearance picked in Settings as early as possible.
+void restoreAppearance()
+
+/** Feeds the scheme's palette to every NativeWind color class below it. */
+function ThemeRoot({ children }: { children: React.ReactNode }) {
+    const scheme = useScheme()
+    return <View style={[{ flex: 1 }, themeVars[scheme]]}>{children}</View>
+}
 
 function Bootstrap({ children }: { children: React.ReactNode }) {
     const api = useApi()
@@ -57,33 +73,40 @@ function Bootstrap({ children }: { children: React.ReactNode }) {
 // Native header on the auth forms, so they get the iOS back button and swipe-back.
 // Opaque rather than transparent: a transparent header makes the form inset
 // itself under it, and that inset stacks with the keyboard's.
-const authHeader = {
-    headerShown: true,
-    headerTitle: "",
-    headerStyle: { backgroundColor: colors.bg },
-    headerShadowVisible: false,
-    headerBackButtonDisplayMode: "minimal",
-    headerTintColor: colors.ink
-} as const
+const authHeader = (colors: Palette) =>
+    ({
+        headerShown: true,
+        headerTitle: "",
+        headerStyle: { backgroundColor: colors.bg },
+        headerShadowVisible: false,
+        headerBackButtonDisplayMode: "minimal",
+        headerTintColor: colors.ink
+    }) as const
 
 export default function RootLayout() {
+    const colors = useColors()
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
             <SafeAreaProvider>
                 <ApiProvider config={apiConfig}>
-                    <StatusBar style="dark" />
-                    <Bootstrap>
-                        <Stack screenOptions={{ headerShown: false }}>
-                            <Stack.Screen name="index" />
-                            <Stack.Screen name="welcome" />
-                            <Stack.Screen name="login" options={authHeader} />
-                            <Stack.Screen
-                                name="register"
-                                options={authHeader}
-                            />
-                            <Stack.Screen name="(app)" />
-                        </Stack>
-                    </Bootstrap>
+                    <StatusBar style="auto" />
+                    <ThemeRoot>
+                        <Bootstrap>
+                            <Stack screenOptions={{ headerShown: false }}>
+                                <Stack.Screen name="index" />
+                                <Stack.Screen name="welcome" />
+                                <Stack.Screen
+                                    name="login"
+                                    options={authHeader(colors)}
+                                />
+                                <Stack.Screen
+                                    name="register"
+                                    options={authHeader(colors)}
+                                />
+                                <Stack.Screen name="(app)" />
+                            </Stack>
+                        </Bootstrap>
+                    </ThemeRoot>
                 </ApiProvider>
             </SafeAreaProvider>
         </GestureHandlerRootView>

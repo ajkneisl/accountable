@@ -7,9 +7,10 @@
 // Glass bar (and it floats over content that scrolls beneath it).
 
 import { NativeTabs } from "expo-router/unstable-native-tabs"
-import { colors } from "../../../theme"
+import { useColors } from "../../../theme"
 
 export default function TabsLayout() {
+    const colors = useColors()
     return (
         <NativeTabs tintColor={colors.ink} minimizeBehavior="onScrollDown">
             <NativeTabs.Trigger name="dashboard">

@@ -5,11 +5,12 @@
 
 import { Text, View } from "react-native"
 import { router } from "expo-router"
-import { colors } from "../theme"
+import { useColors } from "../theme"
 import { CircleButton } from "./CircleButton"
 import { BackChevronIcon } from "./icons"
 
 export function BackBar({ label = "Back" }: { label?: string }) {
+    const colors = useColors()
     return (
         // Sits 4pt higher so it lines up with the top-right buttons.
         <View className="-mt-1 max-w-[60%] self-start">

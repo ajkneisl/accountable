@@ -6,7 +6,7 @@
 // DST shifts can't nudge a day across a boundary.
 
 import type { HabitColor } from "@shared/index"
-import { colors } from "../../theme"
+import { type Palette, palettes, type Scheme, useScheme } from "../../theme"
 
 const DAY_MS = 86_400_000
 
@@ -54,70 +54,94 @@ export function buildGrid(
     )
 }
 
-/**
- * Fill, soft tint and ink for a habit's accent. `dark` marks fills that need a
- * light foreground (e.g. the check mark) to stay visible.
- */
-export const HABIT_PALETTE: Record<
-    HabitColor,
-    { fill: string; soft: string; ink: string; label: string; dark: boolean }
-> = {
-    LIME: {
-        fill: colors.lime,
-        soft: colors.limeSoft,
-        ink: colors.limeInk,
-        label: "Lime",
-        dark: false
-    },
-    CORAL: {
-        fill: colors.coral,
-        soft: colors.coralSoft,
-        ink: colors.coralInk,
-        label: "Coral",
-        dark: false
-    },
-    INDIGO: {
-        fill: colors.indigo,
-        soft: "#dfe3f7",
-        ink: colors.indigo,
-        label: "Indigo",
-        dark: true
-    },
-    INK: {
-        fill: colors.ink,
-        soft: colors.line,
-        ink: colors.ink,
-        label: "Ink",
-        dark: true
-    },
-    AMBER: {
-        fill: "#f5b82e",
-        soft: "#fdefc8",
-        ink: "#6b4700",
-        label: "Amber",
-        dark: false
-    },
-    TEAL: {
-        fill: "#14a39a",
-        soft: "#d2f1ee",
-        ink: "#00524c",
-        label: "Teal",
-        dark: false
-    },
-    SKY: {
-        fill: "#4aa8f0",
-        soft: "#dcecfb",
-        ink: "#0b4a7a",
-        label: "Sky",
-        dark: false
-    },
-    PLUM: {
-        fill: "#8e3fa8",
-        soft: "#efdff5",
-        ink: "#8e3fa8",
-        label: "Plum",
-        dark: true
+export type HabitSwatch = {
+    fill: string
+    soft: string
+    ink: string
+    label: string
+    /** The fill needs a light foreground (e.g. the check mark) to stay visible. */
+    dark: boolean
+}
+
+/** Fill, soft tint and ink for each accent, built from a scheme's palette. */
+function habitPalette(
+    c: Palette,
+    scheme: Scheme
+): Record<HabitColor, HabitSwatch> {
+    const night = scheme === "dark"
+    return {
+        LIME: {
+            fill: c.lime,
+            soft: c.limeSoft,
+            ink: c.limeInk,
+            label: "Lime",
+            dark: false
+        },
+        CORAL: {
+            fill: c.coral,
+            soft: c.coralSoft,
+            ink: c.coralInk,
+            label: "Coral",
+            dark: false
+        },
+        INDIGO: {
+            fill: c.indigo,
+            soft: night ? "#232a4d" : "#dfe3f7",
+            ink: c.indigo,
+            label: "Indigo",
+            // Lightened for the dark background, so a dark check reads on it.
+            dark: !night
+        },
+        // Ink follows the text color: near-black by day, near-white at night.
+        INK: {
+            fill: c.ink,
+            soft: c.line,
+            ink: c.ink,
+            label: "Ink",
+            dark: !night
+        },
+        AMBER: {
+            fill: "#f5b82e",
+            soft: night ? "#3d2f0e" : "#fdefc8",
+            ink: night ? "#f8d98a" : "#6b4700",
+            label: "Amber",
+            dark: false
+        },
+        TEAL: {
+            fill: "#14a39a",
+            soft: night ? "#0f2f2c" : "#d2f1ee",
+            ink: night ? "#7fd8d1" : "#00524c",
+            label: "Teal",
+            dark: false
+        },
+        SKY: {
+            fill: "#4aa8f0",
+            soft: night ? "#132c40" : "#dcecfb",
+            ink: night ? "#9fd0f7" : "#0b4a7a",
+            label: "Sky",
+            dark: false
+        },
+        PLUM: {
+            fill: night ? "#b267cc" : "#8e3fa8",
+            soft: night ? "#33203b" : "#efdff5",
+            ink: night ? "#d9a8ea" : "#8e3fa8",
+            label: "Plum",
+            dark: true
+        }
     }
+}
+
+export const HABIT_PALETTES: Record<Scheme, Record<HabitColor, HabitSwatch>> = {
+    light: habitPalette(palettes.light, "light"),
+    dark: habitPalette(palettes.dark, "dark")
+}
+
+/** The light palette, for the widgets (which pick their own dark colors). */
+export const HABIT_PALETTE = HABIT_PALETTES.light
+
+/** The habit palette for the scheme the app is showing. */
+export function useHabitPalette(): Record<HabitColor, HabitSwatch> {
+    return HABIT_PALETTES[useScheme()]
 }
 
 export const HABIT_COLORS = Object.keys(HABIT_PALETTE) as HabitColor[]

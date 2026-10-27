@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Pressable, Text, View } from "react-native"
 import { router } from "expo-router"
 import { type Goal, type GoalWeek, getGoalWeek, useApi } from "@shared/index"
+import { useScheme } from "../../../theme"
 import {
     Button,
     Card,
@@ -89,6 +90,7 @@ export function GoalCard({
     onEdit?: () => void
 }) {
     const api = useApi()
+    const scheme = useScheme()
     const visual = integrationVisual(goal.integration)
     const unit = unitLabel(goal.integration, goal.metric)
 
@@ -187,7 +189,7 @@ export function GoalCard({
                         {goal.competition && (
                             <CompetitionChip
                                 competition={goal.competition}
-                                color={goalFill(goal)}
+                                color={goalFill(goal, scheme)}
                             />
                         )}
                     </View>
@@ -235,7 +237,7 @@ export function GoalCard({
                 vals={vals}
                 target={dailyTargetFor(goal)}
                 limit={isLimit(goal.integration, goal.metric)}
-                color={goalFill(goal)}
+                color={goalFill(goal, scheme)}
             />
 
             <View className="flex-row items-center justify-between">

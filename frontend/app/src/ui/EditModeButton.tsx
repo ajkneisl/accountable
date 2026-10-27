@@ -1,7 +1,7 @@
 // Top-right toggle for a tab's edit mode: a pencil to start editing, a check to
 // finish. While it's on, the tab's cards show their Edit buttons.
 
-import { colors } from "../theme"
+import { useColors } from "../theme"
 import { CircleButton } from "./CircleButton"
 import { CheckIcon, PencilIcon } from "./icons"
 
@@ -15,6 +15,7 @@ export function EditModeButton({
     noun: string
     onChange: (editing: boolean) => void
 }) {
+    const colors = useColors()
     return (
         <CircleButton
             label={editing ? `Done editing ${noun}` : `Edit ${noun}`}

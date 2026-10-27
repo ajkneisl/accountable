@@ -6,7 +6,7 @@
 import { useState } from "react"
 import { ActivityIndicator } from "react-native"
 import { refreshAllIntegrations, useApi } from "@shared/index"
-import { colors } from "../../../theme"
+import { useColors } from "../../../theme"
 import { CircleButton } from "../../../ui/CircleButton"
 import { RefreshIcon } from "../../../ui/icons"
 import { useAppData } from "../../common/AppData"
@@ -15,6 +15,7 @@ import { useAppleHealth } from "../../health/AppleHealthData"
 import { useScreenTime } from "../../screenTime/ScreenTimeData"
 
 export function SyncAllButton() {
+    const colors = useColors()
     const api = useApi()
     const { reload } = useAppData()
     const habits = useHabits()

@@ -11,13 +11,10 @@ import {
     useApi
 } from "@shared/index"
 import { useAppData } from "../common/AppData"
-import {
-    formatRefreshed,
-    integrationVisual
-} from "../dashboard/types"
+import { formatRefreshed, integrationVisual } from "../dashboard/types"
 import { useAppleHealth } from "../health/AppleHealthData"
 import { useScreenTime } from "../screenTime/ScreenTimeData"
-import { colors } from "../../theme"
+import { useColors } from "../../theme"
 import { BoxButton } from "../../ui/BoxButton"
 import { RefreshIcon } from "../../ui/icons"
 import {
@@ -244,6 +241,7 @@ function ScreenTimeCard() {
 }
 
 export function IntegrationsPanel() {
+    const colors = useColors()
     const api = useApi()
     const { data, loading, reload } = useAppData()
     const [refreshingAll, setRefreshingAll] = useState(false)

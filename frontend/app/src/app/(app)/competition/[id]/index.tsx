@@ -24,7 +24,7 @@ import { CircleButton } from "../../../../ui/CircleButton"
 import { Screen } from "../../../../ui/Screen"
 import { GearIcon, PlusIcon } from "../../../../ui/icons"
 import { Card, Display, ErrorList, Mono } from "../../../../ui/primitives"
-import { colors as theme } from "../../../../theme"
+import { useColors, useScheme } from "../../../../theme"
 
 function messageFor(err: unknown): string {
     if (err instanceof ApiError) return err.messages.join(", ")
@@ -34,6 +34,8 @@ function messageFor(err: unknown): string {
 
 export default function Competition() {
     const api = useApi()
+    const theme = useColors()
+    const scheme = useScheme()
     const { id } = useLocalSearchParams<{ id: string }>()
     const user = useAtomValue(userAtom)
 
@@ -74,9 +76,7 @@ export default function Competition() {
 
     const isOwner = detail?.ownerID === user?.userID
 
-    const colors = detail
-        ? buildColorMap(detail.members)
-        : {}
+    const colors = detail ? buildColorMap(detail.members, scheme) : {}
 
     /** Hand the join code to the share sheet, ready to send. */
     function shareJoinCode() {

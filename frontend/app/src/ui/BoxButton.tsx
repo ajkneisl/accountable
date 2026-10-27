@@ -4,7 +4,7 @@
 
 import type { ReactNode } from "react"
 import { ActivityIndicator, Pressable } from "react-native"
-import { colors } from "../theme"
+import { useColors } from "../theme"
 
 export function BoxButton({
     label,
@@ -21,6 +21,7 @@ export function BoxButton({
     /** The icon. */
     children: ReactNode
 }) {
+    const colors = useColors()
     return (
         <Pressable
             onPress={onPress}

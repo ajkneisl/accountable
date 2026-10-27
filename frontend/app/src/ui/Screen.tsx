@@ -3,11 +3,8 @@
 
 import { type ReactNode, useEffect, useRef, useState } from "react"
 import { RefreshControl, ScrollView, View } from "react-native"
-import {
-    SafeAreaView,
-    useSafeAreaInsets
-} from "react-native-safe-area-context"
-import { colors } from "../theme"
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
+import { useColors } from "../theme"
 
 export function Screen({
     children,
@@ -30,6 +27,7 @@ export function Screen({
     /** Floats over the bottom-right corner, e.g. an add button; stays put while the content scrolls. */
     bottomRight?: ReactNode
 }) {
+    const colors = useColors()
     // Inside native tabs the bottom inset includes the floating tab bar, so
     // padding by it lets the last card scroll clear of the bar. A floating
     // button needs room too, so the last card can scroll out from under it.
@@ -78,7 +76,11 @@ export function Screen({
             </ScrollView>
             {bottomRight !== undefined && (
                 <View
-                    style={{ position: "absolute", right: 20, bottom: insets.bottom + 12 }}
+                    style={{
+                        position: "absolute",
+                        right: 20,
+                        bottom: insets.bottom + 12
+                    }}
                 >
                     {bottomRight}
                 </View>

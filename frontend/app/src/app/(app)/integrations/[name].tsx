@@ -24,7 +24,7 @@ import {
 } from "../../../features/dashboard/types"
 import { AddWorkoutSheet } from "../../../features/integration/components/AddWorkoutSheet"
 import { WorkoutCard } from "../../../features/integration/components/WorkoutCard"
-import { colors } from "../../../theme"
+import { useColors } from "../../../theme"
 import { BackBar } from "../../../ui/BackBar"
 import { Screen } from "../../../ui/Screen"
 import {
@@ -123,8 +123,8 @@ function ConfigCard({
                 </Text>
             ) : name === APPLE_STEPS ? (
                 <Text className="text-[13px] text-ink-3">
-                    Steps come from Apple Health, connect it on the
-                    Integrations tab.
+                    Steps come from Apple Health, connect it on the Integrations
+                    tab.
                 </Text>
             ) : name === SCREEN_TIME ? (
                 <Text className="text-[13px] text-ink-3">
@@ -232,6 +232,7 @@ function HistoryCard({
     history: IntegrationHistoryDay[]
     loading: boolean
 }) {
+    const colors = useColors()
     const max = Math.max(1, ...history.map(dayValue))
     return (
         <Card className="p-5">

@@ -4,7 +4,8 @@
 
 import type { Goal, GoalColor } from "@shared/index"
 import type { TileVariant } from "../../ui/primitives"
-import { HABIT_PALETTE } from "../habits/grid"
+import type { Scheme } from "../../theme"
+import { HABIT_PALETTES } from "../habits/grid"
 
 /** Stable per-integration display badge. */
 export const INTEGRATION_VISUAL: Record<
@@ -44,9 +45,9 @@ export function goalColor(
     return goal.color ?? TILE_COLOR[integrationVisual(goal.integration).tile]
 }
 
-/** Fill color for {@link goalColor}. */
-export function goalFill(goal: Goal): string {
-    return HABIT_PALETTE[goalColor(goal)].fill
+/** Fill color for {@link goalColor}, in [scheme]'s palette. */
+export function goalFill(goal: Goal, scheme: Scheme = "light"): string {
+    return HABIT_PALETTES[scheme][goalColor(goal)].fill
 }
 
 /** Pretty unit name for a (integration, metric) pair. */

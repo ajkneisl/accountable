@@ -6,6 +6,7 @@ import { Pressable, Text, View } from "react-native"
 import { router } from "expo-router"
 import type { CompetitionDetail } from "@shared/index"
 import { Card, Eyebrow, Mono } from "../../../ui/primitives"
+import { useScheme } from "../../../theme"
 import { buildColorMap, onMemberFill } from "../../competition/colors"
 import { CardFigure } from "./CardFigure"
 
@@ -22,7 +23,8 @@ export function CompetitionCard({
     total: number
     meID: string | undefined
 }) {
-    const colorMap = buildColorMap(competition.members)
+    const scheme = useScheme()
+    const colorMap = buildColorMap(competition.members, scheme)
     const ranked = [...competition.members].sort((a, b) => b.streak - a.streak)
     const shown = ranked.slice(0, MAX_ROWS)
     const hidden = ranked.length - shown.length
@@ -81,7 +83,10 @@ export function CompetitionCard({
                                 >
                                     <Text
                                         style={{
-                                            color: onMemberFill(colorMap[m.userID])
+                                            color: onMemberFill(
+                                                colorMap[m.userID],
+                                                scheme
+                                            )
                                         }}
                                         className="text-[11px] font-bold"
                                     >

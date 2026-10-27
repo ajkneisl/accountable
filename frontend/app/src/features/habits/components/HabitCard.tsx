@@ -4,10 +4,10 @@
 
 import { Pressable, Text, View } from "react-native"
 import type { Habit } from "@shared/index"
-import { colors } from "../../../theme"
+import { onFill } from "../../../theme"
 import { CheckIcon } from "../../../ui/icons"
 import { Button, Card, Mono } from "../../../ui/primitives"
-import { HABIT_PALETTE } from "../grid"
+import { useHabitPalette } from "../grid"
 import { Heatmap } from "./Heatmap"
 
 const CHECK = 38
@@ -26,10 +26,10 @@ export function HabitCard({
     /** Opens the edit sheet; passed only while the Habits tab is in edit mode. */
     onEdit?: () => void
 }) {
-    const palette = HABIT_PALETTE[habit.color]
+    const palette = useHabitPalette()[habit.color]
     const doneToday = habit.done[habit.done.length - 1] ?? false
     // Dark fills need a light check to stay visible.
-    const checkColor = palette.dark ? colors.bg : colors.ink
+    const checkColor = palette.dark ? onFill.dark : onFill.light
 
     return (
         <Card className="gap-4 p-5">

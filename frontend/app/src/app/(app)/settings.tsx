@@ -24,7 +24,7 @@ import {
     ChangePasswordSheet,
     DeleteAccountSheet
 } from "../../features/account/AccountSheets"
-import { HABIT_PALETTE } from "../../features/habits/grid"
+import { useHabitPalette } from "../../features/habits/grid"
 import { IntegrationsPanel } from "../../features/integration/IntegrationsPanel"
 import {
     enablePushes,
@@ -32,9 +32,15 @@ import {
     pushSupported,
     type PushPermission
 } from "../../features/notifications/notifications"
-import { colors } from "../../theme"
+import {
+    type AppearanceChoice,
+    onFill,
+    useAppearance,
+    useColors
+} from "../../theme"
 import { BackBar } from "../../ui/BackBar"
 import { confirm } from "../../ui/confirm"
+import { CheckIcon } from "../../ui/icons"
 import { Screen } from "../../ui/Screen"
 import { Button, Card, Display, ErrorList } from "../../ui/primitives"
 import { Row, Section } from "../../ui/SettingsList"
@@ -105,6 +111,7 @@ function SwitchRow({
     first?: boolean
     onChange: (on: boolean) => void
 }) {
+    const colors = useColors()
     return (
         <View
             className={`flex-row items-center justify-between gap-4 py-2.5 ${
@@ -128,6 +135,40 @@ const NOTIFICATIONS: { kind: NotificationKind; label: string }[] = [
     { kind: "STREAK_RISK", label: "Streak reminder" },
     { kind: "COMPETITION_RECAP", label: "Competition recap" }
 ]
+
+const APPEARANCES: { choice: AppearanceChoice; label: string }[] = [
+    { choice: "system", label: "System" },
+    { choice: "light", label: "Light" },
+    { choice: "dark", label: "Dark" }
+]
+
+/** Light, dark, or whatever the phone is set to. */
+function AppearanceSection() {
+    const colors = useColors()
+    const [appearance, setAppearance] = useAppearance()
+
+    return (
+        <Section title="Appearance">
+            {APPEARANCES.map(({ choice, label }, i) => {
+                const selected = appearance === choice
+                return (
+                    <Pressable
+                        key={choice}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected }}
+                        onPress={() => setAppearance(choice)}
+                        className={`flex-row items-center justify-between py-3.5 ${
+                            i === 0 ? "" : "border-t border-line-2"
+                        }`}
+                    >
+                        <Text className="text-[15px] text-ink">{label}</Text>
+                        {selected && <CheckIcon color={colors.ink} size={18} />}
+                    </Pressable>
+                )
+            })}
+        </Section>
+    )
+}
 
 function NotificationsSection() {
     const api = useApi()
@@ -311,7 +352,7 @@ function GeneralTab() {
     const close = () => setSheet(null)
     const initial = (user?.username[0] ?? "?").toUpperCase()
     // A user signed in before colors existed has none until the next refresh.
-    const palette = HABIT_PALETTE[user?.color ?? "LIME"]
+    const palette = useHabitPalette()[user?.color ?? "LIME"]
 
     async function onSignOut() {
         const ok = await confirm(
@@ -331,7 +372,9 @@ function GeneralTab() {
                     className="h-14 w-14 items-center justify-center rounded-full"
                 >
                     <Text
-                        style={{ color: palette.dark ? colors.bg : colors.ink }}
+                        style={{
+                            color: palette.dark ? onFill.dark : onFill.light
+                        }}
                         className="text-[22px] font-bold"
                     >
                         {initial}
@@ -380,6 +423,8 @@ function GeneralTab() {
                     onPress={() => setSheet("password")}
                 />
             </Section>
+
+            <AppearanceSection />
 
             <NotificationsSection />
 

@@ -16,7 +16,7 @@ import {
     type ViewProps
 } from "react-native"
 import Svg, { Circle, Line, Path, Polyline } from "react-native-svg"
-import { colors, type Tone } from "../theme"
+import { onFill, type Palette, type Tone, useColors } from "../theme"
 
 export type { Tone }
 /** Retained under the web's name so ported components read the same. */
@@ -146,7 +146,7 @@ const BUTTON_BG: Record<ButtonVariant, string> = {
 
 const BUTTON_FG: Record<ButtonVariant, string> = {
     primary: "text-bg",
-    accent: "text-ink",
+    accent: "text-on-fill",
     line: "text-ink",
     ghost: "text-ink",
     danger: "text-white"
@@ -183,6 +183,7 @@ export function Button({
     busy?: boolean
     className?: string
 }) {
+    const colors = useColors()
     const inactive = disabled || busy
     return (
         <Pressable
@@ -197,9 +198,13 @@ export function Button({
                 <ActivityIndicator
                     size="small"
                     color={
-                        variant === "primary" || variant === "danger"
-                            ? colors.bg
-                            : colors.ink
+                        variant === "danger"
+                            ? "#ffffff"
+                            : variant === "primary"
+                              ? colors.bg
+                              : variant === "accent"
+                                ? onFill.light
+                                : colors.ink
                     }
                 />
             )}
@@ -229,6 +234,7 @@ export function IconButton({
     label: string
     size?: number
 }) {
+    const colors = useColors()
     return (
         <Pressable
             onPress={onPress}
@@ -301,6 +307,7 @@ export function Input({
     style,
     ...rest
 }: TextInputProps & { className?: string }) {
+    const colors = useColors()
     return (
         <TextInput
             placeholderTextColor={colors.ink3}
@@ -363,6 +370,7 @@ export function Dot({ color, size = 8 }: { color: string; size?: number }) {
 /* ------------------------------------------------------------------ chrome */
 
 export function Spinner({ size = 14 }: { size?: number }) {
+    const colors = useColors()
     return (
         <ActivityIndicator
             size={size > 20 ? "large" : "small"}
@@ -373,6 +381,7 @@ export function Spinner({ size = 14 }: { size?: number }) {
 
 /** Wordmark lockup — a lime dot + "Accountable". */
 export function AccLogo({ size = 18 }: { size?: number }) {
+    const colors = useColors()
     const dot = size * 0.78
     return (
         <View className="flex-row items-center gap-2">
@@ -393,7 +402,7 @@ export function AccLogo({ size = 18 }: { size?: number }) {
                         width: dot * 0.42,
                         height: dot * 0.42,
                         borderRadius: dot,
-                        backgroundColor: colors.ink
+                        backgroundColor: onFill.light
                     }}
                 />
             </View>
@@ -410,6 +419,7 @@ export function AccLogo({ size = 18 }: { size?: number }) {
 /* -------------------------------------------------------- integration marks */
 
 function GitHubIcon({ size = 22 }: { size?: number }) {
+    const colors = useColors()
     return (
         <Svg width={size} height={size} viewBox="0 0 24 24">
             <Path
@@ -421,6 +431,7 @@ function GitHubIcon({ size = 22 }: { size?: number }) {
 }
 
 function LeetCodeIcon({ size = 22 }: { size?: number }) {
+    const colors = useColors()
     return (
         <Svg width={size} height={size} viewBox="0 0 24 24">
             <Polyline
@@ -453,6 +464,7 @@ function LeetCodeIcon({ size = 22 }: { size?: number }) {
 }
 
 function WorkoutIcon({ size = 24 }: { size?: number }) {
+    const colors = useColors()
     const props = {
         stroke: colors.ink,
         strokeWidth: 2,
@@ -471,6 +483,7 @@ function WorkoutIcon({ size = 24 }: { size?: number }) {
 }
 
 function SleepIcon({ size = 24 }: { size?: number }) {
+    const colors = useColors()
     return (
         <Svg width={size} height={size} viewBox="0 0 24 24">
             <Path
@@ -485,6 +498,7 @@ function SleepIcon({ size = 24 }: { size?: number }) {
 }
 
 function StepsIcon({ size = 24 }: { size?: number }) {
+    const colors = useColors()
     const props = {
         stroke: colors.ink,
         strokeWidth: 2,
@@ -508,6 +522,7 @@ function StepsIcon({ size = 24 }: { size?: number }) {
 }
 
 function ScreenTimeIcon({ size = 24 }: { size?: number }) {
+    const colors = useColors()
     const props = {
         stroke: colors.ink,
         strokeWidth: 2,
@@ -553,17 +568,17 @@ export function IntegrationIcon({
     }
 }
 
-const TILE_BG: Record<Exclude<TileVariant, "">, string> = {
-    ink: colors.ink,
-    lime: colors.limeSoft,
-    coral: colors.coralSoft
-}
+const tileBg = (c: Palette): Record<Exclude<TileVariant, "">, string> => ({
+    ink: c.ink,
+    lime: c.limeSoft,
+    coral: c.coralSoft
+})
 
-const TILE_FG: Record<Exclude<TileVariant, "">, string> = {
-    ink: colors.bg,
-    lime: colors.limeInk,
-    coral: colors.coralInk
-}
+const tileFg = (c: Palette): Record<Exclude<TileVariant, "">, string> => ({
+    ink: c.bg,
+    lime: c.limeInk,
+    coral: c.coralInk
+})
 
 /**
  * Rounded badge standing in for a source's brand mark. An [icon] renders on the
@@ -582,6 +597,7 @@ export function SourceTile({
     /** "sm" renders the compact 30px tile. */
     size?: "sm" | "md"
 }) {
+    const colors = useColors()
     const px = size === "sm" ? 30 : 44
     const tinted = variant !== "" && !icon
     return (
@@ -590,7 +606,9 @@ export function SourceTile({
                 width: px,
                 height: px,
                 borderRadius: size === "sm" ? 9 : 12,
-                backgroundColor: tinted ? TILE_BG[variant] : colors.bgSunken
+                backgroundColor: tinted
+                    ? tileBg(colors)[variant]
+                    : colors.bgSunken
             }}
             className="items-center justify-center"
         >
@@ -599,7 +617,7 @@ export function SourceTile({
                     style={{
                         fontFamily: MONO,
                         fontSize: size === "sm" ? 11 : 14,
-                        color: tinted ? TILE_FG[variant] : colors.ink
+                        color: tinted ? tileFg(colors)[variant] : colors.ink
                     }}
                     className="font-semibold"
                 >
@@ -615,7 +633,7 @@ export function SourceTile({
 /** Rounded progress track. Mirrors `.bar`. */
 export function Bar({
     pct,
-    color = colors.lime,
+    color,
     height = 8,
     track,
     children
@@ -628,6 +646,7 @@ export function Bar({
     /** Overlay drawn on top of the fill, e.g. a pace marker. */
     children?: ReactNode
 }) {
+    const colors = useColors()
     return (
         // No flex here: these bars sit in column layouts, where `flex-1` would set
         // flexBasis:0 and fight the explicit height. Stretching fills the width.
@@ -645,7 +664,7 @@ export function Bar({
                     width: `${Math.min(100, Math.max(0, pct))}%`,
                     height: "100%",
                     borderRadius: height,
-                    backgroundColor: color
+                    backgroundColor: color ?? colors.lime
                 }}
             />
             {children}
@@ -665,6 +684,7 @@ export function RingChart({
     tone?: Tone
     size?: number
 }) {
+    const colors = useColors()
     const stroke = 14
     const r = size / 2 - stroke / 2 - 1
     const c = 2 * Math.PI * r
