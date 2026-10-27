@@ -36,6 +36,9 @@ import {
 /** Opening the app syncs only when the last sync is older than this. */
 const STALE_MS = 5 * 60_000
 
+/** iOS settles its Screen Time status shortly after launch; check again then. */
+const RECHECK_MS = 2_000
+
 /** The mounted provider's sync, if any. */
 const syncListeners = new Set<() => void>()
 
@@ -91,6 +94,22 @@ export function ScreenTimeProvider({ children }: { children: ReactNode }) {
     const [error, setError] = useState<string | null>(null)
     const inFlight = useRef(false)
     const lastSyncRef = useRef<number | null>(null)
+
+    // Re-read the native state after launch settles and on every return to the
+    // foreground, so a wrong first read (or access revoked in Settings) corrects
+    // itself instead of lasting the whole session.
+    useEffect(() => {
+        if (!supported) return
+        const recheck = () => setConnected(isScreenTimeConnected())
+        const timer = setTimeout(recheck, RECHECK_MS)
+        const sub = AppState.addEventListener("change", (state) => {
+            if (state === "active") recheck()
+        })
+        return () => {
+            clearTimeout(timer)
+            sub.remove()
+        }
+    }, [supported])
 
     const sync = useCallback(async () => {
         if (inFlight.current) return

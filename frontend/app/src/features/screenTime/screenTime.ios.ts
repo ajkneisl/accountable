@@ -34,10 +34,16 @@ export function isScreenTimeSupported(): boolean {
     return native !== null
 }
 
+/**
+ * Whether Screen Time is set up: apps picked and the monitor running. Right
+ * after launch or an update, iOS can report access as "notDetermined" for a
+ * moment before it loads the real answer, so only an outright "denied" counts
+ * against it; a running monitor already proves access was granted.
+ */
 export function isScreenTimeConnected(): boolean {
     return (
         native !== null &&
-        native.authorizationStatus() === "approved" &&
+        native.authorizationStatus() !== "denied" &&
         native.hasSelection() &&
         native.isMonitoring()
     )
