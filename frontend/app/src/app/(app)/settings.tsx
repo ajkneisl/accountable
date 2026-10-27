@@ -94,14 +94,12 @@ function Segmented({
 
 function SwitchRow({
     label,
-    detail,
     value,
     disabled = false,
     first = false,
     onChange
 }: {
     label: string
-    detail: string
     value: boolean
     disabled?: boolean
     first?: boolean
@@ -113,10 +111,7 @@ function SwitchRow({
                 first ? "" : "border-t border-line-2"
             }`}
         >
-            <View className="flex-1">
-                <Text className="text-[15px] text-ink">{label}</Text>
-                <Text className="text-[12px] text-ink-3">{detail}</Text>
-            </View>
+            <Text className="flex-1 text-[15px] text-ink">{label}</Text>
             <Switch
                 accessibilityLabel={label}
                 value={value}
@@ -128,26 +123,10 @@ function SwitchRow({
     )
 }
 
-const NOTIFICATIONS: {
-    kind: NotificationKind
-    label: string
-    detail: string
-}[] = [
-    {
-        kind: "GOALS_STATUS",
-        label: "Goals check-in",
-        detail: "5 PM · how today's goals and habits stand"
-    },
-    {
-        kind: "STREAK_RISK",
-        label: "Streak reminder",
-        detail: "9 PM · only when a streak would end tonight"
-    },
-    {
-        kind: "COMPETITION_RECAP",
-        label: "Competition recap",
-        detail: "Mondays 9 AM · where you finished last week"
-    }
+const NOTIFICATIONS: { kind: NotificationKind; label: string }[] = [
+    { kind: "GOALS_STATUS", label: "Goals check-in" },
+    { kind: "STREAK_RISK", label: "Streak reminder" },
+    { kind: "COMPETITION_RECAP", label: "Competition recap" }
 ]
 
 function NotificationsSection() {
@@ -217,21 +196,13 @@ function NotificationsSection() {
     }
 
     return (
-        <Section
-            title="Notifications"
-            footer={
-                permission === "granted"
-                    ? "Times are in your account's time zone."
-                    : undefined
-            }
-        >
+        <Section title="Notifications">
             {permission === "granted" ? (
                 NOTIFICATIONS.map((n, i) => (
                     <SwitchRow
                         key={n.kind}
                         first={i === 0}
                         label={n.label}
-                        detail={n.detail}
                         value={settings?.enabled[n.kind] ?? true}
                         disabled={settings === null}
                         onChange={(on) => void toggle(n.kind, on)}

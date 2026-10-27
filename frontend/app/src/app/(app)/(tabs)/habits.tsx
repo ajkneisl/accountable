@@ -1,9 +1,12 @@
 // Habits — custom daily habits with a heatmap each. State lives in
-// HabitsProvider (mounted above the tabs) so the widget stays fresh.
+// HabitsProvider (mounted above the tabs) so the widget stays fresh. The pencil
+// in the top right toggles edit mode, which gives each habit an Edit button.
 
+import { useState } from "react"
 import { Text, View } from "react-native"
 import { HabitCard } from "../../../features/habits/components/HabitCard"
 import { useHabits } from "../../../features/habits/HabitsData"
+import { EditModeButton } from "../../../ui/EditModeButton"
 import { EmptyState } from "../../../ui/EmptyState"
 import { Screen } from "../../../ui/Screen"
 import { SettingsButton } from "../../../ui/SettingsButton"
@@ -20,14 +23,28 @@ export default function Habits() {
         openEditHabit
     } = useHabits()
     const habits = data?.habits ?? []
+    const [editing, setEditing] = useState(false)
+    // Nothing left to edit (e.g. the last habit was just deleted): leave edit mode.
+    const editMode = editing && habits.length > 0
 
     return (
         <Screen
             refreshing={loading && data !== null}
             onRefresh={reload}
-            topRight={<SettingsButton />}
+            topRight={
+                <View className="flex-row gap-2.5">
+                    {habits.length > 0 && (
+                        <EditModeButton
+                            editing={editMode}
+                            noun="habits"
+                            onChange={setEditing}
+                        />
+                    )}
+                    <SettingsButton />
+                </View>
+            }
         >
-            <View className="gap-1.5 pr-12">
+            <View className="gap-1.5 pr-24">
                 <Display size={32}>Habits</Display>
             </View>
 
@@ -59,7 +76,9 @@ export default function Habits() {
                         start={data.start}
                         today={data.today}
                         onToggle={(date, done) => toggle(habit.id, date, done)}
-                        onEdit={() => openEditHabit(habit.id)}
+                        onEdit={
+                            editMode ? () => openEditHabit(habit.id) : undefined
+                        }
                     />
                 ))}
 

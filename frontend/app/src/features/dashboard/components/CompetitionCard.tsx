@@ -29,8 +29,6 @@ export function CompetitionCard({
     const myRank = ranked.findIndex((m) => m.userID === meID)
 
     const members = competition.members.length
-    const goals = competition.goals.length
-    const subtitle = `${members} member${members === 1 ? "" : "s"} · ${goals} goal${goals === 1 ? "" : "s"}`
 
     return (
         <Pressable
@@ -44,7 +42,7 @@ export function CompetitionCard({
         >
             <Card className="p-5">
                 {/* Laid out like the Habits card: the figure sits beside the
-                    eyebrow, name and subtitle rather than heightening a header. */}
+                    eyebrow and name rather than heightening a header. */}
                 <View className="mb-3.5 flex-row items-start justify-between gap-3">
                     <View className="flex-1">
                         <Eyebrow className="mb-1.5">Competition</Eyebrow>
@@ -53,9 +51,6 @@ export function CompetitionCard({
                             className="text-[18px] font-semibold tracking-tight text-ink"
                         >
                             {competition.name}
-                        </Text>
-                        <Text className="mt-0.5 text-[13px] text-ink-3">
-                            {subtitle}
                         </Text>
                     </View>
                     {myRank >= 0 && members > 1 && (

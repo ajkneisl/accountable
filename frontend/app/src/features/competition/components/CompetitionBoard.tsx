@@ -211,7 +211,7 @@ function GoalProgress({
                         {goalLabel(board)}
                     </Text>
                     <Text className="text-[11px] text-ink-3">
-                        {visual.sourceLabel} · {board.metric}
+                        {visual.sourceLabel}
                     </Text>
                 </View>
                 {onEdit && (

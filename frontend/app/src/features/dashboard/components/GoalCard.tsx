@@ -1,6 +1,8 @@
 // A single goal card — progress, a fixed Mon–Sun week chart, and per-goal week
-// navigation. The gear opens the edit sheet (target, color, delete). Competition goals
-// belong to the competition, so a chip naming it takes the gear's place. The web card's
+// navigation. The amount sits top right; while the Goals tab is in edit mode it
+// becomes an Edit button that opens the edit sheet (target, color, delete).
+// Competition goals belong to the competition, so they're never editable here and
+// carry a chip naming it beside their source. The web card's
 // scroll-into-view/flash behaviour is dropped: it existed to answer sidebar deep links,
 // and there's no sidebar on mobile.
 
@@ -8,9 +10,8 @@ import { useEffect, useMemo, useState } from "react"
 import { Pressable, Text, View } from "react-native"
 import { router } from "expo-router"
 import { type Goal, type GoalWeek, getGoalWeek, useApi } from "@shared/index"
-import { colors } from "../../../theme"
-import { GearIcon } from "../../../ui/icons"
 import {
+    Button,
     Card,
     Chip,
     Dot,
@@ -25,10 +26,8 @@ import {
     goalTitle,
     integrationVisual,
     isLimit,
-    isoWeekNumber,
     localWeekday,
     meetsTarget,
-    paceStatusFor,
     unitLabel
 } from "../types"
 import { WeekChart } from "./WeekChart"
@@ -42,7 +41,7 @@ function dailyTargetFor(goal: Goal): number {
     return goal.period === "DAILY" ? goal.target : goal.target / 7
 }
 
-/** Header chip naming a competition goal's competition, in the gear's slot; opens it. */
+/** Chip naming a competition goal's competition, beside its source; opens it. */
 function CompetitionChip({
     competition,
     color
@@ -86,7 +85,7 @@ export function GoalCard({
     onEdit
 }: {
     goal: Goal
-    /** Opens the edit sheet; omitted for goals the user can't edit (competition goals). */
+    /** Opens the edit sheet. Passed only while the Goals tab is in edit mode, and never for competition goals. */
     onEdit?: () => void
 }) {
     const api = useApi()
@@ -108,7 +107,13 @@ export function GoalCard({
             target: goal.target,
             period: goal.period
         }),
-        [goal.weekStart, goal.weekVals, goal.weekTotal, goal.target, goal.period]
+        [
+            goal.weekStart,
+            goal.weekVals,
+            goal.weekTotal,
+            goal.target,
+            goal.period
+        ]
     )
 
     useEffect(() => {
@@ -147,15 +152,11 @@ export function GoalCard({
     const total = week?.total ?? goal.progress
     const weeklyTarget = weeklyTargetFor(goal)
 
-    // The current week is paced against the days already over; a completed past
-    // week compares against the full weekly target.
-    const pace = paceStatusFor(goal)(total, weeklyTarget, offset === 0)
-
     const rangeLabel = week ? formatWeekRange(week.weekStart) : "—"
 
     // Daily goals read per day, not as a ×7 weekly sum: the headline is today's
     // value (a past week's daily average) against the daily target, and the
-    // footer counts the days the target was hit.
+    // week label counts the days the target was hit.
     const daily = goal.period === "DAILY"
     const daysCounted = offset === 0 ? localWeekday() + 1 : 7
     const daysHit = vals
@@ -166,7 +167,6 @@ export function GoalCard({
             ? (vals[localWeekday()] ?? 0)
             : total / 7
         : total
-    const weekNum = isoWeekNumber(new Date(week ? week.weekStart : Date.now()))
 
     return (
         <Card className="gap-4 p-5">
@@ -180,52 +180,55 @@ export function GoalCard({
                     <Text className="text-base font-semibold tracking-tight text-ink">
                         {goalTitle(goal)}
                     </Text>
-                    <Text className="text-xs text-ink-3">
-                        {visual.sourceLabel} · {goal.metric}
-                    </Text>
+                    <View className="flex-row items-center gap-2">
+                        <Text className="text-xs text-ink-3">
+                            {visual.sourceLabel}
+                        </Text>
+                        {goal.competition && (
+                            <CompetitionChip
+                                competition={goal.competition}
+                                color={goalFill(goal)}
+                            />
+                        )}
+                    </View>
                 </View>
-                {goal.competition && (
-                    <CompetitionChip
-                        competition={goal.competition}
-                        color={goalFill(goal)}
-                    />
-                )}
-                {onEdit && (
-                    <Pressable
+                {onEdit ? (
+                    <Button
+                        label="Edit"
+                        variant="line"
+                        size="sm"
                         onPress={onEdit}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Edit ${goalTitle(goal)}`}
-                        hitSlop={8}
-                        className="h-8 w-8 items-center justify-center rounded-[9px] border border-line bg-bg-card"
-                    >
-                        <GearIcon color={colors.ink3} size={16} />
-                    </Pressable>
+                    />
+                ) : (
+                    <View className="items-end">
+                        <Mono
+                            style={{
+                                fontSize: 28,
+                                lineHeight: 30,
+                                letterSpacing: -0.8
+                            }}
+                            className="font-bold text-ink"
+                        >
+                            {formatAmount(
+                                goal.integration,
+                                goal.metric,
+                                headline
+                            )}
+                        </Mono>
+                        <Text className="text-[11px] text-ink-3">
+                            /{" "}
+                            {formatAmount(
+                                goal.integration,
+                                goal.metric,
+                                daily ? goal.target : weeklyTarget
+                            )}{" "}
+                            {unit}
+                            {/* A weekly goal's week is in the footer already. */}
+                            {daily &&
+                                (offset === 0 ? " · today" : " · daily avg")}
+                        </Text>
+                    </View>
                 )}
-            </View>
-
-            <View className="flex-row items-end gap-3">
-                <Mono
-                    style={{ fontSize: 40, lineHeight: 42, letterSpacing: -1.2 }}
-                    className="font-bold text-ink"
-                >
-                    {formatAmount(goal.integration, goal.metric, headline)}
-                </Mono>
-                <Text className="mb-1.5 flex-1 text-[13px] text-ink-3">
-                    /{" "}
-                    {formatAmount(
-                        goal.integration,
-                        goal.metric,
-                        daily ? goal.target : weeklyTarget
-                    )}{" "}
-                    {unit} ·{" "}
-                    {daily
-                        ? offset === 0
-                            ? "today"
-                            : "daily avg"
-                        : offset === 0
-                          ? "this week"
-                          : rangeLabel}
-                </Text>
             </View>
 
             <WeekChart
@@ -246,7 +249,12 @@ export function GoalCard({
                     <Text className="text-base text-ink-3">‹</Text>
                 </Pressable>
                 <Mono className="text-[11px] text-ink-3">
-                    Week {weekNum} · {offset === 0 ? "This week" : rangeLabel}
+                    {offset === 0 ? "This week" : rangeLabel} /{" "}
+                    <Text className="font-bold text-ink">
+                        {daily
+                            ? `${daysHit}/${daysCounted} days`
+                            : `${Math.round((total / Math.max(1, weeklyTarget)) * 100)}%`}
+                    </Text>
                 </Mono>
                 <Pressable
                     accessibilityRole="button"
@@ -258,21 +266,6 @@ export function GoalCard({
                 >
                     <Text className="text-base text-ink-3">›</Text>
                 </Pressable>
-            </View>
-
-            <View className="flex-row items-center border-t border-line-2 pt-2.5">
-                <Text className="flex-1 text-xs text-ink-3">
-                    {pace === "onTrack"
-                        ? "On track"
-                        : pace === "atRisk"
-                          ? "At risk"
-                          : "Behind pace"}
-                </Text>
-                <Mono className="text-[11px] text-ink-3">
-                    {daily
-                        ? `${daysHit}/${daysCounted} days`
-                        : `${Math.round((total / Math.max(1, weeklyTarget)) * 100)}%`}
-                </Mono>
             </View>
         </Card>
     )

@@ -161,16 +161,6 @@ export function formatWeekRange(weekStart: number): string {
     return `${startStr} – ${endStr}`
 }
 
-/** ISO-8601 week number (1–53) for the given date. */
-export function isoWeekNumber(d: Date): number {
-    const utc = new Date(
-        Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
-    )
-    utc.setUTCDate(utc.getUTCDate() + 4 - (utc.getUTCDay() || 7))
-    const yearStart = new Date(Date.UTC(utc.getUTCFullYear(), 0, 1))
-    return Math.ceil(((+utc - +yearStart) / 86400000 + 1) / 7)
-}
-
 /** Weekday (0 = Monday … 6 = Sunday) of [now] in the device's time zone. */
 export function localWeekday(now = Date.now()): number {
     return (new Date(now).getDay() + 6) % 7

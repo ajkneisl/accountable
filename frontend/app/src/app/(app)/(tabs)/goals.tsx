@@ -1,12 +1,16 @@
 // Goals — the goal streak and every goal with its progress for the week, followed by the
 // goals of the user's competitions. Data comes from the AppDataProvider mounted above the tabs.
+// The pencil in the top right toggles edit mode, which gives each of the user's own goals an
+// Edit button; competition goals are edited from their competition.
 
+import { useState } from "react"
 import { Text, View } from "react-native"
 import { useAppData } from "../../../features/common/AppData"
 import { GoalCard } from "../../../features/dashboard/components/GoalCard"
 import { StreakSection } from "../../../features/dashboard/components/StreaksCard"
 import { goalKey } from "../../../features/dashboard/types"
 import { EmptyState } from "../../../ui/EmptyState"
+import { EditModeButton } from "../../../ui/EditModeButton"
 import { Screen } from "../../../ui/Screen"
 import { SettingsButton } from "../../../ui/SettingsButton"
 import {
@@ -23,14 +27,28 @@ export default function Goals() {
     const goals = data.goals
     const competitionGoals = data.competitionGoals
     const allGoals = [...goals, ...competitionGoals]
+    const [editing, setEditing] = useState(false)
+    // Nothing left to edit (e.g. the last goal was just deleted): leave edit mode.
+    const editMode = editing && goals.length > 0
 
     return (
         <Screen
             refreshing={loading}
             onRefresh={reload}
-            topRight={<SettingsButton />}
+            topRight={
+                <View className="flex-row gap-2.5">
+                    {goals.length > 0 && (
+                        <EditModeButton
+                            editing={editMode}
+                            noun="goals"
+                            onChange={setEditing}
+                        />
+                    )}
+                    <SettingsButton />
+                </View>
+            }
         >
-            <View className="gap-1.5 pr-12">
+            <View className="gap-1.5 pr-24">
                 <Display size={32}>Goals</Display>
             </View>
 
@@ -68,7 +86,9 @@ export default function Goals() {
                 <GoalCard
                     key={goalKey(g)}
                     goal={g}
-                    onEdit={() => openEditGoal(goalKey(g))}
+                    onEdit={
+                        editMode ? () => openEditGoal(goalKey(g)) : undefined
+                    }
                 />
             ))}
 
@@ -77,10 +97,7 @@ export default function Goals() {
             )}
 
             {competitionGoals.map((g) => (
-                <GoalCard
-                    key={goalKey(g)}
-                    goal={g}
-                />
+                <GoalCard key={goalKey(g)} goal={g} />
             ))}
         </Screen>
     )

@@ -1,11 +1,12 @@
 // One habit: name, streak, today's check-off, and its heatmap. The whole header
-// row toggles today; the gear opens the edit sheet (rename, recolor, delete).
+// row toggles today; while the Habits tab is in edit mode an Edit button opens the
+// edit sheet (rename, recolor, delete).
 
 import { Pressable, Text, View } from "react-native"
 import type { Habit } from "@shared/index"
 import { colors } from "../../../theme"
-import { CheckIcon, GearIcon } from "../../../ui/icons"
-import { Card, Mono } from "../../../ui/primitives"
+import { CheckIcon } from "../../../ui/icons"
+import { Button, Card, Mono } from "../../../ui/primitives"
 import { HABIT_PALETTE } from "../grid"
 import { Heatmap } from "./Heatmap"
 
@@ -22,7 +23,8 @@ export function HabitCard({
     start: string
     today: string
     onToggle: (date: string, done: boolean) => void
-    onEdit: () => void
+    /** Opens the edit sheet; passed only while the Habits tab is in edit mode. */
+    onEdit?: () => void
 }) {
     const palette = HABIT_PALETTE[habit.color]
     const doneToday = habit.done[habit.done.length - 1] ?? false
@@ -72,15 +74,14 @@ export function HabitCard({
                         </Mono>
                     </View>
                 </Pressable>
-                <Pressable
-                    onPress={onEdit}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Edit ${habit.name}`}
-                    hitSlop={8}
-                    className="h-8 w-8 items-center justify-center rounded-[9px] border border-line bg-bg-card"
-                >
-                    <GearIcon color={colors.ink3} size={16} />
-                </Pressable>
+                {onEdit && (
+                    <Button
+                        label="Edit"
+                        variant="line"
+                        size="sm"
+                        onPress={onEdit}
+                    />
+                )}
             </View>
 
             <Heatmap

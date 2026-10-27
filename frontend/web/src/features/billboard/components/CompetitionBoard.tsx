@@ -126,7 +126,7 @@ function GoalProgress({
                         {goalTitle(board)}
                     </div>
                     <div className="text-[0.8em] text-ink-3">
-                        {visual.sourceLabel} · {board.metric}
+                        {visual.sourceLabel}
                     </div>
                 </div>
             </div>

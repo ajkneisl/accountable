@@ -69,6 +69,19 @@ export function RefreshIcon({ color, size = 24 }: IconProps) {
     )
 }
 
+/** Pencil for "edit". */
+export function PencilIcon({ color, size = 24 }: IconProps) {
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+            <Path
+                d="M4 20h4L18.5 9.5a2.12 2.12 0 0 0-3-3L5 17v3Z"
+                {...stroke(color)}
+            />
+            <Path d="M13.5 8.5l2 2" {...stroke(color)} />
+        </Svg>
+    )
+}
+
 /** Plus for "add". */
 export function PlusIcon({ color, size = 24 }: IconProps) {
     return (

@@ -56,8 +56,8 @@ export function GoalCard({
                         {goalTitle(goal)}
                     </div>
                     <div className="truncate text-[0.85em] text-ink-3">
-                        {visual.sourceLabel} ·{" "}
-                        {goal.competition ? goal.competition.name : goal.metric}
+                        {visual.sourceLabel}
+                        {goal.competition && ` · ${goal.competition.name}`}
                     </div>
                 </div>
             </div>
