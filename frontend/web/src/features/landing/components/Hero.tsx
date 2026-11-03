@@ -1,3 +1,5 @@
+const APP_STORE_URL = "https://apps.apple.com/us/app/beacc/id6825988118"
+
 /**
  * Hero section of Beacc.
  */
@@ -15,9 +17,12 @@ export function Hero() {
                 Track your goals and habits, and compete with your friends.
             </p>
 
-            <p className="m-0 text-[15px] text-ink-3">
-                Coming soon to iOS and Android.
-            </p>
+            <a
+                href={APP_STORE_URL}
+                className="btn btn-primary btn-lg mt-5"
+            >
+                Download on the App Store
+            </a>
         </section>
     )
 }
