@@ -107,8 +107,8 @@ export function EditGoalSheet({
             title={shared ? "Edit shared goal" : "Edit goal"}
             description={
                 shared
-                    ? "Change the target every member is measured against. To track something else, remove it and add a new goal."
-                    : "Change its target or color. To track something else, delete it and create a new goal."
+                    ? "Change the target every member is measured against."
+                    : "Change its target or color."
             }
             onClose={onClose}
             action={{

@@ -1,0 +1,10 @@
+{
+    "applinks": {
+        "details": [
+            {
+                "appIDs": ["CBL6R6SP6A.app.umn.acc"],
+                "components": [{ "/": "/join/*" }]
+            }
+        ]
+    }
+}

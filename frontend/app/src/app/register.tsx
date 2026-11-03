@@ -7,6 +7,7 @@ import { useSetAtom } from "jotai"
 import { ApiError, getSelf, register, useApi } from "@shared/index"
 import { tokenStore, userAtom } from "../auth"
 import { AuthForm, AuthSwitch } from "../features/auth/components"
+import { homeAfterSignIn } from "../features/competition/pendingJoin"
 import { Button, ErrorList, Input, Label } from "../ui/primitives"
 
 export default function Register() {
@@ -25,7 +26,7 @@ export default function Register() {
             const tokens = await register(api, username, password, email)
             await tokenStore.set(tokens)
             setUser(await getSelf(api))
-            router.replace("/dashboard")
+            router.replace(homeAfterSignIn())
         } catch (err) {
             if (err instanceof ApiError) setErrors(err.messages)
             else if (err instanceof Error) setErrors([err.message])

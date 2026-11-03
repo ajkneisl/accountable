@@ -17,6 +17,12 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
+    # Lets iOS open beacc.app/join/* links in the app. The file has no extension,
+    # and Apple requires it to be served as JSON.
+    location = /.well-known/apple-app-site-association {
+        default_type application/json;
+    }
+
     # SPA fallback: let client-side routing handle unknown paths.
     location / {
         try_files $uri $uri/ /index.html;

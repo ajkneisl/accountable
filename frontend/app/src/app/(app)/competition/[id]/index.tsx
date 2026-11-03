@@ -19,6 +19,7 @@ import { userAtom } from "../../../../auth"
 import { buildColorMap } from "../../../../features/competition/colors"
 import { AddCompetitionGoalSheet } from "../../../../features/competition/components/AddCompetitionGoalSheet"
 import { CompetitionBoard } from "../../../../features/competition/components/CompetitionBoard"
+import { joinLink } from "../../../../features/competition/pendingJoin"
 import { BackBar } from "../../../../ui/BackBar"
 import { CircleButton } from "../../../../ui/CircleButton"
 import { Screen } from "../../../../ui/Screen"
@@ -78,11 +79,11 @@ export default function Competition() {
 
     const colors = detail ? buildColorMap(detail.members, scheme) : {}
 
-    /** Hand the join code to the share sheet, ready to send. */
+    /** Hand a join link to the share sheet; it opens the join sheet in Beacc. */
     function shareJoinCode() {
         if (!detail) return
         void Share.share({
-            message: `Join "${detail.name}" on Beacc with code ${detail.joinCode}`
+            message: `Join "${detail.name}" on Beacc: ${joinLink(detail.joinCode)}`
         }).catch(() => {})
     }
 
@@ -110,7 +111,7 @@ export default function Competition() {
                     <View className="flex-row gap-2.5">
                         <CircleButton
                             pill
-                            label={`Share join code ${detail.joinCode}`}
+                            label={`Share join link for code ${detail.joinCode}`}
                             onPress={shareJoinCode}
                         >
                             {() => (

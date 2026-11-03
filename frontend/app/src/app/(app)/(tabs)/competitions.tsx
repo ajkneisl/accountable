@@ -1,10 +1,10 @@
 // Competitions tab — every competition the user belongs to, plus create/join.
 // Merges the web's sidebar competition list with its AllCompetitions page.
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Pressable, Text, View } from "react-native"
 import { router } from "expo-router"
-import { useAtomValue } from "jotai"
+import { useAtom, useAtomValue } from "jotai"
 import type { CompetitionSummary } from "@shared/index"
 import { userAtom } from "../../../auth"
 import { EmptyState } from "../../../ui/EmptyState"
@@ -20,6 +20,7 @@ import {
 } from "../../../ui/primitives"
 import { useAppData } from "../../../features/common/AppData"
 import { CompetitionSheet } from "../../../features/competition/components/CompetitionSheet"
+import { pendingJoinCodeAtom } from "../../../features/competition/pendingJoin"
 
 type Filter = "all" | "owned" | "joined"
 
@@ -33,7 +34,22 @@ export default function Competitions() {
     const { data, loading, reload } = useAppData()
     const user = useAtomValue(userAtom)
     const [sheetOpen, setSheetOpen] = useState(false)
+    const [joinCode, setJoinCode] = useState<string | null>(null)
     const [filter, setFilter] = useState<Filter>("all")
+    const [pendingCode, setPendingCode] = useAtom(pendingJoinCodeAtom)
+
+    // A join link opens the sheet on the Join tab with its code filled in.
+    useEffect(() => {
+        if (!pendingCode) return
+        setJoinCode(pendingCode)
+        setSheetOpen(true)
+        setPendingCode(null)
+    }, [pendingCode, setPendingCode])
+
+    function closeSheet() {
+        setSheetOpen(false)
+        setJoinCode(null)
+    }
 
     const competitions = data.competitions
     const meID = user?.userID
@@ -124,9 +140,12 @@ export default function Competitions() {
 
             {sheetOpen && (
                 <CompetitionSheet
-                    onClose={() => setSheetOpen(false)}
+                    key={joinCode ?? "new"}
+                    initialMode={joinCode ? "join" : "create"}
+                    initialCode={joinCode ?? undefined}
+                    onClose={closeSheet}
                     onDone={(id) => {
-                        setSheetOpen(false)
+                        closeSheet()
                         reload()
                         router.push({
                             pathname: "/competition/[id]",

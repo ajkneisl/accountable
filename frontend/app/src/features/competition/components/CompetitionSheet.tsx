@@ -22,10 +22,13 @@ function messageFor(err: unknown): string {
 
 export function CompetitionSheet({
     initialMode = "create",
+    initialCode,
     onClose,
     onDone
 }: {
     initialMode?: Mode
+    /** Prefills the join code, e.g. from a join link. */
+    initialCode?: string
     onClose: () => void
     /** Called with the resulting competition id after a successful create/join. */
     onDone: (id: string) => void
@@ -33,7 +36,7 @@ export function CompetitionSheet({
     const api = useApi()
     const [mode, setMode] = useState<Mode>(initialMode)
     const [name, setName] = useState("")
-    const [code, setCode] = useState("")
+    const [code, setCode] = useState(initialCode?.toUpperCase() ?? "")
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState<string | null>(null)
 

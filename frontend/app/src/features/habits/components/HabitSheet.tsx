@@ -81,8 +81,8 @@ export function HabitSheet({
             title={habit ? "Edit habit" : "New habit"}
             description={
                 habit
-                    ? "Rename it or change its color. Your history stays put."
-                    : "Something you want to do every day. Check it off and watch the heatmap fill in."
+                    ? "Rename it or change its color."
+                    : "Something you want to do every day."
             }
             onClose={onClose}
             action={{

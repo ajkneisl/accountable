@@ -2,15 +2,16 @@
     "expo": {
         "name": "Beacc",
         "slug": "accountable",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "orientation": "portrait",
         "icon": "./assets/icon.png",
         "userInterfaceStyle": "automatic",
         "ios": {
             "supportsTablet": true,
             "bundleIdentifier": "app.umn.acc",
-            "buildNumber": "22",
+            "buildNumber": "25",
             "appleTeamId": "CBL6R6SP6A",
+            "associatedDomains": ["applinks:beacc.app"],
             "config": {
                 "usesNonExemptEncryption": false
             }

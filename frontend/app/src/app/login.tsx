@@ -7,6 +7,7 @@ import { useSetAtom } from "jotai"
 import { ApiError, getSelf, login, syncTimezone, useApi } from "@shared/index"
 import { tokenStore, userAtom } from "../auth"
 import { AuthForm, AuthSwitch } from "../features/auth/components"
+import { homeAfterSignIn } from "../features/competition/pendingJoin"
 import { Button, ErrorList, Input, Label } from "../ui/primitives"
 
 export default function Login() {
@@ -26,7 +27,7 @@ export default function Login() {
             const me = await getSelf(api)
             setUser(me)
             await syncTimezone(api, me.timezone)
-            router.replace("/dashboard")
+            router.replace(homeAfterSignIn())
         } catch (err) {
             if (err instanceof ApiError) setErrors(err.messages)
             else if (err instanceof Error) setErrors([err.message])

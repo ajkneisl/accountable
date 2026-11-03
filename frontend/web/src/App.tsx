@@ -6,6 +6,7 @@ import { tokenStore, userAtom } from "./auth"
 import { Footer } from "./features/common/Footer"
 import Landing from "./features/landing"
 import Login from "./features/auth/Login"
+import Join from "./features/join/Join"
 import Privacy from "./features/legal/Privacy"
 import Support from "./features/legal/Support"
 import Terms from "./features/legal/Terms"
@@ -85,6 +86,7 @@ function App() {
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/tos" element={<Terms />} />
                 <Route path="/support" element={<Support />} />
+                <Route path="/join/:code" element={<Join />} />
                 <Route element={<RequireAuth />}>
                     <Route path="/billboard" element={<Billboard />} />
                 </Route>
