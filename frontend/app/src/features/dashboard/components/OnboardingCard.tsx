@@ -1,5 +1,5 @@
-// Shown on the dashboard in place of the Goals and Habits cards while the user
-// has neither: the three things that fill it in, each opening where it's done.
+// Shown on Home in place of the Goals card while the user has no goals or
+// habits: the three things that fill it in, each opening where it's done.
 
 import { Pressable, Text } from "react-native"
 import { type Href, router } from "expo-router"

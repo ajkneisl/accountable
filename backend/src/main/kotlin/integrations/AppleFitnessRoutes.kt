@@ -2,6 +2,8 @@ package integrations
 
 import api.Cache
 import api.Error
+import features.feed.deleteWorkoutPost
+import features.feed.publishFeed
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.auth.jwt.JWTPrincipal
@@ -62,6 +64,7 @@ private val WORKOUT_CREATE_ROUTE: suspend RoutingContext.() -> Unit = {
             happenedAt = req.happenedAt ?: System.currentTimeMillis(),
         )
     Cache.invalidateUser(userID)
+    publishFeed(userID)
     call.respond(HttpStatusCode.Created, workout)
 }
 
@@ -79,7 +82,10 @@ private val WORKOUT_IMPORT_ROUTE: suspend RoutingContext.() -> Unit = {
         if (it.calories < 0) Error.text("calories must be non-negative")
     }
     val imported = importWorkouts(userID, req.workouts)
-    if (imported > 0) Cache.invalidateUser(userID)
+    if (imported > 0) {
+        Cache.invalidateUser(userID)
+        publishFeed(userID)
+    }
     call.respond(ImportWorkoutsResponse(imported))
 }
 
@@ -93,6 +99,9 @@ private val WORKOUT_DELETE_ROUTE: suspend RoutingContext.() -> Unit = {
     val removed = removeWorkout(userID, workoutID)
     if (!removed) Error.notFound("workout")
     Cache.invalidateUser(userID)
+    deleteWorkoutPost(userID, workoutID)
+    // The day's totals on the other workout cards just changed too.
+    publishFeed(userID)
     call.respond(HttpStatusCode.NoContent)
 }
 

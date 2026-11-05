@@ -18,6 +18,7 @@ import io.ktor.serialization.kotlinx.json.json
 import java.util.UUID
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -33,7 +34,13 @@ object LeetCodeTable : IntegrationTable("integrations_leetcode") {
     val easy = long("easy")
     val medium = long("medium")
     val hard = long("hard")
+
+    /** JSON list of [LeetCodeSolve]: the day's problems. Null on rows from before it existed. */
+    val solves = text("solves").nullable()
 }
+
+/** One problem solved on one day, for the feed. */
+@Serializable data class LeetCodeSolve(val title: String, val difficulty: String)
 
 object LeetCode : Integration<LeetCode.LeetCodeData> {
     override val name = "leetcode"
@@ -51,7 +58,7 @@ object LeetCode : Integration<LeetCode.LeetCodeData> {
 
     override suspend fun pullData(userID: UUID, date: Long): LeetCodeData {
         val target = startOfDay(date, zoneOf(userID))
-        return pullRecentByDay(userID)[target]
+        return pullRecentByDay(userID)[target]?.data
             ?: LeetCodeData(date = target, easy = 0, medium = 0, hard = 0)
     }
 
@@ -62,7 +69,7 @@ object LeetCode : Integration<LeetCode.LeetCodeData> {
      * one — so callers can backfill several days from one request. Days with no accepted submission
      * are simply absent from the map.
      */
-    private suspend fun pullRecentByDay(userID: UUID): Map<Long, LeetCodeData> {
+    private suspend fun pullRecentByDay(userID: UUID): Map<Long, RecentDay> {
         val externalID = externalIDFor(userID, name)
         val zone = zoneOf(userID)
 
@@ -85,27 +92,39 @@ object LeetCode : Integration<LeetCode.LeetCodeData> {
         val easy = mutableMapOf<Long, Long>()
         val medium = mutableMapOf<Long, Long>()
         val hard = mutableMapOf<Long, Long>()
+        val solves = mutableMapOf<Long, MutableList<LeetCodeSolve>>()
         // Count each slug at most once per day.
         val counted = mutableSetOf<Pair<Long, String>>()
         for (sub in recent.data.recentAcSubmissionList) {
             val day = startOfDay(sub.timestamp.toLong() * 1000, zone)
             if (!counted.add(day to sub.titleSlug)) continue
-            when (difficultyBySlug[sub.titleSlug]) {
+            val difficulty = difficultyBySlug[sub.titleSlug]
+            when (difficulty) {
                 "Easy" -> easy.merge(day, 1L, Long::plus)
                 "Medium" -> medium.merge(day, 1L, Long::plus)
                 "Hard" -> hard.merge(day, 1L, Long::plus)
+                else -> continue
             }
+            solves
+                .getOrPut(day) { mutableListOf() }
+                .add(LeetCodeSolve(sub.title ?: sub.titleSlug, difficulty))
         }
 
         return (easy.keys + medium.keys + hard.keys).associateWith { day ->
-            LeetCodeData(
-                date = day,
-                easy = easy[day] ?: 0L,
-                medium = medium[day] ?: 0L,
-                hard = hard[day] ?: 0L,
+            RecentDay(
+                LeetCodeData(
+                    date = day,
+                    easy = easy[day] ?: 0L,
+                    medium = medium[day] ?: 0L,
+                    hard = hard[day] ?: 0L,
+                ),
+                solves[day].orEmpty(),
             )
         }
     }
+
+    /** One day of the recent window: its counts, and the problems behind them. */
+    private data class RecentDay(val data: LeetCodeData, val solves: List<LeetCodeSolve>)
 
     /**
      * Pull and upsert. Backfills every recent day in the same pass — the read routes only ever
@@ -115,24 +134,27 @@ object LeetCode : Integration<LeetCode.LeetCodeData> {
     override suspend fun refresh(userID: UUID, date: Long): IntegrationRecord<LeetCodeData> {
         val target = startOfDay(date, zoneOf(userID))
         val byDay = pullRecentByDay(userID)
-        val targetData =
-            byDay[target] ?: LeetCodeData(date = target, easy = 0, medium = 0, hard = 0)
+        val targetDay =
+            byDay[target]
+                ?: RecentDay(LeetCodeData(date = target, easy = 0, medium = 0, hard = 0), emptyList())
         val now = System.currentTimeMillis()
         suspendTransaction {
             // Always (re)write the target day, even when empty, plus every other recent day with
             // solves. Days that have scrolled out of the recent window are left untouched.
-            (byDay.values + targetData).distinctBy { it.date }.forEach { record ->
+            (byDay.values + targetDay).distinctBy { it.data.date }.forEach { day ->
+                val record = day.data
                 LeetCodeTable.upsert {
                     it[LeetCodeTable.userID] = userID
                     it[LeetCodeTable.date] = record.date
                     it[LeetCodeTable.easy] = record.easy
                     it[LeetCodeTable.medium] = record.medium
                     it[LeetCodeTable.hard] = record.hard
+                    it[LeetCodeTable.solves] = Json.encodeToString(day.solves)
                     it[LeetCodeTable.fetchedAt] = now
                 }
             }
         }
-        return IntegrationRecord(targetData, now)
+        return IntegrationRecord(targetDay.data, now)
     }
 
     override suspend fun getDay(userID: UUID, date: Long): IntegrationRecord<LeetCodeData>? {
@@ -194,6 +216,7 @@ object LeetCode : Integration<LeetCode.LeetCodeData> {
         """
         query recentAcSubmissions(${'$'}username: String!, ${'$'}limit: Int!) {
           recentAcSubmissionList(username: ${'$'}username, limit: ${'$'}limit) {
+            title
             titleSlug
             timestamp
           }
@@ -216,7 +239,12 @@ object LeetCode : Integration<LeetCode.LeetCodeData> {
     @Serializable
     private data class RecentAcData(val recentAcSubmissionList: List<RecentSubmission>)
 
-    @Serializable private data class RecentSubmission(val titleSlug: String, val timestamp: String)
+    @Serializable
+    private data class RecentSubmission(
+        val titleSlug: String,
+        val timestamp: String,
+        val title: String? = null,
+    )
 
     @Serializable private data class QuestionResponse(val data: QuestionData)
 

@@ -28,6 +28,7 @@ import kotlinx.serialization.Serializable
  * @param email The user's email.
  * @param createdAt When the user created their account.
  * @param color The color that stands for them in competitions; a default until they pick one.
+ * @param feedDetails Whether others see the specifics on their feed cards, or only totals.
  */
 @Serializable
 data class SelfResponse(
@@ -37,6 +38,7 @@ data class SelfResponse(
     val createdAt: Long,
     val timezone: String,
     val color: HabitColor,
+    val feedDetails: Boolean,
 )
 
 /** Request body for [PUT /user/timezone]. */
@@ -44,6 +46,9 @@ data class SelfResponse(
 
 /** Request body for [PUT /user/color]. */
 @Serializable data class UpdateColorRequest(val color: HabitColor)
+
+/** Request body for [PUT /user/feed-details]. */
+@Serializable data class UpdateFeedDetailsRequest(val enabled: Boolean)
 
 /** Request body for [PUT /user/password]. */
 @Serializable data class ChangePasswordRequest(val currentPassword: String, val newPassword: String)
@@ -81,6 +86,7 @@ fun Route.userRoutes() {
                         createdAt = user.createdAt,
                         timezone = user.timezone,
                         color = user.displayColor,
+                        feedDetails = user.feedDetails,
                     )
                 )
             }
@@ -125,6 +131,16 @@ fun Route.userRoutes() {
                 }
                 // The zone defines day boundaries, so re-bucket existing per-day data to it.
                 realignDayBuckets(userID)
+                call.respond(HttpStatusCode.NoContent)
+            }
+
+            put("/feed-details") {
+                val principal = call.principal<JWTPrincipal>()!!
+                val userID =
+                    principal.subject?.let(UUID::fromString) ?: Error.text("invalid token")
+
+                val req = call.receive<UpdateFeedDetailsRequest>()
+                if (!updateFeedDetails(userID, req.enabled)) Error.notFound("user")
                 call.respond(HttpStatusCode.NoContent)
             }
 

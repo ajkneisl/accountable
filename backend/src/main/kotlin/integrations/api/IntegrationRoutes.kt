@@ -2,6 +2,7 @@ package integrations.api
 
 import api.Cache
 import api.Error
+import features.feed.publishFeed
 import integrations.IntegrationData
 import integrations.appleFitnessRoutes
 import integrations.appleSleepRoutes
@@ -121,7 +122,10 @@ private val INTEGRATION_REFRESH_ALL_ROUTE: suspend RoutingContext.() -> Unit = {
         val stale = cached == null || System.currentTimeMillis() - cached.fetchedAt >= REFRESH_COOLDOWN_MS
         if (stale) runCatching { integration.refresh(userID, today) }.onSuccess { refreshedAny = true }
     }
-    if (refreshedAny) Cache.invalidateUser(userID)
+    if (refreshedAny) {
+        Cache.invalidateUser(userID)
+        publishFeed(userID)
+    }
 
     call.respond(integrationStatusesFor(userID))
 }
@@ -190,7 +194,10 @@ private val INTEGRATION_GET_ROUTE: suspend RoutingContext.() -> Unit = {
                         cached == null ||
                             System.currentTimeMillis() - cached.fetchedAt >= REFRESH_COOLDOWN_MS
                     ) {
-                        integration.refresh(userID, target).also { Cache.invalidateUser(userID) }
+                        integration.refresh(userID, target).also {
+                            Cache.invalidateUser(userID)
+                            publishFeed(userID)
+                        }
                     } else cached
                 record.data to record.fetchedAt
             }

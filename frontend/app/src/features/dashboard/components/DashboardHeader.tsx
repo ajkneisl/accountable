@@ -1,4 +1,4 @@
-// Greeting at the top of the dashboard. Goal status lives in TodayCard.
+// Greeting at the top of Home. Goal status lives in TodayCard.
 
 import { View } from "react-native"
 import type { SelfResponse } from "@shared/index"

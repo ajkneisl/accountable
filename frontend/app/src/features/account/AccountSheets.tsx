@@ -223,7 +223,7 @@ export function ChangeColorSheet({
     const { busy, errors, submit } = useSubmit(async () => {
         await updateColor(api, color)
         setUser(await getSelf(api))
-        // The dashboard's competition card shows it too.
+        // Competition data on the tabs shows it too.
         reload()
         onClose()
     })

@@ -11,9 +11,9 @@ export function joinLink(code: string): string {
     return `https://beacc.app/join/${encodeURIComponent(code)}`
 }
 
-/** Where to land after signing in: the join sheet if a link is waiting, else the dashboard. */
-export function homeAfterSignIn(): "/competitions" | "/dashboard" {
+/** Where to land after signing in: the join sheet if a link is waiting, else home. */
+export function homeAfterSignIn(): "/competitions" | "/home" {
     return getDefaultStore().get(pendingJoinCodeAtom)
         ? "/competitions"
-        : "/dashboard"
+        : "/home"
 }

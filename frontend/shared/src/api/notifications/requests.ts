@@ -1,15 +1,17 @@
 import { request, type ApiConfig } from "../http"
 
 /**
- * The scheduled notifications a user can switch off, sent at their local time:
+ * The notifications a user can switch off, sent at their local time unless noted:
  * - GOALS_STATUS: 5pm, how today's goals and habits stand
  * - STREAK_RISK: 9pm, a streak that ends at midnight unless today is finished
  * - COMPETITION_RECAP: Monday 9am, where they finished last week in each competition
+ * - FEED_LIKES: as it happens, someone liked one of their feed updates
  */
 export type NotificationKind =
     | "GOALS_STATUS"
     | "STREAK_RISK"
     | "COMPETITION_RECAP"
+    | "FEED_LIKES"
 
 export interface NotificationSettings {
     /** Whether each kind is on; every kind is present in a response. */

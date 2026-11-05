@@ -26,6 +26,23 @@ export function GearIcon({ color, size = 24 }: IconProps) {
     )
 }
 
+/** Heart for likes; [filled] once it's been given. */
+export function HeartIcon({
+    color,
+    size = 24,
+    filled = false
+}: IconProps & { filled?: boolean }) {
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+            <Path
+                d="M12 20.5s-7.5-4.6-9.2-9.3C1.7 8.1 3.7 4.8 7.1 4.8c2 0 3.7 1.100 4.900 3 1.200-1.900 2.900-3 4.900-3 3.400 0 5.400 3.300 4.300 6.400-1.700 4.700-9.200 9.300-9.200 9.300z"
+                {...stroke(color)}
+                fill={filled ? color : "none"}
+            />
+        </Svg>
+    )
+}
+
 /** Check mark for done states. */
 export function CheckIcon({ color, size = 24 }: IconProps) {
     return (

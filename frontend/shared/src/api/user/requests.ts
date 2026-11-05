@@ -14,6 +14,8 @@ export interface SelfResponse extends User {
     timezone: string
     /** The color that stands for them in competitions; a default until they pick one. */
     color: HabitColor
+    /** Whether others see the specifics on their feed updates, or only totals. */
+    feedDetails: boolean
 }
 
 /**
@@ -129,8 +131,25 @@ export function deleteAccount(
     )
 }
 
+/** PUT /api/user/feed-details — set whether others see the specifics on this user's feed updates. */
+export function updateFeedDetails(
+    config: ApiConfig,
+    enabled: boolean
+): Promise<void> {
+    return request(
+        config,
+        "PUT",
+        "/user/feed-details",
+        { enabled },
+        { auth: true, expectJson: false }
+    )
+}
+
 /** PUT /api/user/color — set the color that stands for the authenticated user in competitions. */
-export function updateColor(config: ApiConfig, color: HabitColor): Promise<void> {
+export function updateColor(
+    config: ApiConfig,
+    color: HabitColor
+): Promise<void> {
     return request(
         config,
         "PUT",

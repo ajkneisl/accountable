@@ -20,6 +20,7 @@ import java.time.Instant
 import java.util.UUID
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.and
@@ -30,7 +31,16 @@ import user.zoneOf
 /** Per-day commit counts pulled from GitHub. */
 object GitHubTable : IntegrationTable("integrations_github") {
     val commits = long("commits")
+
+    /** JSON list of [RepoCommits]: the day's public repos. Null on rows from before it existed. */
+    val repos = text("repos").nullable()
 }
+
+/** Commits in one public repo on one day, for the feed. */
+@Serializable data class RepoCommits(val repo: String, val commits: Long)
+
+/** Most results one commit search returns; a busier day's remainder only counts in the total. */
+private const val SEARCH_PAGE_SIZE = 100
 
 object GitHub : Integration<GitHub.GitHubData> {
     override val name = "github"
@@ -46,7 +56,14 @@ object GitHub : Integration<GitHub.GitHubData> {
      * Counts the number of commits authored by [userID]'s linked GitHub account on the UTC
      * calendar day containing [date]. Uses the GitHub Search/commits API.
      */
-    override suspend fun pullData(userID: UUID, date: Long): GitHubData {
+    override suspend fun pullData(userID: UUID, date: Long): GitHubData = search(userID, date).first
+
+    /**
+     * The day's commit count and its per-repo breakdown, from one request. A private repo the
+     * server's token can see counts toward the total but is never named, since the feed shows
+     * these names to other people.
+     */
+    private suspend fun search(userID: UUID, date: Long): Pair<GitHubData, List<RepoCommits>> {
         val externalID = externalIDFor(userID, name)
         val zone = zoneOf(userID)
         val dayStart = startOfDay(date, zone)
@@ -57,24 +74,32 @@ object GitHub : Integration<GitHub.GitHubData> {
             client
                 .get("https://api.github.com/search/commits") {
                     parameter("q", query)
-                    parameter("per_page", 1)
+                    parameter("per_page", SEARCH_PAGE_SIZE)
                     header(HttpHeaders.Accept, "application/vnd.github+json")
                     header("X-GitHub-Api-Version", "2022-11-28")
                     token?.let { bearerAuth(it) }
                 }
                 .body()
 
-        return GitHubData(date = dayStart, commits = response.totalCount)
+        val repos =
+            response.items
+                .filterNot { it.repository.private }
+                .groupingBy { it.repository.fullName }
+                .eachCount()
+                .map { (repo, commits) -> RepoCommits(repo, commits.toLong()) }
+                .sortedWith(compareByDescending<RepoCommits> { it.commits }.thenBy { it.repo })
+        return GitHubData(date = dayStart, commits = response.totalCount) to repos
     }
 
     override suspend fun refresh(userID: UUID, date: Long): IntegrationRecord<GitHubData> {
-        val data = pullData(userID, date)
+        val (data, repos) = search(userID, date)
         val now = System.currentTimeMillis()
         suspendTransaction {
             GitHubTable.upsert {
                 it[GitHubTable.userID] = userID
                 it[GitHubTable.date] = data.date
                 it[GitHubTable.commits] = data.commits
+                it[GitHubTable.repos] = Json.encodeToString(repos)
                 it[GitHubTable.fetchedAt] = now
             }
         }
@@ -109,7 +134,18 @@ object GitHub : Integration<GitHub.GitHubData> {
     }
 
     @Serializable
-    private data class SearchCommitsResponse(@SerialName("total_count") val totalCount: Long)
+    private data class SearchCommitsResponse(
+        @SerialName("total_count") val totalCount: Long,
+        val items: List<SearchCommit> = emptyList(),
+    )
+
+    @Serializable private data class SearchCommit(val repository: SearchRepository)
+
+    @Serializable
+    private data class SearchRepository(
+        @SerialName("full_name") val fullName: String,
+        val private: Boolean = false,
+    )
 
     @Serializable
     @SerialName("github")

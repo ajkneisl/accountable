@@ -71,6 +71,8 @@ object NotificationWorker {
                 NotificationKind.GOALS_STATUS -> listOfNotNull(goalsStatus(userID, now))
                 NotificationKind.STREAK_RISK -> listOfNotNull(streakRisk(userID, now))
                 NotificationKind.COMPETITION_RECAP -> competitionRecaps(userID, now)
+                // Sent when the like happens; never in `due`.
+                NotificationKind.FEED_LIKES -> emptyList()
             }
         }
     }

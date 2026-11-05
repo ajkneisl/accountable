@@ -13,9 +13,9 @@ export default function TabsLayout() {
     const colors = useColors()
     return (
         <NativeTabs tintColor={colors.ink} minimizeBehavior="onScrollDown">
-            <NativeTabs.Trigger name="dashboard">
-                <NativeTabs.Trigger.Icon sf="chart.bar.fill" md="bar_chart" />
-                <NativeTabs.Trigger.Label>Dashboard</NativeTabs.Trigger.Label>
+            <NativeTabs.Trigger name="home">
+                <NativeTabs.Trigger.Icon sf="house.fill" md="home" />
+                <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
             </NativeTabs.Trigger>
             <NativeTabs.Trigger name="goals">
                 <NativeTabs.Trigger.Icon sf="target" md="track_changes" />

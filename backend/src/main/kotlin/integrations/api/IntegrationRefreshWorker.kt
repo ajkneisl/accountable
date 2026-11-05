@@ -1,6 +1,7 @@
 package integrations.api
 
 import api.Cache
+import features.feed.publishFeed
 import io.ktor.util.logging.KtorSimpleLogger
 import java.time.Instant
 import java.util.UUID
@@ -67,6 +68,7 @@ object IntegrationRefreshWorker {
         }
         // Fresh upstream data invalidates the user's cached goals, streak, and integrations.
         Cache.invalidateUser(userID)
+        publishFeed(userID, now)
     }
 }
 

@@ -16,7 +16,7 @@ export function TodayCard({
 }) {
     const total = goals.length
 
-    // Hidden until there's a goal; the dashboard shows onboarding instead.
+    // Hidden until there's a goal; Home shows onboarding instead.
     if (total === 0) return null
 
     const onTrack = goals.filter((g) => goalPace(g) === "onTrack")

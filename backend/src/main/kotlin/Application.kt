@@ -37,6 +37,7 @@ import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import features.feed.feedRoutes
 import notifications.NotificationWorker
 import notifications.notificationRoutes
 import user.userRoutes
@@ -150,6 +151,7 @@ fun Application.configureModule() {
             streakRoutes()
             competitionRoutes()
             dashboardRoutes()
+            feedRoutes()
             notificationRoutes()
         }
     }

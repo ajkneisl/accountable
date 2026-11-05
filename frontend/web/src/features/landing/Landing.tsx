@@ -1,6 +1,7 @@
 import { NavBar } from "./components/NavBar"
 import { Hero } from "./components/Hero"
 import { Features } from "./components/Features"
+import { CallToAction } from "./components/CallToAction"
 
 /**
  * The primary landing page.
@@ -11,6 +12,7 @@ export default function Landing() {
             <NavBar />
             <Hero />
             <Features />
+            <CallToAction />
         </div>
     )
 }

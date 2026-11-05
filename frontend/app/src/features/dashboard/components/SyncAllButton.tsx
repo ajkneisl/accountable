@@ -1,4 +1,4 @@
-// Top-right sync on the dashboard, beside the gear: refreshes every linked
+// Top-right sync on Home, beside the gear: refreshes every linked
 // account on the server and pulls Apple Health and Screen Time from the phone,
 // then reloads the dashboard. Each source is best-effort — one failing doesn't
 // stop the rest, and Settings shows per-source detail.

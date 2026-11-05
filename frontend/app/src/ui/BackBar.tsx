@@ -19,7 +19,7 @@ export function BackBar({ label = "Back" }: { label?: string }) {
                 label={label === "Back" ? label : `Back to ${label}`}
                 onPress={() => {
                     if (router.canGoBack()) router.back()
-                    else router.replace("/dashboard")
+                    else router.replace("/home")
                 }}
             >
                 {() => (

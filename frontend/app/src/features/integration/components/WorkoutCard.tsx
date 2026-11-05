@@ -1,4 +1,5 @@
-// Workout card — today's Apple Fitness workouts with manual entry + delete.
+// Workout card — today's workouts, marking the ones logged by hand, with manual
+// entry + delete.
 
 import { Pressable, Text, View } from "react-native"
 import {
@@ -7,6 +8,7 @@ import {
     type Workout,
     type WorkoutType
 } from "@shared/index"
+import { confirm } from "../../../ui/confirm"
 import {
     Button,
     Card,
@@ -16,7 +18,7 @@ import {
     Spinner
 } from "../../../ui/primitives"
 
-const TYPE_LABEL: Record<WorkoutType, string> = {
+export const WORKOUT_LABEL: Record<WorkoutType, string> = {
     RUN: "Run",
     WEIGHTLIFTING: "Weightlifting",
     BASKETBALL: "Basketball",
@@ -44,9 +46,16 @@ export function WorkoutCard({
     const totalCalories = workouts.reduce((sum, w) => sum + w.calories, 0)
     const totalMinutes = workouts.reduce((sum, w) => sum + w.durationMin, 0)
 
-    async function remove(id: string) {
+    async function remove(workout: Workout) {
+        const ok = await confirm(
+            `Remove ${WORKOUT_LABEL[workout.type]}?`,
+            "It'll also come off your goals and the feed, along with any likes.",
+            "Remove",
+            true
+        )
+        if (!ok) return
         try {
-            await deleteWorkout(api, id)
+            await deleteWorkout(api, workout.id)
             onChanged()
         } catch {
             // ignore; UI stays as-is, user can retry
@@ -79,8 +88,7 @@ export function WorkoutCard({
             <View className="mb-4 flex-row items-center gap-3">
                 <Button label="+ Add workout" size="sm" onPress={onAdd} />
                 <Text className="flex-1 text-[11px] leading-[15px] text-ink-3">
-                    Manual override — workouts sync from Apple Health
-                    automatically.
+                    Workouts sync from Apple Health. Add any it missed.
                 </Text>
             </View>
 
@@ -99,18 +107,27 @@ export function WorkoutCard({
                         >
                             <View className="flex-1">
                                 <Text className="text-[14px] font-semibold text-ink">
-                                    {TYPE_LABEL[w.type]}
+                                    {WORKOUT_LABEL[w.type]}
                                 </Text>
                                 <Text className="text-[11px] text-ink-3">
-                                    {TIME_FMT.format(new Date(w.happenedAt))} ·{" "}
-                                    {w.durationMin} min ·{" "}
-                                    {w.calories.toLocaleString()} kcal
+                                    {[
+                                        TIME_FMT.format(new Date(w.happenedAt)),
+                                        `${w.durationMin} min`,
+                                        ...(w.calories > 0
+                                            ? [
+                                                  `${w.calories.toLocaleString()} kcal`
+                                              ]
+                                            : []),
+                                        ...(w.source === "MANUAL"
+                                            ? ["Manual"]
+                                            : [])
+                                    ].join(" · ")}
                                 </Text>
                             </View>
                             <Pressable
-                                onPress={() => remove(w.id)}
+                                onPress={() => void remove(w)}
                                 accessibilityRole="button"
-                                accessibilityLabel={`Remove ${TYPE_LABEL[w.type]} workout`}
+                                accessibilityLabel={`Remove ${WORKOUT_LABEL[w.type]} workout`}
                                 hitSlop={10}
                                 className="h-7 w-7 items-center justify-center rounded-full"
                             >

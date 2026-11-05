@@ -81,13 +81,14 @@ class GitHubTest {
 
     private fun mockGitHubClient(
         totalCount: Long,
+        items: String = "",
         capture: (HttpRequestData) -> Unit = {},
     ): HttpClient {
         val engine =
             MockEngine { request ->
                 capture(request)
                 respond(
-                    content = """{"total_count": $totalCount, "items": []}""",
+                    content = """{"total_count": $totalCount, "items": [$items]}""",
                     status = HttpStatusCode.OK,
                     headers = headersOf(HttpHeaders.ContentType, "application/json"),
                 )
@@ -118,6 +119,44 @@ class GitHubTest {
         assertNotNull(q)
         assertTrue(q.contains("author:$testExternalID"), "query missing external id: $q")
         assertTrue(q.contains("author-date:2025-05-16"), "query missing target date: $q")
+    }
+
+    private fun commitItem(repo: String, private: Boolean = false) =
+        """{"sha":"abc","repository":{"full_name":"$repo","private":$private}}"""
+
+    private fun storedRepos(): String? = transaction {
+        GitHubTable.selectAll().where { GitHubTable.userID eq testUserID }.single()[GitHubTable.repos]
+    }
+
+    @Test
+    fun `refresh stores commits per repo, busiest first, from one page`() = runBlocking {
+        var requests = 0
+        val items =
+            listOf(commitItem("a/small"), commitItem("a/big"), commitItem("a/big")).joinToString(",")
+        GitHub.client =
+            mockGitHubClient(totalCount = 3, items = items) {
+                requests++
+                assertEquals("100", it.url.parameters["per_page"])
+            }
+
+        GitHub.refresh(testUserID, testDate)
+
+        assertEquals(1, requests)
+        assertEquals(
+            """[{"repo":"a/big","commits":2},{"repo":"a/small","commits":1}]""",
+            storedRepos(),
+        )
+    }
+
+    @Test
+    fun `refresh never stores the name of a private repo`() = runBlocking {
+        val items = listOf(commitItem("a/public"), commitItem("a/hidden", private = true))
+        GitHub.client = mockGitHubClient(totalCount = 2, items = items.joinToString(","))
+
+        val record = GitHub.refresh(testUserID, testDate)
+
+        assertEquals(2L, record.data.commits)
+        assertEquals("""[{"repo":"a/public","commits":1}]""", storedRepos())
     }
 
     @Test

@@ -1,5 +1,5 @@
 // Settings — pushed from the gear on each tab. Two tabs: General (account,
-// security, notifications, time zone, app info, sign out, delete) and Integrations (data sources).
+// security, feed, notifications, time zone, app info, sign out, delete) and Integrations (data sources).
 
 import { type ReactNode, useEffect, useState } from "react"
 import { AppState, Linking, Pressable, Switch, Text, View } from "react-native"
@@ -9,6 +9,7 @@ import { useAtom } from "jotai"
 import {
     browserTimezone,
     getSelf,
+    updateFeedDetails,
     updateTimezone,
     getNotificationSettings,
     type NotificationKind,
@@ -133,7 +134,8 @@ function SwitchRow({
 const NOTIFICATIONS: { kind: NotificationKind; label: string }[] = [
     { kind: "GOALS_STATUS", label: "Goals check-in" },
     { kind: "STREAK_RISK", label: "Streak reminder" },
-    { kind: "COMPETITION_RECAP", label: "Competition recap" }
+    { kind: "COMPETITION_RECAP", label: "Competition recap" },
+    { kind: "FEED_LIKES", label: "Likes on your updates" }
 ]
 
 const APPEARANCES: { choice: AppearanceChoice; label: string }[] = [
@@ -166,6 +168,47 @@ function AppearanceSection() {
                     </Pressable>
                 )
             })}
+        </Section>
+    )
+}
+
+/** What people in your competitions see on your feed updates. */
+function FeedSection() {
+    const api = useApi()
+    const [user, setUser] = useAtom(userAtom)
+    const [errors, setErrors] = useState<string[]>([])
+    if (!user) return null
+
+    async function toggle(on: boolean) {
+        if (!user) return
+        setErrors([])
+        // Applies right away; the server's answer only matters if it refuses.
+        setUser({ ...user, feedDetails: on })
+        try {
+            await updateFeedDetails(api, on)
+        } catch {
+            setUser(user)
+            setErrors(["Couldn't update your feed setting"])
+        }
+    }
+
+    return (
+        <Section title="Feed">
+            <SwitchRow
+                first
+                label="Show details in the feed"
+                value={user.feedDetails}
+                onChange={(on) => void toggle(on)}
+            />
+            <Text className="pb-3 text-[13px] leading-[18px] text-ink-3">
+                Repo names, LeetCode problems and workout details. When this is
+                off, people in your competitions only see totals.
+            </Text>
+            {errors.length > 0 && (
+                <View className="border-t border-line-2 py-3.5">
+                    <ErrorList errors={errors} />
+                </View>
+            )}
         </Section>
     )
 }
@@ -425,6 +468,8 @@ function GeneralTab() {
             </Section>
 
             <AppearanceSection />
+
+            <FeedSection />
 
             <NotificationsSection />
 

@@ -27,6 +27,7 @@ import {
     updateGoal,
     useApi
 } from "@shared/index"
+import { AddWorkoutSheet } from "../integration/components/AddWorkoutSheet"
 import { EditGoalSheet } from "../dashboard/components/EditGoalSheet"
 import { NewGoalSheet } from "../dashboard/components/NewGoalSheet"
 import { goalKey } from "../dashboard/types"
@@ -64,6 +65,8 @@ interface AppData {
     openNewGoal: () => void
     /** Open the edit sheet (target, color, delete) for the goal with [key] (see goalKey). */
     openEditGoal: (key: string) => void
+    /** Open the "log a workout" sheet from anywhere in the tab stack. */
+    openLogWorkout: () => void
 }
 
 const AppDataContext = createContext<AppData | null>(null)
@@ -85,6 +88,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     const [tick, setTick] = useState(0)
     const [newGoalOpen, setNewGoalOpen] = useState(false)
     const [editGoalKey, setEditGoalKey] = useState<string | null>(null)
+    const [logWorkoutOpen, setLogWorkoutOpen] = useState(false)
 
     useEffect(() => {
         let cancelled = false
@@ -112,6 +116,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     const openNewGoal = useCallback(() => setNewGoalOpen(true), [])
     const openEditGoal = useCallback((key: string) => setEditGoalKey(key), [])
     const closeEditGoal = useCallback(() => setEditGoalKey(null), [])
+    const openLogWorkout = useCallback(() => setLogWorkoutOpen(true), [])
     const editing =
         editGoalKey !== null
             ? data.goals.find((g) => goalKey(g) === editGoalKey)
@@ -152,8 +157,24 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     )
 
     const value = useMemo(
-        () => ({ data, loading, error, reload, openNewGoal, openEditGoal }),
-        [data, loading, error, reload, openNewGoal, openEditGoal]
+        () => ({
+            data,
+            loading,
+            error,
+            reload,
+            openNewGoal,
+            openEditGoal,
+            openLogWorkout
+        }),
+        [
+            data,
+            loading,
+            error,
+            reload,
+            openNewGoal,
+            openEditGoal,
+            openLogWorkout
+        ]
     )
 
     return (
@@ -162,6 +183,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
             {newGoalOpen && (
                 <NewGoalSheet
                     onClose={() => setNewGoalOpen(false)}
+                    onCreated={reload}
+                />
+            )}
+            {logWorkoutOpen && (
+                <AddWorkoutSheet
+                    onClose={() => setLogWorkoutOpen(false)}
                     onCreated={reload}
                 />
             )}

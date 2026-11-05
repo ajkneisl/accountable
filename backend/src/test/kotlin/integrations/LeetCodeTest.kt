@@ -93,6 +93,7 @@ class LeetCodeTest {
     private fun mockLeetCodeClient(
         submissions: List<Pair<String, Long>>,
         difficulties: Map<String, String> = emptyMap(),
+        titles: Map<String, String> = emptyMap(),
         capture: (String) -> Unit = {},
     ): HttpClient {
         val engine =
@@ -103,7 +104,8 @@ class LeetCodeTest {
                     if (body.contains("recentAcSubmissionList")) {
                         val items =
                             submissions.joinToString(",") { (slug, ts) ->
-                                """{"titleSlug":"$slug","timestamp":"$ts"}"""
+                                val title = titles[slug]?.let { """"title":"$it",""" }.orEmpty()
+                                """{$title"titleSlug":"$slug","timestamp":"$ts"}"""
                             }
                         """{"data":{"recentAcSubmissionList":[$items]}}"""
                     } else {
@@ -125,6 +127,34 @@ class LeetCodeTest {
         return HttpClient(engine) {
             install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
         }
+    }
+
+    @Test
+    fun `refresh stores the problems solved, once per day each`() = runBlocking {
+        LeetCode.client =
+            mockLeetCodeClient(
+                submissions =
+                    listOf(
+                        "two-sum" to inDayTimestamp,
+                        "two-sum" to inDayTimestamp,
+                        "no-title" to inDayTimestamp,
+                        "unknown-difficulty" to inDayTimestamp,
+                    ),
+                difficulties = mapOf("two-sum" to "Easy", "no-title" to "Hard"),
+                titles = mapOf("two-sum" to "Two Sum"),
+            )
+
+        LeetCode.refresh(testUserID, testDate)
+
+        val solves = transaction {
+            LeetCodeTable.selectAll()
+                .where { LeetCodeTable.userID eq testUserID }
+                .single()[LeetCodeTable.solves]
+        }
+        assertEquals(
+            """[{"title":"Two Sum","difficulty":"Easy"},{"title":"no-title","difficulty":"Hard"}]""",
+            solves,
+        )
     }
 
     @Test

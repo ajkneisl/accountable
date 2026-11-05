@@ -325,7 +325,7 @@ export default function IntegrationScreen() {
         loadHistory()
     }, [loadHistory])
 
-    if (!known) return <Redirect href="/dashboard" />
+    if (!known) return <Redirect href="/home" />
 
     const status = data.integrations.find((it) => it.name === name)
     const visual = integrationVisual(name)

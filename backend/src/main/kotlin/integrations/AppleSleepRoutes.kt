@@ -2,6 +2,7 @@ package integrations
 
 import api.Cache
 import api.Error
+import features.feed.publishFeed
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.principal
@@ -40,7 +41,10 @@ private val SLEEP_IMPORT_ROUTE: suspend RoutingContext.() -> Unit = {
         }
     }
     val imported = importSleep(userID, req.days)
-    if (imported > 0) Cache.invalidateUser(userID)
+    if (imported > 0) {
+        Cache.invalidateUser(userID)
+        publishFeed(userID)
+    }
     call.respond(ImportSleepResponse(imported))
 }
 

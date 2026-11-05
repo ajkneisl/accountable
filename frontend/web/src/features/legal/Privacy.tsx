@@ -4,7 +4,7 @@ import { ContactLink, LegalPage } from "./LegalPage"
 /** Privacy policy, served at /privacy. */
 export default function Privacy() {
     return (
-        <LegalPage title="Privacy Policy" updated="October 26, 2026">
+        <LegalPage title="Privacy Policy" updated="November 5, 2026">
             <p>
                 Beacc tracks your goals from the apps you already use and lets
                 you compete with friends. This policy explains what we collect
@@ -33,11 +33,12 @@ export default function Privacy() {
                 receive which apps or websites you used.
             </p>
             <p>
-                <strong>GitHub and LeetCode.</strong> If you link these, you give
-                us your public username. We use it to look up your public
-                activity (commit counts and solved problems) from GitHub and
-                LeetCode. We don't ask for access to your accounts or any
-                private data.
+                <strong>GitHub and LeetCode.</strong> If you link these, you
+                give us your public username. We use it to look up your public
+                activity from GitHub and LeetCode: how many commits you made and
+                in which public repositories, and which problems you solved. We
+                don't read commit messages or code, and we don't ask for access
+                to your accounts or any private data.
             </p>
             <p>
                 <strong>What you create.</strong> Your goals, habits and the
@@ -58,7 +59,10 @@ export default function Privacy() {
             <h2>How we use it</h2>
             <ul>
                 <li>To track progress on your goals, habits and streak.</li>
-                <li>To rank you and show your progress in competitions you join.</li>
+                <li>
+                    To rank you and show your progress in competitions you join.
+                </li>
+                <li>To show your updates in the feed, and who liked them.</li>
                 <li>To send the notifications you've allowed.</li>
                 <li>To keep your account secure and the service running.</li>
             </ul>
@@ -73,8 +77,19 @@ export default function Privacy() {
                 <strong>Members of your competitions.</strong> When you join a
                 competition, the other members can see your username, color,
                 streak, and your progress on that competition's shared goals.
-                They don't see your other goals, your habits, or your raw
-                health data. Leaving a competition stops sharing with it.
+                They don't see your other goals or your habits. Leaving a
+                competition stops sharing with it.
+            </p>
+            <p>
+                <strong>Your feed.</strong> Members of a competition also see
+                updates for each source that competition has a goal on, from
+                after you've both joined. Depending on the source, an update can
+                show your commit count and public repository names, the LeetCode
+                problems you solved, a workout's type, length, calories and
+                whether you logged it yourself, or your total steps, sleep or
+                screen time when you meet a goal. They can like your updates,
+                and you'll see how many likes you got. To show them only totals,
+                turn off "Show details in the feed" in Settings.
             </p>
             <p>
                 <strong>Service providers.</strong> We host Beacc on Amazon Web
@@ -95,8 +110,8 @@ export default function Privacy() {
                 delete your account, your profile, goals, habits, health and
                 activity data, devices, competition memberships and any
                 competitions you own are permanently deleted from our database.
-                Copies may remain in encrypted backups for a limited time
-                until they expire.
+                Copies may remain in encrypted backups for a limited time until
+                they expire.
             </p>
 
             <h2>Your choices</h2>

@@ -10,6 +10,9 @@ import integrations.AppleFitnessWorkouts
 import integrations.AppleHealthImports
 import integrations.api.IntegrationTables
 import integrations.api.UserIntegrations
+import features.feed.FeedLikes
+import features.feed.FeedPostGoals
+import features.feed.FeedPosts
 import notifications.NotificationOptOuts
 import notifications.PushDevices
 import user.RefreshTokens
@@ -76,10 +79,16 @@ fun initDb() {
             PushDevices,
             NotificationOptOuts,
             *IntegrationTables.all.toTypedArray(),
+            FeedPosts,
+            FeedPostGoals,
+            FeedLikes,
         )
         // create() skips tables that already exist, so columns added later need adding by hand.
         exec("ALTER TABLE goals ADD COLUMN IF NOT EXISTS color VARCHAR(16)")
         exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS color VARCHAR(16)")
+        exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS feed_details BOOLEAN NOT NULL DEFAULT TRUE")
+        exec("ALTER TABLE integrations_github ADD COLUMN IF NOT EXISTS repos TEXT")
+        exec("ALTER TABLE integrations_leetcode ADD COLUMN IF NOT EXISTS solves TEXT")
     }
 }
 

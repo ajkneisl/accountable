@@ -40,6 +40,9 @@ object Users : Table("users") {
     /** [User.color] */
     val color = enumerationByName("color", 16, HabitColor::class).nullable()
 
+    /** [User.feedDetails] */
+    val feedDetails = bool("feed_details").default(true)
+
     override val primaryKey = PrimaryKey(id)
 }
 
@@ -53,6 +56,7 @@ object Users : Table("users") {
  * @param createdAt The ms epoch when the account was created.
  * @param timezone The user's IANA timezone id, used to bucket their data by local day.
  * @param color The color they picked to stand for them in competitions, or null for [defaultColor].
+ * @param feedDetails Whether others see the specifics on their feed cards, or only totals.
  */
 @MappedTable(Users::class)
 @Verifiable(UserVerifier::class)
@@ -64,6 +68,7 @@ data class User(
     val createdAt: Long,
     val timezone: String = "UTC",
     val color: HabitColor? = null,
+    val feedDetails: Boolean = true,
 )
 
 /** Colors a user is given before picking one. Ink is left out: it reads as no color at all. */
@@ -129,6 +134,11 @@ fun zoneOf(id: UUID): ZoneId =
 /** Set [id]'s [color]. Returns false if the user does not exist. */
 fun updateColor(id: UUID, color: HabitColor): Boolean = transaction {
     Users.update({ Users.id eq id }) { it[Users.color] = color } > 0
+}
+
+/** Set whether others see [id]'s feed details. Returns false if the user does not exist. */
+fun updateFeedDetails(id: UUID, enabled: Boolean): Boolean = transaction {
+    Users.update({ Users.id eq id }) { it[Users.feedDetails] = enabled } > 0
 }
 
 /** Set [id]'s [email]. Returns false if the user does not exist. */

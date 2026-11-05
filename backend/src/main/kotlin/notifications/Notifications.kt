@@ -13,7 +13,7 @@ import org.jetbrains.exposed.sql.update
 import org.jetbrains.exposed.sql.upsert
 import user.Users
 
-/** The scheduled notifications a user can switch off. All are on until they do. */
+/** The notifications a user can switch off. All are on until they do. */
 @Serializable
 enum class NotificationKind {
     /** 5pm: how today's goals and habits stand. */
@@ -24,6 +24,9 @@ enum class NotificationKind {
 
     /** Monday morning: where the user finished last week in each competition. */
     COMPETITION_RECAP,
+
+    /** As it happens, not scheduled: someone liked one of the user's feed cards. */
+    FEED_LIKES,
 }
 
 /**
@@ -71,6 +74,13 @@ suspend fun allDevices(): Map<UUID, List<PushDevice>> = suspendTransaction {
         { it[PushDevices.userID] },
         { PushDevice(it[PushDevices.token], it[PushDevices.sandbox]) },
     )
+}
+
+/** Every device of [userID]. */
+suspend fun devicesFor(userID: UUID): List<PushDevice> = suspendTransaction {
+    PushDevices.selectAll()
+        .where { PushDevices.userID eq userID }
+        .map { PushDevice(it[PushDevices.token], it[PushDevices.sandbox]) }
 }
 
 /** Record which APNs environment [token] turned out to belong to. */
