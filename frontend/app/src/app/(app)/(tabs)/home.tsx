@@ -8,7 +8,6 @@ import { router } from "expo-router"
 import { useAtomValue } from "jotai"
 import { userAtom } from "../../../auth"
 import { useAppData } from "../../../features/common/AppData"
-import { DashboardHeader } from "../../../features/dashboard/components/DashboardHeader"
 import { OnboardingCard } from "../../../features/dashboard/components/OnboardingCard"
 import { SyncAllButton } from "../../../features/dashboard/components/SyncAllButton"
 import { TodayCard } from "../../../features/dashboard/components/TodayCard"
@@ -17,14 +16,42 @@ import { FeedIntroCard } from "../../../features/feed/FeedIntroCard"
 import { useFeed } from "../../../features/feed/useFeed"
 import { useHabits } from "../../../features/habits/HabitsData"
 import { EmptyState } from "../../../ui/EmptyState"
+import { CircleButton } from "../../../ui/CircleButton"
+import { PlusIcon } from "../../../ui/icons"
 import { Screen } from "../../../ui/Screen"
 import { SettingsButton } from "../../../ui/SettingsButton"
-import { AddCard, Button, Card, Eyebrow } from "../../../ui/primitives"
+import {
+    Button,
+    Card,
+    Display,
+    Eyebrow,
+    PageTitle
+} from "../../../ui/primitives"
+import { useColors } from "../../../theme"
 
-/** Sync beside the gear, so every source can be pulled in from home. */
+/**
+ * Logging a workout (for anyone with a goal on them), then sync beside the gear,
+ * so every source can be pulled in from home.
+ */
 function HomeActions() {
+    const colors = useColors()
+    const { data, openLogWorkout } = useAppData()
+    const tracksWorkouts = [...data.goals, ...data.competitionGoals].some(
+        (g) => g.integration === "apple_fitness"
+    )
     return (
         <View className="flex-row gap-2.5">
+            {tracksWorkouts && (
+                <CircleButton label="Log a workout" onPress={openLogWorkout}>
+                    {(glass) =>
+                        glass ? (
+                            <PlusIcon color={colors.ink} size={21} />
+                        ) : (
+                            <PlusIcon color={colors.ink2} size={20} />
+                        )
+                    }
+                </CircleButton>
+            )}
             <SyncAllButton />
             <SettingsButton />
         </View>
@@ -52,7 +79,7 @@ function InviteCard() {
 
 export default function Home() {
     const user = useAtomValue(userAtom)
-    const { data, loading, error, reload, openLogWorkout } = useAppData()
+    const { data, loading, error, reload } = useAppData()
     const habits = useHabits()
     const feed = useFeed()
 
@@ -93,9 +120,6 @@ export default function Home() {
     }
 
     const competing = data.competitions.length > 0
-    const tracksWorkouts = allGoals.some(
-        (g) => g.integration === "apple_fitness"
-    )
     const posts = feed.posts ?? []
 
     return (
@@ -104,7 +128,7 @@ export default function Home() {
             onRefresh={refresh}
             topRight={<HomeActions />}
         >
-            <DashboardHeader user={user} />
+            <PageTitle>Beacc</PageTitle>
 
             {fresh ? (
                 <OnboardingCard />
@@ -113,13 +137,15 @@ export default function Home() {
                 <TodayCard goals={allGoals} streak={data.streak} />
             )}
 
-            {tracksWorkouts && (
-                <AddCard label="Log a workout" onPress={openLogWorkout} />
-            )}
-
             {competing && <FeedIntroCard />}
 
             {loadedOnce.current && !fresh && !competing && <InviteCard />}
+
+            {(posts.length > 0 ||
+                feed.error ||
+                (feed.posts !== null && competing)) && (
+                <Display size={22}>Recent Activity</Display>
+            )}
 
             {feed.error && posts.length === 0 && (
                 <Card className="gap-3 p-5">

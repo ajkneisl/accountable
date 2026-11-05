@@ -102,13 +102,13 @@ function Card({ card }: { card: SampleCard }) {
                 </div>
             ))}
             <div className="mt-3 flex items-center justify-between">
+                <span className="chip">Fall Fitness Challenge ›</span>
                 <span
                     className={`flex items-center gap-1.5 text-[13px] font-semibold ${card.liked ? "text-coral" : "text-ink-3"}`}
                 >
-                    <Heart filled={card.liked} />
                     <span className="text-ink-2">{card.likes}</span>
+                    <Heart filled={card.liked} />
                 </span>
-                <span className="chip">Fall Fitness Challenge ›</span>
             </div>
         </div>
     )

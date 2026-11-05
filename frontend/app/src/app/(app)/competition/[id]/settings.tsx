@@ -28,7 +28,13 @@ import { Screen } from "../../../../ui/Screen"
 import { Sheet, SheetField } from "../../../../ui/Sheet"
 import { Row, Section } from "../../../../ui/SettingsList"
 import { confirm } from "../../../../ui/confirm"
-import { Card, Display, Dot, ErrorList, Input } from "../../../../ui/primitives"
+import {
+    Card,
+    Dot,
+    ErrorList,
+    Input,
+    PageTitle
+} from "../../../../ui/primitives"
 
 /** Longest name the server accepts. */
 const NAME_MAX_LENGTH = 64
@@ -249,7 +255,7 @@ export default function CompetitionSettings() {
     return (
         <Screen edges={["top", "bottom"]}>
             <BackBar label={detail.name} />
-            <Display size={32}>Settings</Display>
+            <PageTitle>Settings</PageTitle>
 
             {error !== null && <ErrorList errors={[error]} />}
 

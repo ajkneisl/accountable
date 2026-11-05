@@ -58,7 +58,8 @@ private suspend fun notifyLiked(likerID: UUID, like: LikeResult) {
                 Push(
                     title = "$liker liked your update",
                     body = like.detail.summary().replaceFirstChar { it.uppercase() },
-                    path = "/home",
+                    // No path, so a tap just opens the app. Home was renamed in 1.2.0, so
+                    // naming it would strand older versions on the router's error page.
                     thread = "feed-likes",
                 ),
             )

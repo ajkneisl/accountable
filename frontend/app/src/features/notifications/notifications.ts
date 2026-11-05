@@ -5,7 +5,7 @@
 
 import { useEffect } from "react"
 import { Platform } from "react-native"
-import { type Href, router } from "expo-router"
+import { type Href, router, useSegments } from "expo-router"
 import * as Notifications from "expo-notifications"
 import * as SecureStore from "expo-secure-store"
 import {
@@ -75,12 +75,26 @@ export async function disablePushes(api: ApiConfig): Promise<void> {
     }
 }
 
-/** Open the screen a tapped notification points at. */
+/**
+ * Open the screen a tapped notification points at.
+ *
+ * A tap often cold-starts the app, and this runs as soon as the authenticated
+ * area mounts, before its nested navigators have registered their state. A
+ * navigation at that point is worked out against a tree that isn't there yet, so
+ * the tap waits for the route to reach a screen inside that area. It's only cleared
+ * once it's being handled, so a tap that arrives early isn't lost.
+ *
+ * Uses navigate, not push: a tab that's already there gets switched to, rather than
+ * a second copy of the tabs being stacked on top.
+ */
 export function useNotificationRouting(): void {
     const response = Notifications.useLastNotificationResponse()
+    const segments = useSegments() as string[]
+    const ready = segments[0] === "(app)" && segments.length > 1
 
     useEffect(() => {
         if (
+            !ready ||
             !response ||
             response.actionIdentifier !==
                 Notifications.DEFAULT_ACTION_IDENTIFIER
@@ -90,6 +104,6 @@ export function useNotificationRouting(): void {
         // Cleared so a remount doesn't open it again.
         Notifications.clearLastNotificationResponse()
         if (typeof path === "string" && path.startsWith("/"))
-            router.push(path as Href)
-    }, [response])
+            router.navigate(path as Href)
+    }, [response, ready])
 }

@@ -125,18 +125,6 @@ function progressLabel(post: FeedPost, chip: FeedGoalChip): string {
     return `${amount(chip.value)} of ${amount(chip.target)} ${unit} ${windowLabel(post, chip)}`
 }
 
-/** What a chip says for a goal other than the one in the corner. */
-function chipLabel(post: FeedPost, chip: FeedGoalChip): string {
-    const outcome = chip.met
-        ? isLimit(post.integration, chip.metric)
-            ? "Under limit"
-            : "Goal hit"
-        : progressLabel(post, chip)
-    return chip.competitionName
-        ? `${outcome} in ${chip.competitionName}`
-        : outcome
-}
-
 export function FeedCard({
     post,
     mine,
@@ -152,19 +140,6 @@ export function FeedCard({
     const { title, lines } = describe(post.detail)
     const goals = sortGoals(post.goals).filter((g) => hasResult(post, g))
     const headline = goals[0]
-    // A personal and a competition goal can say the same thing as the corner.
-    const chips = [
-        ...new Set(
-            goals
-                .filter(
-                    (g) =>
-                        g.metric !== headline.metric ||
-                        g.period !== headline.period ||
-                        fraction(post, g) !== fraction(post, headline)
-                )
-                .map((g) => chipLabel(post, g))
-        )
-    ]
     const competitions = [
         ...new Map(
             post.goals.flatMap((g) =>
@@ -235,46 +210,43 @@ export function FeedCard({
                 ))}
             </View>
 
-            {competitions.length + chips.length > 0 && (
-                <View className="flex-row flex-wrap gap-1.5">
-                    {competitions.map(([id, name]) => (
-                        <Pressable
-                            key={id}
-                            accessibilityRole="link"
-                            accessibilityLabel={`Open ${name}`}
-                            hitSlop={6}
-                            onPress={() =>
-                                router.push({
-                                    pathname: "/competition/[id]",
-                                    params: { id }
-                                })
-                            }
-                        >
-                            <Chip>
-                                <Text className="text-[11px] font-semibold text-ink">
-                                    {name}
-                                </Text>
-                                <ChevronIcon color={colors.ink3} size={11} />
-                            </Chip>
-                        </Pressable>
-                    ))}
-                    {chips.map((chip) => (
-                        <Chip key={chip}>
-                            <Text className="text-[11px] font-semibold text-ink-2">
-                                {chip}
-                            </Text>
-                        </Chip>
-                    ))}
+            {/* Your own card shows its hearts, but they're not yours to give. */}
+            {(competitions.length > 0 || !mine || post.likeCount > 0) && (
+                <View className="flex-row items-center justify-between gap-3">
+                    <View className="flex-1 flex-row flex-wrap gap-1.5">
+                        {competitions.map(([id, name]) => (
+                            <Pressable
+                                key={id}
+                                accessibilityRole="link"
+                                accessibilityLabel={`Open ${name}`}
+                                hitSlop={6}
+                                onPress={() =>
+                                    router.push({
+                                        pathname: "/competition/[id]",
+                                        params: { id }
+                                    })
+                                }
+                            >
+                                <Chip>
+                                    <Text className="text-[11px] font-semibold text-ink">
+                                        {name}
+                                    </Text>
+                                    <ChevronIcon
+                                        color={colors.ink3}
+                                        size={11}
+                                    />
+                                </Chip>
+                            </Pressable>
+                        ))}
+                    </View>
+                    <Likes
+                        count={post.likeCount}
+                        liked={post.likedByMe}
+                        onPress={mine ? undefined : onToggleLike}
+                        color={post.likedByMe ? colors.coral : colors.ink3}
+                    />
                 </View>
             )}
-
-            <Likes
-                count={post.likeCount}
-                liked={post.likedByMe}
-                // Your own card shows its hearts, but they're not yours to give.
-                onPress={mine ? undefined : onToggleLike}
-                color={post.likedByMe ? colors.coral : colors.ink3}
-            />
         </Card>
     )
 }
@@ -293,19 +265,19 @@ function Likes({
     if (!onPress && count === 0) return null
     const content = (
         <>
-            <HeartIcon color={color} size={20} filled={liked} />
             {count > 0 && (
                 <Text className="text-[13px] font-semibold text-ink-2">
                     {count}
                 </Text>
             )}
+            <HeartIcon color={color} size={20} filled={liked} />
         </>
     )
     if (!onPress) {
         return (
             <View
                 accessibilityLabel={plural(count, "like")}
-                className="flex-row items-center gap-1.5 self-start"
+                className="flex-row items-center gap-1.5"
             >
                 {content}
             </View>
@@ -318,7 +290,7 @@ function Likes({
             accessibilityState={{ selected: liked }}
             hitSlop={10}
             onPress={onPress}
-            className="flex-row items-center gap-1.5 self-start"
+            className="flex-row items-center gap-1.5"
         >
             {content}
         </Pressable>

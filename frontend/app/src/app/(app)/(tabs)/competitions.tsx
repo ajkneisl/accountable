@@ -15,7 +15,7 @@ import {
     Button,
     Card,
     Chip,
-    Display,
+    PageTitle,
     Mono
 } from "../../../ui/primitives"
 import { useAppData } from "../../../features/common/AppData"
@@ -73,9 +73,7 @@ export default function Competitions() {
             onRefresh={reload}
             topRight={<SettingsButton />}
         >
-            <View className="gap-2 pr-12">
-                <Display size={32}>Competitions</Display>
-            </View>
+            <PageTitle>Competitions</PageTitle>
 
             {competitions.length > 0 && (
                 <View className="flex-row">

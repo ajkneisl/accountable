@@ -379,33 +379,51 @@ export function Spinner({ size = 14 }: { size?: number }) {
     )
 }
 
-/** Wordmark lockup — a lime dot + "Accountable". */
-export function AccLogo({ size = 18 }: { size?: number }) {
+/** The logo on its own — a lime dot, [size] across. */
+export function LogoMark({ size = 14 }: { size?: number }) {
     const colors = useColors()
-    const dot = size * 0.78
     return (
-        <View className="flex-row items-center gap-2">
+        <View
+            style={{
+                width: size,
+                height: size,
+                borderRadius: size / 2,
+                backgroundColor: colors.lime,
+                borderWidth: 1,
+                borderColor: colors.ink,
+                alignItems: "center",
+                justifyContent: "center"
+            }}
+        >
             <View
                 style={{
-                    width: dot,
-                    height: dot,
-                    borderRadius: dot / 2,
-                    backgroundColor: colors.lime,
-                    borderWidth: 1,
-                    borderColor: colors.ink,
-                    alignItems: "center",
-                    justifyContent: "center"
+                    width: size * 0.42,
+                    height: size * 0.42,
+                    borderRadius: size,
+                    backgroundColor: onFill.light
                 }}
-            >
-                <View
-                    style={{
-                        width: dot * 0.42,
-                        height: dot * 0.42,
-                        borderRadius: dot,
-                        backgroundColor: onFill.light
-                    }}
-                />
+            />
+        </View>
+    )
+}
+
+/** A screen's title: the logo, then the page's name ("Beacc" on Home). */
+export function PageTitle({ children }: { children: ReactNode }) {
+    return (
+        <View className="flex-row items-center gap-2.5">
+            <LogoMark size={26} />
+            <View className="shrink">
+                <Display size={32}>{children}</Display>
             </View>
+        </View>
+    )
+}
+
+/** Wordmark lockup — a lime dot + "Beacc". */
+export function AccLogo({ size = 18 }: { size?: number }) {
+    return (
+        <View className="flex-row items-center gap-2">
+            <LogoMark size={size * 0.78} />
             <Text
                 style={{ fontSize: size, letterSpacing: size * -0.02 }}
                 className="font-bold text-ink"

@@ -16,7 +16,7 @@ import { SettingsButton } from "../../../ui/SettingsButton"
 import {
     AddCard,
     Card,
-    Display,
+    PageTitle,
     Eyebrow,
     Spinner
 } from "../../../ui/primitives"
@@ -48,9 +48,7 @@ export default function Goals() {
                 </View>
             }
         >
-            <View className="gap-1.5 pr-24">
-                <Display size={32}>Goals</Display>
-            </View>
+            <PageTitle>Goals</PageTitle>
 
             {error !== null && (
                 <Card className="bg-coral-soft p-4">

@@ -10,7 +10,7 @@ import { EditModeButton } from "../../../ui/EditModeButton"
 import { EmptyState } from "../../../ui/EmptyState"
 import { Screen } from "../../../ui/Screen"
 import { SettingsButton } from "../../../ui/SettingsButton"
-import { AddCard, Card, Display, Spinner } from "../../../ui/primitives"
+import { AddCard, Card, PageTitle, Spinner } from "../../../ui/primitives"
 
 export default function Habits() {
     const {
@@ -44,9 +44,7 @@ export default function Habits() {
                 </View>
             }
         >
-            <View className="gap-1.5 pr-24">
-                <Display size={32}>Habits</Display>
-            </View>
+            <PageTitle>Habits</PageTitle>
 
             {error !== null && (
                 <Card className="bg-coral-soft p-4">

@@ -43,7 +43,7 @@ import { BackBar } from "../../ui/BackBar"
 import { confirm } from "../../ui/confirm"
 import { CheckIcon } from "../../ui/icons"
 import { Screen } from "../../ui/Screen"
-import { Button, Card, Display, ErrorList } from "../../ui/primitives"
+import { Button, Card, ErrorList, PageTitle } from "../../ui/primitives"
 import { Row, Section } from "../../ui/SettingsList"
 
 type Tab = "general" | "integrations"
@@ -518,7 +518,7 @@ export default function Settings() {
             onRefresh={tab === "integrations" ? reload : undefined}
         >
             <BackBar />
-            <Display size={32}>Settings</Display>
+            <PageTitle>Settings</PageTitle>
             <Segmented
                 value={tab}
                 onChange={(t) => {
