@@ -41,6 +41,8 @@ dependencies {
     implementation(libs.khealth)
     implementation(libs.bcrypt)
     implementation(libs.jedis)
+    implementation(libs.aws.sesv2)
+    implementation(libs.aws.url.connection.client)
 
     implementation(kotlin("reflect"))
 

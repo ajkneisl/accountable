@@ -81,3 +81,39 @@ export function logout(config: ApiConfig, refreshToken: string): Promise<void> {
         { expectJson: false }
     )
 }
+
+/**
+ * POST /api/auth/password/forgot — email a password reset link to the account
+ * [identifier] names (a username or an email address). Resolves the same way
+ * whether or not an account matched.
+ */
+export function requestPasswordReset(
+    config: ApiConfig,
+    identifier: string
+): Promise<void> {
+    return request(
+        config,
+        "POST",
+        "/auth/password/forgot",
+        { identifier },
+        { expectJson: false }
+    )
+}
+
+/**
+ * POST /api/auth/password/reset — set a new password with the token from a
+ * reset link. Signs the account out everywhere.
+ */
+export function resetPassword(
+    config: ApiConfig,
+    token: string,
+    password: string
+): Promise<void> {
+    return request(
+        config,
+        "POST",
+        "/auth/password/reset",
+        { token, password },
+        { expectJson: false }
+    )
+}

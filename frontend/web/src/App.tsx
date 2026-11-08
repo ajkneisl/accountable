@@ -6,6 +6,8 @@ import { tokenStore, userAtom } from "./auth"
 import { Footer } from "./features/common/Footer"
 import Landing from "./features/landing"
 import Login from "./features/auth/Login"
+import ForgotPassword from "./features/auth/ForgotPassword"
+import ResetPassword from "./features/auth/ResetPassword"
 import Join from "./features/join/Join"
 import Privacy from "./features/legal/Privacy"
 import Support from "./features/legal/Support"
@@ -83,6 +85,8 @@ function App() {
             <Route element={<Layout />}>
                 <Route path="/" element={<Landing />} />
                 <Route path="/login" element={<Login />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/tos" element={<Terms />} />
                 <Route path="/support" element={<Support />} />

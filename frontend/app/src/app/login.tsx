@@ -1,7 +1,7 @@
 // Sign-in screen, pushed from /welcome.
 
 import { useState } from "react"
-import { View } from "react-native"
+import { Text, View } from "react-native"
 import { router } from "expo-router"
 import { useSetAtom } from "jotai"
 import { ApiError, getSelf, login, syncTimezone, useApi } from "@shared/index"
@@ -73,6 +73,13 @@ export default function Login() {
                     onSubmitEditing={onSubmit}
                     returnKeyType="go"
                 />
+                <Text
+                    onPress={() => router.push("/forgot-password")}
+                    accessibilityRole="link"
+                    className="mt-2.5 text-[15px] text-ink-3"
+                >
+                    Forgot password?
+                </Text>
             </View>
 
             <ErrorList errors={errors} />

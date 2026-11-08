@@ -92,6 +92,37 @@ private val USER_LOGOUT_ROUTE: suspend RoutingContext.() -> Unit = {
     call.respond(HttpStatusCode.NoContent)
 }
 
+/** @param identifier The account's username, or its email address. */
+@Serializable data class ForgotPasswordRequest(val identifier: String)
+
+/**
+ * POST /api/auth/password/forgot
+ *
+ * Email a password reset link. Always 204, whether or not an account matched.
+ */
+private val FORGOT_PASSWORD_ROUTE: suspend RoutingContext.() -> Unit = {
+    val req = call.receive<ForgotPasswordRequest>()
+    PasswordReset.request(req.identifier)
+    call.respond(HttpStatusCode.NoContent)
+}
+
+/**
+ * @param token The token from the reset link.
+ * @param password The new password.
+ */
+@Serializable data class ResetPasswordRequest(val token: String, val password: String)
+
+/**
+ * POST /api/auth/password/reset
+ *
+ * Set a new password with a reset link's token, signing out every session.
+ */
+private val RESET_PASSWORD_ROUTE: suspend RoutingContext.() -> Unit = {
+    val req = call.receive<ResetPasswordRequest>()
+    PasswordReset.reset(req.token, req.password)
+    call.respond(HttpStatusCode.NoContent)
+}
+
 fun Route.authRoutes() {
     route("/auth") {
         // POST /api/auth/register
@@ -105,5 +136,11 @@ fun Route.authRoutes() {
 
         // POST /api/auht/logout
         post("/logout", USER_LOGOUT_ROUTE)
+
+        // POST /api/auth/password/forgot
+        post("/password/forgot", FORGOT_PASSWORD_ROUTE)
+
+        // POST /api/auth/password/reset
+        post("/password/reset", RESET_PASSWORD_ROUTE)
     }
 }

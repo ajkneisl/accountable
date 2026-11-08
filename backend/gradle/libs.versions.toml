@@ -8,6 +8,7 @@ khealth = "3.0.2"
 hikaricp = "6.2.1"
 bcrypt = "0.10.2"
 jedis = "5.2.0"
+awssdk = "2.29.0"
 
 [libraries]
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
@@ -27,6 +28,9 @@ khealth = { module = "dev.hayden:khealth", version.ref = "khealth" }
 bcrypt = { module = "at.favre.lib:bcrypt", version.ref = "bcrypt" }
 
 jedis = { module = "redis.clients:jedis", version.ref = "jedis" }
+
+aws-sesv2 = { module = "software.amazon.awssdk:sesv2", version.ref = "awssdk" }
+aws-url-connection-client = { module = "software.amazon.awssdk:url-connection-client", version.ref = "awssdk" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

@@ -15,6 +15,7 @@ import features.feed.FeedPostGoals
 import features.feed.FeedPosts
 import notifications.NotificationOptOuts
 import notifications.PushDevices
+import auth.PasswordResets
 import user.RefreshTokens
 import user.Users
 import com.zaxxer.hikari.HikariConfig
@@ -67,6 +68,7 @@ fun initDb() {
         SchemaUtils.create(
             Users,
             RefreshTokens,
+            PasswordResets,
             UserIntegrations,
             Goals,
             Habits,

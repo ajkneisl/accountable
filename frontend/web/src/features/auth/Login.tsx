@@ -115,6 +115,12 @@ export default function Login() {
                             onChange={(e) => setPassword(e.target.value)}
                             className={`${inputClass} !mb-1.5`}
                         />
+                        <Link
+                            to="/forgot-password"
+                            className="text-xs text-ink-3 underline"
+                        >
+                            Forgot password?
+                        </Link>
 
                         {errors.length > 0 && (
                             <ul

@@ -125,8 +125,8 @@ object Auth {
         return user
     }
 
-    /** Strength rules shared by registration and password changes. */
-    private fun passwordErrors(password: String): List<String> = buildList {
+    /** Strength rules shared by registration, password changes and resets. */
+    internal fun passwordErrors(password: String): List<String> = buildList {
         if (password.length < 8) add("password must be at least 8 characters")
         if (password.length > 128) add("password must be at most 128 characters")
         if (password.none(Char::isLetter)) add("password must contain a letter")

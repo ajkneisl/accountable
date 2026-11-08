@@ -101,6 +101,10 @@ export default function RootLayout() {
                                     name="register"
                                     options={authHeader(colors)}
                                 />
+                                <Stack.Screen
+                                    name="forgot-password"
+                                    options={authHeader(colors)}
+                                />
                                 <Stack.Screen name="(app)" />
                             </Stack>
                         </Bootstrap>
