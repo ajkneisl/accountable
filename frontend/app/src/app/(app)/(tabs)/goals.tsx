@@ -1,7 +1,7 @@
 // Goals — the goal streak and every goal with its progress for the week, followed by the
 // goals of the user's competitions. Data comes from the AppDataProvider mounted above the tabs.
 // The pencil in the top right toggles edit mode, which gives each of the user's own goals an
-// Edit button; competition goals are edited from their competition.
+// Edit button and shows the New goal card; competition goals are edited from their competition.
 
 import { useState } from "react"
 import { Text, View } from "react-native"
@@ -13,13 +13,7 @@ import { EmptyState } from "../../../ui/EmptyState"
 import { EditModeButton } from "../../../ui/EditModeButton"
 import { Screen } from "../../../ui/Screen"
 import { SettingsButton } from "../../../ui/SettingsButton"
-import {
-    AddCard,
-    Card,
-    PageTitle,
-    Eyebrow,
-    Spinner
-} from "../../../ui/primitives"
+import { AddCard, Card, PageTitle, Spinner } from "../../../ui/primitives"
 
 export default function Goals() {
     const { data, loading, error, reload, openNewGoal, openEditGoal } =
@@ -71,8 +65,7 @@ export default function Goals() {
             )}
 
             {goals.length > 0 && (
-                <Card className="p-5">
-                    <Eyebrow className="mb-3.5">Streak</Eyebrow>
+                <Card className="p-4">
                     <StreakSection
                         streak={data.streak}
                         history={data.history}
@@ -90,7 +83,8 @@ export default function Goals() {
                 />
             ))}
 
-            {allGoals.length > 0 && (
+            {/* With only competition goals there's no edit mode to enter, so it stays. */}
+            {allGoals.length > 0 && (editMode || goals.length === 0) && (
                 <AddCard label="New goal" onPress={openNewGoal} />
             )}
 

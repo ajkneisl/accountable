@@ -703,7 +703,9 @@ export function RingChart({
     size?: number
 }) {
     const colors = useColors()
-    const stroke = 14
+    // Stroke and figure scale with the ring, so a small one keeps its proportions.
+    const scale = size / 120
+    const stroke = Math.max(6, Math.round(14 * scale))
     const r = size / 2 - stroke / 2 - 1
     const c = 2 * Math.PI * r
     const color =
@@ -739,12 +741,22 @@ export function RingChart({
             </Svg>
             <View className="absolute inset-0 items-center justify-center">
                 <View className="flex-row items-baseline">
-                    <Mono className="text-[28px] font-bold text-ink">
+                    <Mono
+                        className="font-bold text-ink"
+                        style={{ fontSize: Math.round(28 * scale) }}
+                    >
                         {pct}
                     </Mono>
-                    <Text className="text-sm text-ink-3">%</Text>
+                    <Text
+                        className="text-ink-3"
+                        style={{ fontSize: Math.max(10, Math.round(14 * scale)) }}
+                    >
+                        %
+                    </Text>
                 </View>
-                <Text className="mt-1 text-[11px] text-ink-3">{label}</Text>
+                {label !== "" && (
+                    <Text className="mt-1 text-[11px] text-ink-3">{label}</Text>
+                )}
             </View>
         </View>
     )

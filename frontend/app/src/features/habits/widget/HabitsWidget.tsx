@@ -38,7 +38,7 @@ export interface HabitsWidgetHabit {
     streak: number
     doneToday: boolean
     /**
-     * Week columns, oldest first, each Mon→Sun: 1 done, 0 not, -1 a day after
+     * Week columns, oldest first, each Sun→Sat: 1 done, 0 not, -1 a day after
      * today.
      */
     weeks: number[][]

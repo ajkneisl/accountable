@@ -1,6 +1,6 @@
 // Heatmap geometry shared by the in-app heatmap and the widget snapshot.
 //
-// Columns are Monday-anchored weeks (rows Mon→Sun), GitHub-style, with the last
+// Columns are Sunday-anchored weeks (rows Sun→Sat), GitHub-style, with the last
 // column holding the current week. Dates are the backend's `yyyy-MM-dd` strings
 // in the user's timezone; they're handled as UTC midnights so device-timezone
 // DST shifts can't nudge a day across a boundary.
@@ -37,13 +37,13 @@ export function buildGrid(
 ): Cell[][] {
     const startMs = parse(start)
     const todayMs = parse(today)
-    // getUTCDay: Sun=0 … Sat=6 → Mon=0 … Sun=6.
-    const weekday = (new Date(todayMs).getUTCDay() + 6) % 7
-    const firstMonday = todayMs - weekday * DAY_MS - (cols - 1) * 7 * DAY_MS
+    // getUTCDay: Sun=0 … Sat=6, which is already the row.
+    const weekday = new Date(todayMs).getUTCDay()
+    const firstSunday = todayMs - weekday * DAY_MS - (cols - 1) * 7 * DAY_MS
 
     return Array.from({ length: cols }, (_, c) =>
         Array.from({ length: 7 }, (_, r) => {
-            const ms = firstMonday + (c * 7 + r) * DAY_MS
+            const ms = firstSunday + (c * 7 + r) * DAY_MS
             const index = Math.round((ms - startMs) / DAY_MS)
             return {
                 date: format(ms),
