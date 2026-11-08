@@ -33,6 +33,15 @@ import {
 } from "../types"
 import { WeekChart } from "./WeekChart"
 
+const DAY_MS = 86_400_000
+
+/** "Tue, Nov 3" for a day picked on the chart. */
+const DAY_FMT = new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric"
+})
+
 /**
  * Per-day target used for the chart's reference line.
  * - DAILY goals: the full target each day.
@@ -96,6 +105,13 @@ export function GoalCard({
 
     // 0 = current week, 1 = last week, … Drives the per-goal week navigation.
     const [offset, setOffset] = useState(0)
+    // A day picked on the chart (0 = Monday), shown in the headline instead of
+    // the usual figure. Cleared when the week changes.
+    const [day, setDay] = useState<number | null>(null)
+    const changeWeek = (next: (o: number) => number) => {
+        setDay(null)
+        setOffset(next)
+    }
     // Past weeks are fetched on demand; the current week ships inside the goal payload.
     const [fetchedWeek, setFetchedWeek] = useState<GoalWeek | null>(null)
 
@@ -164,11 +180,21 @@ export function GoalCard({
     const daysHit = vals
         .slice(0, daysCounted)
         .filter((v) => meetsTarget(goal, v, goal.target)).length
-    const headline = daily
-        ? offset === 0
-            ? (vals[localWeekday()] ?? 0)
-            : total / 7
-        : total
+    const headline =
+        day !== null
+            ? (vals[day] ?? 0)
+            : daily
+              ? offset === 0
+                  ? (vals[localWeekday()] ?? 0)
+                  : total / 7
+              : total
+    // Noon, so a DST change can't tip the label onto the neighbouring day.
+    const dayLabel =
+        day !== null && week
+            ? DAY_FMT.format(
+                  new Date(week.weekStart + day * DAY_MS + DAY_MS / 2)
+              )
+            : null
 
     return (
         <Card className="gap-4 p-5">
@@ -217,18 +243,34 @@ export function GoalCard({
                                 headline
                             )}
                         </Mono>
-                        <Text className="text-[11px] text-ink-3">
-                            /{" "}
-                            {formatAmount(
-                                goal.integration,
-                                goal.metric,
-                                daily ? goal.target : weeklyTarget
-                            )}{" "}
-                            {unit}
-                            {/* A weekly goal's week is in the footer already. */}
-                            {daily &&
-                                (offset === 0 ? " · today" : " · daily avg")}
-                        </Text>
+                        {dayLabel ? (
+                            // A picked day: its own target for a daily goal (a
+                            // weekly target means nothing for one day), and the
+                            // date in full ink so it's clearly not the usual figure.
+                            <Text className="text-[11px] text-ink-3">
+                                {daily
+                                    ? `/ ${formatAmount(goal.integration, goal.metric, goal.target)} ${unit} · `
+                                    : `${unit} · `}
+                                <Text className="font-semibold text-ink">
+                                    {dayLabel}
+                                </Text>
+                            </Text>
+                        ) : (
+                            <Text className="text-[11px] text-ink-3">
+                                /{" "}
+                                {formatAmount(
+                                    goal.integration,
+                                    goal.metric,
+                                    daily ? goal.target : weeklyTarget
+                                )}{" "}
+                                {unit}
+                                {/* A weekly goal's week is in the footer already. */}
+                                {daily &&
+                                    (offset === 0
+                                        ? " · today"
+                                        : " · daily avg")}
+                            </Text>
+                        )}
                     </View>
                 )}
             </View>
@@ -238,13 +280,16 @@ export function GoalCard({
                 target={dailyTargetFor(goal)}
                 limit={isLimit(goal.integration, goal.metric)}
                 color={goalFill(goal, scheme)}
+                selected={day}
+                onSelect={setDay}
+                selectableDays={offset === 0 ? localWeekday() + 1 : 7}
             />
 
             <View className="flex-row items-center justify-between">
                 <Pressable
                     accessibilityRole="button"
                     accessibilityLabel="Previous week"
-                    onPress={() => setOffset((o) => o + 1)}
+                    onPress={() => changeWeek((o) => o + 1)}
                     hitSlop={12}
                     className="px-2"
                 >
@@ -261,7 +306,7 @@ export function GoalCard({
                 <Pressable
                     accessibilityRole="button"
                     accessibilityLabel="Next week"
-                    onPress={() => setOffset((o) => Math.max(0, o - 1))}
+                    onPress={() => changeWeek((o) => Math.max(0, o - 1))}
                     disabled={offset === 0}
                     hitSlop={12}
                     className={`px-2 ${offset === 0 ? "opacity-30" : ""}`}

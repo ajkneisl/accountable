@@ -33,6 +33,8 @@ import {
     formatAmount,
     formatWeekRange,
     integrationVisual,
+    localWeekday,
+    meetsTarget,
     unitLabel
 } from "../../dashboard/types"
 import { FALLBACK_BAR_COLOR, onMemberFill } from "../colors"
@@ -172,15 +174,146 @@ function Standings({
     )
 }
 
+const WEEKDAY = ["M", "T", "W", "T", "F", "S", "S"]
+const WEEKDAY_NAME = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday"
+]
+const DAY_MS = 86_400_000
+
+/** "Tue, Nov 3" for a picked day. */
+const DAY_FMT = new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric"
+})
+
+/**
+ * M T W T F S S chips that pick one day of the week for every shared goal at
+ * once; tapping the picked day again returns to the whole week. Days still to
+ * come can't be picked.
+ */
+function DayPicker({
+    selected,
+    selectable,
+    onSelect
+}: {
+    selected: number | null
+    selectable: number
+    onSelect: (day: number | null) => void
+}) {
+    return (
+        <View className="flex-row gap-1.5">
+            {WEEKDAY.map((d, i) => {
+                const picked = selected === i
+                const future = i >= selectable
+                return (
+                    <Pressable
+                        key={i}
+                        disabled={future}
+                        onPress={() => onSelect(picked ? null : i)}
+                        accessibilityRole="button"
+                        accessibilityState={{
+                            selected: picked,
+                            disabled: future
+                        }}
+                        accessibilityLabel={WEEKDAY_NAME[i]}
+                        hitSlop={4}
+                        className={`h-7 flex-1 items-center justify-center rounded-[8px] ${
+                            picked ? "bg-ink" : "bg-bg-sunken"
+                        } ${future ? "opacity-40" : ""}`}
+                    >
+                        <Mono
+                            className={`text-[11px] font-semibold ${
+                                picked ? "text-bg" : "text-ink-3"
+                            }`}
+                        >
+                            {d}
+                        </Mono>
+                    </Pressable>
+                )
+            })}
+        </View>
+    )
+}
+
+/**
+ * A daily goal's week for one member: a dot per day, in their color when the
+ * target was met, faded coral when missed, outlined for today while it's still
+ * running, and blank for days to come. The picked day's dot is ringed.
+ */
+function DayDots({
+    board,
+    member,
+    color,
+    today,
+    selected
+}: {
+    board: CompetitionGoalBoard
+    member: CompetitionMemberWeek
+    color: string
+    /** Today's index in the current week, or 7 for a past week. */
+    today: number
+    selected: number | null
+}) {
+    const colors = useColors()
+    return (
+        <View className="flex-row items-center gap-[3px]">
+            {member.vals.map((v, i) => {
+                const met = meetsTarget(board, v, board.target)
+                const style =
+                    i > today
+                        ? { backgroundColor: colors.line }
+                        : met
+                          ? { backgroundColor: color }
+                          : i === today
+                            ? { borderWidth: 1.5, borderColor: colors.ink3 }
+                            : { backgroundColor: colors.coral, opacity: 0.45 }
+                return (
+                    <View
+                        key={i}
+                        style={[
+                            { width: 7, height: 7, borderRadius: 3.5 },
+                            style,
+                            selected === i && {
+                                outlineWidth: 1.5,
+                                outlineColor: colors.ink,
+                                outlineOffset: 1
+                            }
+                        ]}
+                    />
+                )
+            })}
+        </View>
+    )
+}
+
+/** "Tue, Nov 3" for day [day] (0 = Monday) of the week starting [weekStart]. */
+function dayDate(weekStart: number, day: number): string {
+    // Noon, so a DST change can't tip the label onto the neighbouring day.
+    return DAY_FMT.format(new Date(weekStart + day * DAY_MS + DAY_MS / 2))
+}
+
 function GoalProgress({
     board,
     currentWeek,
+    weekStart,
+    day,
     meID,
     colorMap,
     onEdit
 }: {
     board: CompetitionGoalBoard
     currentWeek: boolean
+    /** Monday 00:00 (ms epoch) of the week shown. */
+    weekStart: number
+    /** The day picked for the whole card (0 = Monday), or null for the week. */
+    day: number | null
     meID?: string
     colorMap: Record<string, string>
     /** Opens the edit sheet; owner-only. */
@@ -193,11 +326,19 @@ function GoalProgress({
     const pacePct = Math.min(100, (pace / wt) * 100)
     // Daily goals show per-day amounts against the daily target.
     const daily = board.period === "DAILY"
+    const today = currentWeek ? localWeekday() : 7
     const shown = (m: CompetitionMemberWeek) =>
-        displayValue(board, m, currentWeek)
+        day !== null ? (m.vals[day] ?? 0) : displayValue(board, m, currentWeek)
     const members = [...board.members].sort((a, b) => shown(b) - shown(a))
     const amount = (v: number) =>
         formatAmount(board.integration, board.metric, v)
+    // One day of a weekly goal has no target of its own, so its bars compare
+    // members against that day's leader instead.
+    const dayLeader = Math.max(1, ...board.members.map(shown))
+    const barScale =
+        day !== null && !daily ? dayLeader : Math.max(1, board.target)
+    const showTarget = day === null || daily
+    const dayLabel = day !== null ? dayDate(weekStart, day) : null
 
     return (
         <View className="gap-3.5 py-5">
@@ -218,6 +359,11 @@ function GoalProgress({
                         {visual.sourceLabel}
                     </Text>
                 </View>
+                {/* Repeated on each goal, so the rows still read as one day
+                    once the card's picker has scrolled away. */}
+                {dayLabel && (
+                    <Mono className="text-[11px] text-ink-2">{dayLabel}</Mono>
+                )}
                 {onEdit && (
                     <Pressable
                         onPress={onEdit}
@@ -235,10 +381,7 @@ function GoalProgress({
                 {members.map((m) => {
                     const isMe = m.userID === meID
                     const color = colorMap[m.userID] ?? FALLBACK_BAR_COLOR
-                    const pct = Math.min(
-                        100,
-                        (shown(m) / Math.max(1, board.target)) * 100
-                    )
+                    const pct = Math.min(100, (shown(m) / barScale) * 100)
                     return (
                         <View key={m.userID} className="gap-1.5">
                             <View className="flex-row items-center gap-2">
@@ -253,17 +396,26 @@ function GoalProgress({
                                         </Text>
                                     )}
                                 </Text>
+                                {daily && (
+                                    <DayDots
+                                        board={board}
+                                        member={m}
+                                        color={color}
+                                        today={today}
+                                        selected={day}
+                                    />
+                                )}
                                 <Mono className="text-xs text-ink-3">
                                     <Text className="font-bold text-ink">
                                         {amount(shown(m))}
                                     </Text>
-                                    /{amount(board.target)}
+                                    {showTarget && `/${amount(board.target)}`}
                                 </Mono>
                             </View>
 
                             {/* Progress toward the target; weekly goals add a pace marker. */}
                             <Bar pct={pct} color={color} height={12}>
-                                {!daily && (
+                                {!daily && day === null && (
                                     <View
                                         pointerEvents="none"
                                         style={{
@@ -345,6 +497,12 @@ export function CompetitionBoard({
 }) {
     const api = useApi()
     const [offset, setOffset] = useState(0)
+    // A day picked for the Shared goals card (0 = Monday), or null for the week.
+    const [day, setDay] = useState<number | null>(null)
+    const changeWeek = (next: (o: number) => number) => {
+        setDay(null)
+        setOffset(next)
+    }
     const [week, setWeek] = useState<CompetitionWeek | null>(null)
     const [loading, setLoading] = useState(true)
     const [editing, setEditing] = useState<CompetitionGoalBoard | null>(null)
@@ -374,7 +532,9 @@ export function CompetitionBoard({
             metric: board.metric,
             period: board.period,
             target,
-            ...(board.minWorkoutMin ? { minWorkoutMin: board.minWorkoutMin } : {})
+            ...(board.minWorkoutMin
+                ? { minWorkoutMin: board.minWorkoutMin }
+                : {})
         })
         onChanged()
     }
@@ -430,8 +590,8 @@ export function CompetitionBoard({
                                   : "—"
                         }
                         canGoForward={!currentWeek}
-                        onBack={() => setOffset((o) => o + 1)}
-                        onForward={() => setOffset((o) => Math.max(0, o - 1))}
+                        onBack={() => changeWeek((o) => o + 1)}
+                        onForward={() => changeWeek((o) => Math.max(0, o - 1))}
                     />
                 )}
             </Card>
@@ -440,13 +600,31 @@ export function CompetitionBoard({
             <Card className="p-5">
                 <View className="mb-2 flex-row items-center justify-between">
                     <Eyebrow>Shared goals</Eyebrow>
-                    {/* Past weeks are named, so it's clear what's shown. */}
-                    {!currentWeek && week && (
-                        <Mono className="text-[11px] text-ink-3">
-                            {formatWeekRange(week.weekStart)}
+                    {/* A picked day in full ink, so it's clear every goal below
+                        is that day; otherwise past weeks are named. */}
+                    {day !== null && week ? (
+                        <Mono className="text-[11px] font-semibold text-ink">
+                            {dayDate(week.weekStart, day)}
                         </Mono>
+                    ) : (
+                        !currentWeek &&
+                        week && (
+                            <Mono className="text-[11px] text-ink-3">
+                                {formatWeekRange(week.weekStart)}
+                            </Mono>
+                        )
                     )}
                 </View>
+
+                {week && week.goals.length > 0 && (
+                    <View className="mb-1 mt-2">
+                        <DayPicker
+                            selected={day}
+                            selectable={currentWeek ? localWeekday() + 1 : 7}
+                            onSelect={setDay}
+                        />
+                    </View>
+                )}
 
                 {!week || week.goals.length === 0 ? (
                     <Text className="text-[13px] text-ink-3">
@@ -464,6 +642,8 @@ export function CompetitionBoard({
                                 <GoalProgress
                                     board={board}
                                     currentWeek={currentWeek}
+                                    weekStart={week.weekStart}
+                                    day={day}
                                     meID={meID}
                                     colorMap={colorMap}
                                     onEdit={
