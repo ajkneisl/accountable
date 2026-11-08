@@ -1,4 +1,5 @@
-// Edit sheet for a goal: its target and accent color, plus the delete button
+// Edit sheet for a goal: its target, minimum workout length (workouts goals) and
+// accent color, plus the delete button
 // (here rather than on the card so it can't be hit by accident). Source, metric
 // and cadence are the goal's identity on the backend, so changing those means
 // deleting the goal and creating a new one. A competition's shared goal uses it
@@ -18,6 +19,7 @@ import {
     unitLabel,
     unitScale
 } from "../types"
+import { MinWorkoutField, takesMinWorkout } from "./MinWorkoutField"
 
 function messages(err: unknown): string[] {
     if (err instanceof ApiError) return err.messages
@@ -32,15 +34,20 @@ export function EditGoalSheet({
     onSave,
     onDelete
 }: {
-    goal: Pick<
-        Goal,
-        "integration" | "metric" | "period" | "target" | "color"
-    >
+    goal: Pick<Goal, "integration" | "metric" | "period" | "target" | "color"> &
+        Partial<Pick<Goal, "minWorkoutMin">>
     /** A competition's shared goal: no color, and deleting removes it for everyone. */
     shared?: boolean
     onClose: () => void
-    /** [target] is in stored units (minutes of sleep, not hours). */
-    onSave: (target: number, color: GoalColor) => Promise<void>
+    /**
+     * [target] is in stored units (minutes of sleep, not hours). [minWorkoutMin]
+     * is null when every workout counts, or for a goal that doesn't take one.
+     */
+    onSave: (
+        target: number,
+        color: GoalColor,
+        minWorkoutMin: number | null
+    ) => Promise<void>
     onDelete: () => Promise<void>
 }) {
     // Targets are typed in display units (hours of sleep) but stored as counted.
@@ -49,6 +56,10 @@ export function EditGoalSheet({
         formatAmount(goal.integration, goal.metric, goal.target)
     )
     const [color, setColor] = useState<GoalColor>(goalColor(goal))
+    const showMinWorkout = takesMinWorkout(goal.integration, goal.metric)
+    const [minWorkout, setMinWorkout] = useState<number | null>(
+        goal.minWorkoutMin ?? null
+    )
     const [submitting, setSubmitting] = useState(false)
     const [deleting, setDeleting] = useState(false)
     const [errors, setErrors] = useState<string[]>([])
@@ -66,7 +77,7 @@ export function EditGoalSheet({
         setErrors([])
         setSubmitting(true)
         try {
-            await onSave(stored, color)
+            await onSave(stored, color, showMinWorkout ? minWorkout : null)
             onClose()
         } catch (err) {
             setErrors(messages(err))
@@ -107,8 +118,10 @@ export function EditGoalSheet({
             title={shared ? "Edit shared goal" : "Edit goal"}
             description={
                 shared
-                    ? "Change the target every member is measured against."
-                    : "Change its target or color."
+                    ? "Change what every member is measured against."
+                    : showMinWorkout
+                      ? "Change its target, minimum length or color."
+                      : "Change its target or color."
             }
             onClose={onClose}
             action={{
@@ -152,6 +165,10 @@ export function EditGoalSheet({
                     </Text>
                 </View>
             </SheetField>
+
+            {showMinWorkout && (
+                <MinWorkoutField value={minWorkout} onChange={setMinWorkout} />
+            )}
 
             {!shared && (
                 <SheetField label="Color">

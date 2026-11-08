@@ -19,6 +19,7 @@ import {
 } from "../../../ui/primitives"
 import { useAppData } from "../../common/AppData"
 import { isLimit, unitLabel, unitScale } from "../types"
+import { MinWorkoutField, takesMinWorkout } from "./MinWorkoutField"
 
 type Source = {
     integration: string
@@ -93,9 +94,6 @@ const SOURCES: Source[] = [
     }
 ]
 
-/** Minimum workout lengths offered for a workouts goal, in minutes; null is any length. */
-const MIN_WORKOUT_CHOICES: (number | null)[] = [null, 15, 20, 30, 45, 60]
-
 /** The goal a {@link GoalSheet} composes, handed to its `onSubmit`. */
 export interface GoalDraft {
     integration: string
@@ -153,9 +151,7 @@ export function GoalSheet({
     const [errors, setErrors] = useState<string[]>([])
 
     const source = SOURCES[sourceIdx]
-    const showMinWorkout =
-        source.integration === "apple_fitness" &&
-        metric === "workouts"
+    const showMinWorkout = takesMinWorkout(source.integration, metric)
     const targetNum = Number(target)
     const unit = unitLabel(source.integration, metric)
     // Targets are typed in display units (hours of sleep) but stored as counted.
@@ -321,26 +317,7 @@ export function GoalSheet({
             </SheetField>
 
             {showMinWorkout && (
-                <SheetField label="Minimum length">
-                    <View className="flex-row flex-wrap gap-2">
-                        {MIN_WORKOUT_CHOICES.map((m) => (
-                            <ChoiceButton
-                                key={m ?? "any"}
-                                selected={minWorkout === m}
-                                onPress={() => setMinWorkout(m)}
-                            >
-                                <Text className="text-center text-[16px] font-semibold text-ink">
-                                    {m === null ? "Any" : `${m} min`}
-                                </Text>
-                            </ChoiceButton>
-                        ))}
-                    </View>
-                    <Text className="text-[13px] text-ink-3">
-                        {minWorkout === null
-                            ? "Every workout counts."
-                            : `Only workouts of ${minWorkout} minutes or more count.`}
-                    </Text>
-                </SheetField>
+                <MinWorkoutField value={minWorkout} onChange={setMinWorkout} />
             )}
 
             <ErrorList errors={errors} />

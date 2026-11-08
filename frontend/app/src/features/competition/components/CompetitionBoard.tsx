@@ -34,7 +34,6 @@ import {
     formatWeekRange,
     integrationVisual,
     localWeekday,
-    meetsTarget,
     unitLabel
 } from "../../dashboard/types"
 import { FALLBACK_BAR_COLOR, onMemberFill } from "../colors"
@@ -242,57 +241,6 @@ function DayPicker({
     )
 }
 
-/**
- * A daily goal's week for one member: a dot per day, in their color when the
- * target was met, faded coral when missed, outlined for today while it's still
- * running, and blank for days to come. The picked day's dot is ringed.
- */
-function DayDots({
-    board,
-    member,
-    color,
-    today,
-    selected
-}: {
-    board: CompetitionGoalBoard
-    member: CompetitionMemberWeek
-    color: string
-    /** Today's index in the current week, or 7 for a past week. */
-    today: number
-    selected: number | null
-}) {
-    const colors = useColors()
-    return (
-        <View className="flex-row items-center gap-[3px]">
-            {member.vals.map((v, i) => {
-                const met = meetsTarget(board, v, board.target)
-                const style =
-                    i > today
-                        ? { backgroundColor: colors.line }
-                        : met
-                          ? { backgroundColor: color }
-                          : i === today
-                            ? { borderWidth: 1.5, borderColor: colors.ink3 }
-                            : { backgroundColor: colors.coral, opacity: 0.45 }
-                return (
-                    <View
-                        key={i}
-                        style={[
-                            { width: 7, height: 7, borderRadius: 3.5 },
-                            style,
-                            selected === i && {
-                                outlineWidth: 1.5,
-                                outlineColor: colors.ink,
-                                outlineOffset: 1
-                            }
-                        ]}
-                    />
-                )
-            })}
-        </View>
-    )
-}
-
 /** "Tue, Nov 3" for day [day] (0 = Monday) of the week starting [weekStart]. */
 function dayDate(weekStart: number, day: number): string {
     // Noon, so a DST change can't tip the label onto the neighbouring day.
@@ -326,7 +274,6 @@ function GoalProgress({
     const pacePct = Math.min(100, (pace / wt) * 100)
     // Daily goals show per-day amounts against the daily target.
     const daily = board.period === "DAILY"
-    const today = currentWeek ? localWeekday() : 7
     const shown = (m: CompetitionMemberWeek) =>
         day !== null ? (m.vals[day] ?? 0) : displayValue(board, m, currentWeek)
     const members = [...board.members].sort((a, b) => shown(b) - shown(a))
@@ -396,15 +343,6 @@ function GoalProgress({
                                         </Text>
                                     )}
                                 </Text>
-                                {daily && (
-                                    <DayDots
-                                        board={board}
-                                        member={m}
-                                        color={color}
-                                        today={today}
-                                        selected={day}
-                                    />
-                                )}
                                 <Mono className="text-xs text-ink-3">
                                     <Text className="font-bold text-ink">
                                         {amount(shown(m))}
@@ -525,16 +463,18 @@ export function CompetitionBoard({
         }
     }, [api, competition.id, offset, refreshKey])
 
-    // Adding a goal that already exists replaces it, so carry its minimum over.
-    async function save(board: CompetitionGoalBoard, target: number) {
+    // Adding a goal that already exists replaces it, minimum included.
+    async function save(
+        board: CompetitionGoalBoard,
+        target: number,
+        minWorkoutMin: number | null
+    ) {
         await addCompetitionGoal(api, competition.id, {
             integration: board.integration,
             metric: board.metric,
             period: board.period,
             target,
-            ...(board.minWorkoutMin
-                ? { minWorkoutMin: board.minWorkoutMin }
-                : {})
+            ...(minWorkoutMin ? { minWorkoutMin } : {})
         })
         onChanged()
     }
@@ -664,7 +604,9 @@ export function CompetitionBoard({
                     goal={editing}
                     shared
                     onClose={() => setEditing(null)}
-                    onSave={(target) => save(editing, target)}
+                    onSave={(target, _color, minWorkoutMin) =>
+                        save(editing, target, minWorkoutMin)
+                    }
                     onDelete={() => remove(editing)}
                 />
             )}

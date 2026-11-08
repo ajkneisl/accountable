@@ -29,6 +29,7 @@ import {
 } from "@shared/index"
 import { AddWorkoutSheet } from "../integration/components/AddWorkoutSheet"
 import { EditGoalSheet } from "../dashboard/components/EditGoalSheet"
+import { takesMinWorkout } from "../dashboard/components/MinWorkoutField"
 import { NewGoalSheet } from "../dashboard/components/NewGoalSheet"
 import { goalKey } from "../dashboard/types"
 
@@ -125,13 +126,25 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     // Changes apply to the cached goals right away; the reload then catches up
     // the streak and history, which depend on every goal's target.
     const saveGoal = useCallback(
-        async (goal: Goal, target: number, color: GoalColor) => {
+        async (
+            goal: Goal,
+            target: number,
+            color: GoalColor,
+            minWorkoutMin: number | null
+        ) => {
             const updated = await updateGoal(
                 api,
                 goal.integration,
                 goal.metric,
                 goal.period,
-                { target, color }
+                {
+                    target,
+                    color,
+                    // 0 removes a minimum; other goals don't have one to change.
+                    ...(takesMinWorkout(goal.integration, goal.metric)
+                        ? { minWorkoutMin: minWorkoutMin ?? 0 }
+                        : {})
+                }
             )
             setData((prev) => ({
                 ...prev,
@@ -197,7 +210,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
                     key={goalKey(editing)}
                     goal={editing}
                     onClose={closeEditGoal}
-                    onSave={(target, color) => saveGoal(editing, target, color)}
+                    onSave={(target, color, minWorkoutMin) =>
+                        saveGoal(editing, target, color, minWorkoutMin)
+                    }
                     onDelete={() => removeGoal(editing)}
                 />
             )}

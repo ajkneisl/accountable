@@ -52,9 +52,15 @@ data class CreateGoalRequest(
  *
  * @param target New positive target count for the goal's period window.
  * @param color New card accent.
+ * @param minWorkoutMin New shortest workout (minutes) that counts toward a workouts goal; 0 removes
+ *   the minimum.
  */
 @Serializable
-data class UpdateGoalRequest(val target: Long? = null, val color: HabitColor? = null)
+data class UpdateGoalRequest(
+    val target: Long? = null,
+    val color: HabitColor? = null,
+    val minWorkoutMin: Long? = null,
+)
 
 /**
  * Goal payload with current-period progress and the last 7 days of raw values.
@@ -253,10 +259,13 @@ private val GOAL_UPDATE_ROUTE: suspend RoutingContext.() -> Unit = {
     val userID = call.userID()
     val (integration, metric, period) = call.goalPath()
     val req = call.receive<UpdateGoalRequest>()
-    if (req.target == null && req.color == null) Error.text("nothing to update")
+    if (req.target == null && req.color == null && req.minWorkoutMin == null) {
+        Error.text("nothing to update")
+    }
     if (req.target != null && req.target <= 0) Error.text("target must be positive")
+    if (req.minWorkoutMin != 0L) validateMinWorkout(integration, metric, req.minWorkoutMin)
 
-    if (!updateGoal(userID, integration, metric, period, req.target, req.color)) {
+    if (!updateGoal(userID, integration, metric, period, req.target, req.color, req.minWorkoutMin)) {
         Error.notFound("goal")
     }
     Cache.invalidateUser(userID)

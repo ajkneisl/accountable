@@ -137,8 +137,8 @@ suspend fun goalFor(
 }
 
 /**
- * Change a goal's target and/or color; null fields are left as they are. Returns true if [userID]
- * has the goal.
+ * Change a goal's target, color and/or minimum workout length; null fields are left as they are,
+ * and a [minWorkoutMin] of 0 removes the minimum. Returns true if [userID] has the goal.
  */
 suspend fun updateGoal(
     userID: UUID,
@@ -147,6 +147,7 @@ suspend fun updateGoal(
     period: GoalPeriod,
     target: Long?,
     color: HabitColor?,
+    minWorkoutMin: Long? = null,
 ): Boolean = suspendTransaction {
     Goals.update({
         (Goals.userID eq userID) and
@@ -156,6 +157,7 @@ suspend fun updateGoal(
     }) {
         if (target != null) it[Goals.target] = target
         if (color != null) it[Goals.color] = color
+        if (minWorkoutMin != null) it[Goals.minWorkoutMin] = minWorkoutMin.takeIf { min -> min > 0 }
     } > 0
 }
 

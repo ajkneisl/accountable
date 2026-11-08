@@ -87,4 +87,20 @@ class GoalTest {
         assertTrue(deleteGoal(owner, "github", "commits", GoalPeriod.DAILY))
         assertNull(goalFor(owner, "github", "commits", GoalPeriod.DAILY))
     }
+
+    @Test
+    fun `update sets and removes a minimum workout length`() = runBlocking {
+        val user = createUser("min", "min@e.com", "hash", "UTC").id
+        upsertGoal(user, "apple_fitness", "workouts", GoalPeriod.WEEKLY, 3)
+
+        updateGoal(user, "apple_fitness", "workouts", GoalPeriod.WEEKLY, null, null, 30)
+        assertEquals(30L, goalFor(user, "apple_fitness", "workouts", GoalPeriod.WEEKLY)?.minWorkoutMin)
+
+        // Editing something else leaves it alone.
+        updateGoal(user, "apple_fitness", "workouts", GoalPeriod.WEEKLY, 4, null)
+        assertEquals(30L, goalFor(user, "apple_fitness", "workouts", GoalPeriod.WEEKLY)?.minWorkoutMin)
+
+        updateGoal(user, "apple_fitness", "workouts", GoalPeriod.WEEKLY, null, null, 0)
+        assertNull(goalFor(user, "apple_fitness", "workouts", GoalPeriod.WEEKLY)?.minWorkoutMin)
+    }
 }

@@ -7,6 +7,14 @@ import features.competition.createCompetition
 import features.competition.goalsForCompetition
 import features.competition.upsertCompetitionGoal
 import features.goals.GoalPeriod
+import features.goals.weekValues
+import features.goals.weekWindow
+import integrations.AppleFitnessTable
+import integrations.AppleFitnessWorkouts
+import integrations.WorkoutType
+import integrations.addWorkout
+import integrations.api.UserIntegrations
+import java.time.ZoneOffset
 import java.util.UUID
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -29,7 +37,18 @@ class CompetitionGoalTest {
             password = "",
         )
         transaction {
-            SchemaUtils.create(Users, Competitions, CompetitionMembers, CompetitionGoals)
+            SchemaUtils.create(
+                Users,
+                Competitions,
+                CompetitionMembers,
+                CompetitionGoals,
+                UserIntegrations,
+                AppleFitnessWorkouts,
+                AppleFitnessTable,
+            )
+            AppleFitnessWorkouts.deleteAll()
+            AppleFitnessTable.deleteAll()
+            UserIntegrations.deleteAll()
             CompetitionGoals.deleteAll()
             CompetitionMembers.deleteAll()
             Competitions.deleteAll()
@@ -55,5 +74,32 @@ class CompetitionGoalTest {
             listOf("apple_steps" to 10_000L, "github" to 8L),
             goalsForCompetition(competition).map { it.integration to it.target },
         )
+    }
+
+    @Test
+    fun `a shared goal's minimum applies to members and can be edited`(): Unit = runBlocking {
+        val member = newUser()
+        val competition = createCompetition(member, "Test").id
+        val now = System.currentTimeMillis()
+        addWorkout(member, WorkoutType.WALK, 20, 100, now)
+        addWorkout(member, WorkoutType.RUN, 40, 300, now)
+        val zone = ZoneOffset.UTC
+        val weekStart = weekWindow(now, zone, 0).first
+
+        // Stored and read back the way the board reads it.
+        upsertCompetitionGoal(competition, "apple_fitness", "workouts", GoalPeriod.WEEKLY, 3, 30)
+        var goal = goalsForCompetition(competition).single()
+        assertEquals(30L, goal.minWorkoutMin)
+        assertEquals(1L, weekValues(member, goal, weekStart, zone).sum())
+
+        // Editing replaces it, and leaving it out removes the minimum.
+        upsertCompetitionGoal(competition, "apple_fitness", "workouts", GoalPeriod.WEEKLY, 3, 15)
+        goal = goalsForCompetition(competition).single()
+        assertEquals(2L, weekValues(member, goal, weekStart, zone).sum())
+
+        upsertCompetitionGoal(competition, "apple_fitness", "workouts", GoalPeriod.WEEKLY, 3)
+        goal = goalsForCompetition(competition).single()
+        assertEquals(null, goal.minWorkoutMin)
+        assertEquals(2L, weekValues(member, goal, weekStart, zone).sum())
     }
 }

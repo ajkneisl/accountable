@@ -51,6 +51,8 @@ export interface CreateGoalRequest {
 export interface UpdateGoalRequest {
     target?: number
     color?: GoalColor
+    /** Shortest workout, in minutes, that counts toward a workouts goal; 0 removes the minimum. */
+    minWorkoutMin?: number
 }
 
 /** One Monday-anchored week of a goal's metric, returned by {@link getGoalWeek}. */
