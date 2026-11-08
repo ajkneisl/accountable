@@ -18,6 +18,7 @@ import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.update
 import org.jetbrains.exposed.sql.upsert
 import user.Users
 import user.zoneOf
@@ -26,9 +27,27 @@ import user.zoneOf
 @Serializable
 enum class WorkoutType {
     RUN,
+    WALK,
+    HIKE,
+    CYCLING,
+    SWIM,
     WEIGHTLIFTING,
+    CORE,
+    HIIT,
+    YOGA,
+    PILATES,
+    ROWING,
+    ELLIPTICAL,
+    STAIRS,
+    DANCE,
+    BOXING,
+    CLIMBING,
+    TENNIS,
+    SOCCER,
     BASKETBALL,
     PICKLEBALL,
+    GOLF,
+    SNOW_SPORTS,
     OTHER,
 }
 
@@ -246,24 +265,39 @@ data class ImportedWorkout(
 )
 
 /**
- * Import Apple Health workouts for [userID], skipping any whose [ImportedWorkout.externalID] was
- * imported before. Refreshes the day-rollup once per affected day. Returns how many were new.
+ * Import Apple Health workouts for [userID]. One whose [ImportedWorkout.externalID] was imported
+ * before isn't added again, but its stored type is corrected if the app now recognizes it
+ * differently (e.g. it was imported as OTHER before that type existed). A workout the user deleted
+ * stays deleted. Refreshes the day-rollup once per day with a new workout. Returns how many
+ * workouts were added or retyped.
  */
 suspend fun importWorkouts(userID: UUID, workouts: List<ImportedWorkout>): Int {
     if (workouts.isEmpty()) return 0
     ensureAppleFitnessEnabled(userID)
     val zone = zoneOf(userID)
 
-    val fresh = suspendTransaction {
+    val (fresh, retyped) = suspendTransaction {
+        // External ID → the workout it created, or null if the user deleted it.
         val seen =
             AppleHealthImports.selectAll()
                 .where {
                     (AppleHealthImports.userID eq userID) and
                         (AppleHealthImports.externalID inList workouts.map { it.externalID })
                 }
-                .map { it[AppleHealthImports.externalID] }
-                .toSet()
-        val fresh = workouts.distinctBy { it.externalID }.filter { it.externalID !in seen }
+                .associate { it[AppleHealthImports.externalID] to it[AppleHealthImports.workoutID] }
+        val unique = workouts.distinctBy { it.externalID }
+        val fresh = unique.filter { it.externalID !in seen }
+
+        var retyped = 0
+        unique.forEach { w ->
+            val workoutID = seen[w.externalID] ?: return@forEach
+            retyped +=
+                AppleFitnessWorkouts.update({
+                    (AppleFitnessWorkouts.id eq workoutID) and (AppleFitnessWorkouts.type neq w.type)
+                }) {
+                    it[AppleFitnessWorkouts.type] = w.type
+                }
+        }
 
         fresh.forEach { w ->
             val id = UUID.randomUUID()
@@ -283,11 +317,11 @@ suspend fun importWorkouts(userID: UUID, workouts: List<ImportedWorkout>): Int {
                 it[AppleHealthImports.workoutID] = id
             }
         }
-        fresh
+        fresh to retyped
     }
 
     fresh.map { startOfDay(it.happenedAt, zone) }.distinct().forEach { AppleFitness.refresh(userID, it) }
-    return fresh.size
+    return fresh.size + retyped
 }
 
 /** Remove a workout owned by [userID]. Returns true if it existed. */

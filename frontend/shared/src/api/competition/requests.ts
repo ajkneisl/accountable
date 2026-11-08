@@ -27,6 +27,8 @@ export interface CompetitionGoal {
     period: GoalPeriod
     target: number
     createdAt: number
+    /** Shortest workout (minutes) that counts, for a workouts goal; null counts every one. */
+    minWorkoutMin?: number | null
 }
 
 export interface CompetitionDetail {
@@ -55,6 +57,8 @@ export interface CompetitionGoalBoard {
     period: GoalPeriod
     target: number
     members: CompetitionMemberWeek[]
+    /** Shortest workout (minutes) that counts, for a workouts goal; null counts every one. */
+    minWorkoutMin?: number | null
 }
 
 /** The competition goals dashboard for one Monday-anchored week. */
@@ -76,6 +80,8 @@ export interface CreateCompetitionGoalRequest {
     metric: string
     period: GoalPeriod
     target: number
+    /** Only for an `apple_fitness` workouts goal: the shortest workout, in minutes, that counts. */
+    minWorkoutMin?: number
 }
 
 /** GET /api/competitions — list competitions the caller is a member of. */

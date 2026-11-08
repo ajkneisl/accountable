@@ -10,7 +10,7 @@ import { ChevronIcon, HeartIcon } from "../../ui/icons"
 import { Card, Chip, IntegrationIcon, Mono } from "../../ui/primitives"
 import { memberFill, onMemberFill } from "../competition/colors"
 import { formatAmount, isLimit, unitLabel } from "../dashboard/types"
-import { WORKOUT_LABEL } from "../integration/components/WorkoutCard"
+import { workoutLabel } from "../integration/components/WorkoutCard"
 
 const DATE_FMT = new Intl.DateTimeFormat(undefined, {
     month: "short",
@@ -74,7 +74,7 @@ function describe(detail: FeedDetail): { title: string; lines: string[] } {
             ].filter((s): s is string => Boolean(s))
             return {
                 title: detail.workoutType
-                    ? WORKOUT_LABEL[detail.workoutType]
+                    ? workoutLabel(detail.workoutType)
                     : "Worked out",
                 lines: [
                     ...(stats.length > 0 ? [stats.join(", ")] : []),

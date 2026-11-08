@@ -1,5 +1,10 @@
 package com.accountable.integrations
 
+import features.competition.CompetitionGoal
+import features.goals.Goal
+import features.goals.GoalPeriod
+import features.goals.metricByDay
+import features.goals.sumMetric
 import integrations.AppleFitness
 import integrations.AppleFitnessTable
 import integrations.AppleFitnessWorkouts
@@ -130,5 +135,52 @@ class AppleFitnessTest {
 
         assertEquals(0, importWorkouts(testUserID, listOf(run)))
         assertEquals(0, workoutsForDay(testUserID, lateEveningLocal).size)
+    }
+
+    @Test
+    fun `re-importing a workout corrects its type without duplicating it`() = runBlocking {
+        importWorkouts(testUserID, listOf(ImportedWorkout("hk-3", WorkoutType.OTHER, 40, 300, lateEveningLocal)))
+
+        val walk = ImportedWorkout("hk-3", WorkoutType.WALK, 40, 300, lateEveningLocal)
+        assertEquals(1, importWorkouts(testUserID, listOf(walk)))
+        assertEquals(0, importWorkouts(testUserID, listOf(walk)))
+
+        val stored = workoutsForDay(testUserID, lateEveningLocal).single()
+        assertEquals(WorkoutType.WALK, stored.type)
+        assertEquals(1L, AppleFitness.getDay(testUserID, lateEveningLocal)?.data?.workouts)
+    }
+
+    @Test
+    fun `a deleted imported workout stays deleted when re-sent with a new type`() = runBlocking {
+        importWorkouts(testUserID, listOf(ImportedWorkout("hk-4", WorkoutType.OTHER, 40, 300, lateEveningLocal)))
+        val id = UUID.fromString(workoutsForDay(testUserID, lateEveningLocal).single().id)
+        removeWorkout(testUserID, id)
+
+        val walk = ImportedWorkout("hk-4", WorkoutType.WALK, 40, 300, lateEveningLocal)
+        assertEquals(0, importWorkouts(testUserID, listOf(walk)))
+        assertEquals(0, workoutsForDay(testUserID, lateEveningLocal).size)
+    }
+
+    @Test
+    fun `a minimum workout length only counts workouts that long`() = runBlocking {
+        addWorkout(testUserID, WorkoutType.WALK, 20, 100, lateEveningLocal)
+        addWorkout(testUserID, WorkoutType.RUN, 30, 300, lateEveningLocal)
+        addWorkout(testUserID, WorkoutType.SWIM, 45, 400, lateEveningLocal)
+        val start = startOfDay(lateEveningLocal, zone)
+        val end = start + 86_400_000
+
+        val every = Goal(testUserID, "apple_fitness", "workouts", GoalPeriod.DAILY, 1, 0)
+        val longOnes = every.copy(minWorkoutMin = 30)
+        assertEquals(3L, sumMetric(testUserID, every, start, end))
+        assertEquals(2L, sumMetric(testUserID, longOnes, start, end))
+        assertEquals(mapOf(start to 2L), metricByDay(testUserID, longOnes, start, end))
+
+        // Competition goals count the same way.
+        val shared = CompetitionGoal(UUID.randomUUID(), "apple_fitness", "workouts", GoalPeriod.DAILY, 1, 0, 30)
+        assertEquals(2L, sumMetric(testUserID, shared, start, end))
+
+        // Calories ignore it: the minimum is only for counting workouts.
+        val calories = longOnes.copy(metric = "calories")
+        assertEquals(800L, sumMetric(testUserID, calories, start, end))
     }
 }

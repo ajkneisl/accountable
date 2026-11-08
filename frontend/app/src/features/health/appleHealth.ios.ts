@@ -131,14 +131,70 @@ function workoutType(hk: HealthKit, activity: number): WorkoutType {
     const t = hk.WorkoutActivityType
     switch (activity) {
         case t.running:
+        case t.trackAndField:
+        case t.wheelchairRunPace:
             return "RUN"
+        case t.walking:
+        case t.wheelchairWalkPace:
+            return "WALK"
+        case t.hiking:
+            return "HIKE"
+        case t.cycling:
+        case t.handCycling:
+            return "CYCLING"
+        case t.swimming:
+        case t.waterFitness:
+            return "SWIM"
         case t.traditionalStrengthTraining:
         case t.functionalStrengthTraining:
             return "WEIGHTLIFTING"
+        case t.coreTraining:
+            return "CORE"
+        case t.highIntensityIntervalTraining:
+        case t.mixedCardio:
+        case t.mixedMetabolicCardioTraining:
+        case t.crossTraining:
+        case t.jumpRope:
+            return "HIIT"
+        case t.yoga:
+            return "YOGA"
+        case t.pilates:
+        case t.barre:
+            return "PILATES"
+        case t.rowing:
+            return "ROWING"
+        case t.elliptical:
+            return "ELLIPTICAL"
+        case t.stairClimbing:
+        case t.stairs:
+        case t.stepTraining:
+            return "STAIRS"
+        case t.dance:
+        case t.danceInspiredTraining:
+        case t.cardioDance:
+        case t.socialDance:
+            return "DANCE"
+        case t.boxing:
+        case t.kickboxing:
+        case t.martialArts:
+            return "BOXING"
+        case t.climbing:
+            return "CLIMBING"
+        case t.tennis:
+            return "TENNIS"
+        case t.soccer:
+            return "SOCCER"
         case t.basketball:
             return "BASKETBALL"
         case t.pickleball:
             return "PICKLEBALL"
+        case t.golf:
+            return "GOLF"
+        case t.downhillSkiing:
+        case t.crossCountrySkiing:
+        case t.snowboarding:
+        case t.snowSports:
+            return "SNOW_SPORTS"
         default:
             return "OTHER"
     }

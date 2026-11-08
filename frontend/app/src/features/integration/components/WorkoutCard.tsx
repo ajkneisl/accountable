@@ -20,10 +20,33 @@ import {
 
 export const WORKOUT_LABEL: Record<WorkoutType, string> = {
     RUN: "Run",
+    WALK: "Walk",
+    HIKE: "Hike",
+    CYCLING: "Cycling",
+    SWIM: "Swim",
     WEIGHTLIFTING: "Weightlifting",
+    CORE: "Core training",
+    HIIT: "HIIT",
+    YOGA: "Yoga",
+    PILATES: "Pilates",
+    ROWING: "Rowing",
+    ELLIPTICAL: "Elliptical",
+    STAIRS: "Stairs",
+    DANCE: "Dance",
+    BOXING: "Boxing",
+    CLIMBING: "Climbing",
+    TENNIS: "Tennis",
+    SOCCER: "Soccer",
     BASKETBALL: "Basketball",
     PICKLEBALL: "Pickleball",
+    GOLF: "Golf",
+    SNOW_SPORTS: "Snow sports",
     OTHER: "Other"
+}
+
+/** A type's label, or "Workout" for one this build doesn't know yet. */
+export function workoutLabel(type: WorkoutType): string {
+    return WORKOUT_LABEL[type] ?? "Workout"
 }
 
 const TIME_FMT = new Intl.DateTimeFormat(undefined, {
@@ -48,7 +71,7 @@ export function WorkoutCard({
 
     async function remove(workout: Workout) {
         const ok = await confirm(
-            `Remove ${WORKOUT_LABEL[workout.type]}?`,
+            `Remove ${workoutLabel(workout.type)}?`,
             "It'll also come off your goals and the feed, along with any likes.",
             "Remove",
             true
@@ -107,7 +130,7 @@ export function WorkoutCard({
                         >
                             <View className="flex-1">
                                 <Text className="text-[14px] font-semibold text-ink">
-                                    {WORKOUT_LABEL[w.type]}
+                                    {workoutLabel(w.type)}
                                 </Text>
                                 <Text className="text-[11px] text-ink-3">
                                     {[
@@ -127,7 +150,7 @@ export function WorkoutCard({
                             <Pressable
                                 onPress={() => void remove(w)}
                                 accessibilityRole="button"
-                                accessibilityLabel={`Remove ${WORKOUT_LABEL[w.type]} workout`}
+                                accessibilityLabel={`Remove ${workoutLabel(w.type)} workout`}
                                 hitSlop={10}
                                 className="h-7 w-7 items-center justify-center rounded-full"
                             >

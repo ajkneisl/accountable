@@ -3,6 +3,7 @@ package features.competition
 import api.Cache
 import api.Error
 import features.goals.GoalPeriod
+import features.goals.validateMinWorkout
 import features.goals.weekValues
 import features.goals.weekWindow
 import features.streak.streakFor
@@ -53,6 +54,8 @@ data class CreateCompetitionGoalRequest(
     val metric: String,
     val period: GoalPeriod,
     val target: Long,
+    /** Shortest workout (minutes) that counts, for a workouts goal; omit to count every one. */
+    val minWorkoutMin: Long? = null,
 )
 
 /** Summary of a competition for list views. Omits members/goals. */
@@ -83,6 +86,7 @@ data class CompetitionGoalView(
     val period: GoalPeriod,
     val target: Long,
     val createdAt: Long,
+    val minWorkoutMin: Long? = null,
 )
 
 /** Full competition view returned by GET /api/competitions/{id}. */
@@ -115,6 +119,7 @@ data class CompetitionGoalBoard(
     val period: GoalPeriod,
     val target: Long,
     val members: List<CompetitionMemberWeek>,
+    val minWorkoutMin: Long? = null,
 )
 
 /** Weekview board returned by [COMPETITION_WEEK_ROUTE]: every shared goal × every member × day. */
@@ -266,6 +271,7 @@ private val COMPETITION_WEEK_ROUTE: suspend RoutingContext.() -> Unit = {
                         period = goal.period,
                         target = goal.target,
                         members = memberWeeks,
+                        minWorkoutMin = goal.minWorkoutMin,
                     )
                 }
 
@@ -383,6 +389,7 @@ private val COMPETITION_GOAL_CREATE_ROUTE: suspend RoutingContext.() -> Unit = {
         Error.text("metric '${req.metric}' is not supported for integration '${req.integration}'")
     }
     if (req.target <= 0) Error.text("target must be positive")
+    validateMinWorkout(req.integration, req.metric, req.minWorkoutMin)
 
     val goal =
         upsertCompetitionGoal(
@@ -391,6 +398,7 @@ private val COMPETITION_GOAL_CREATE_ROUTE: suspend RoutingContext.() -> Unit = {
             metric = req.metric,
             period = req.period,
             target = req.target,
+            minWorkoutMin = req.minWorkoutMin,
         )
     Cache.invalidateCompetition(competition.id)
     call.respond(goal.toView())
@@ -451,6 +459,7 @@ private fun CompetitionGoal.toView() =
         period = period,
         target = target,
         createdAt = createdAt,
+        minWorkoutMin = minWorkoutMin,
     )
 
 fun Route.competitionRoutes() {

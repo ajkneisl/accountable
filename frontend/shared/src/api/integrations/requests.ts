@@ -132,9 +132,27 @@ export function disableIntegration(
 /** Recognized Apple Workout types. Matches the backend enum. */
 export type WorkoutType =
     | "RUN"
+    | "WALK"
+    | "HIKE"
+    | "CYCLING"
+    | "SWIM"
     | "WEIGHTLIFTING"
+    | "CORE"
+    | "HIIT"
+    | "YOGA"
+    | "PILATES"
+    | "ROWING"
+    | "ELLIPTICAL"
+    | "STAIRS"
+    | "DANCE"
+    | "BOXING"
+    | "CLIMBING"
+    | "TENNIS"
+    | "SOCCER"
     | "BASKETBALL"
     | "PICKLEBALL"
+    | "GOLF"
+    | "SNOW_SPORTS"
     | "OTHER"
 
 /** Where a workout row came from. `APPLE` rows are imported from Apple Health. */

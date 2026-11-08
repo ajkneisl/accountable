@@ -41,7 +41,12 @@ import {
  * back to whether HealthKit's permission sheet has been answered.
  */
 const CONNECTED_KEY = "accountable_apple_health"
-const LAST_SYNC_KEY = "accountable_apple_health_synced"
+/**
+ * Workouts' last sync. Renamed (v2) when more workout types were recognized, so
+ * every device re-sends its last month of workouts once and ones imported as
+ * Other pick up their real type.
+ */
+const LAST_SYNC_KEY = "accountable_apple_health_synced_v2"
 /**
  * Sleep's own last sync. Kept apart from workouts' so links made before sleep
  * was read still get a full backfill of it. Renamed (v2) when nights stopped

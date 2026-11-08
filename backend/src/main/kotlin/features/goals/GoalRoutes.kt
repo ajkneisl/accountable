@@ -34,6 +34,8 @@ import user.zoneOf
  * @param metric Metric key registered in [GoalMetrics] for [integration].
  * @param period One of [GoalPeriod] names: `"DAILY"` or `"WEEKLY"`.
  * @param target Positive target count for the [period] window.
+ * @param minWorkoutMin For an `apple_fitness` workouts goal, the shortest workout (in minutes) that
+ *   counts toward it. Omit to count every workout.
  */
 @Serializable
 data class CreateGoalRequest(
@@ -41,6 +43,7 @@ data class CreateGoalRequest(
     val metric: String,
     val period: GoalPeriod,
     val target: Long,
+    val minWorkoutMin: Long? = null,
 )
 
 /**
@@ -69,6 +72,7 @@ data class UpdateGoalRequest(val target: Long? = null, val color: HabitColor? = 
  * @param weekTotal Sum of [weekVals].
  * @param color Card accent, or null to use the integration's default.
  * @param competition The competition this goal belongs to, or null for a personal goal.
+ * @param minWorkoutMin Shortest workout that counts, for a workouts goal; null counts every one.
  */
 @Serializable
 data class GoalResponse(
@@ -84,6 +88,7 @@ data class GoalResponse(
     val weekTotal: Long,
     val color: HabitColor? = null,
     val competition: GoalCompetition? = null,
+    val minWorkoutMin: Long? = null,
 )
 
 /** The competition a [GoalResponse] comes from. */
@@ -109,6 +114,20 @@ data class GoalWeekResponse(
     val period: GoalPeriod,
 )
 
+/** Longest minimum workout length a goal accepts: a day. */
+private const val MAX_WORKOUT_MIN = 24L * 60
+
+/** 400 unless [minWorkoutMin] is absent, or a sane length on a workouts goal. Shared with competitions. */
+fun validateMinWorkout(integration: String, metric: String, minWorkoutMin: Long?) {
+    if (minWorkoutMin == null) return
+    if (integration != "apple_fitness" || metric != "workouts") {
+        Error.text("a minimum workout length only applies to workout goals")
+    }
+    if (minWorkoutMin !in 1..MAX_WORKOUT_MIN) {
+        Error.text("minimum workout length must be between 1 and $MAX_WORKOUT_MIN minutes")
+    }
+}
+
 /** POST /api/goals — create or replace a goal for the authenticated user. */
 private val GOAL_CREATE_ROUTE: suspend RoutingContext.() -> Unit = {
     val userID = call.userID()
@@ -116,8 +135,10 @@ private val GOAL_CREATE_ROUTE: suspend RoutingContext.() -> Unit = {
 
     validateMetric(req.integration, req.metric)
     if (req.target <= 0) Error.text("target must be positive")
+    validateMinWorkout(req.integration, req.metric, req.minWorkoutMin)
 
-    val goal = upsertGoal(userID, req.integration, req.metric, req.period, req.target)
+    val goal =
+        upsertGoal(userID, req.integration, req.metric, req.period, req.target, req.minWorkoutMin)
     Cache.invalidateUser(userID)
     call.respond(buildGoalResponse(userID, goal, System.currentTimeMillis(), zoneOf(userID)))
 }
@@ -183,6 +204,7 @@ private suspend fun buildGoalResponse(
         weekTotal = weekVals.sum(),
         color = color,
         competition = competition,
+        minWorkoutMin = goal.minWorkoutMin,
     )
 }
 

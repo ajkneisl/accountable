@@ -28,6 +28,9 @@ object CompetitionGoals : Table("competition_goals") {
     val target = long("target")
     val createdAt = long("created_at").clientDefault { System.currentTimeMillis() }
 
+    /** See [GoalDefinition.minWorkoutMin]. */
+    val minWorkoutMin = long("min_workout_min").nullable()
+
     override val primaryKey = PrimaryKey(competitionID, integration, metric, period)
 }
 
@@ -40,15 +43,20 @@ data class CompetitionGoal(
     override val period: GoalPeriod,
     override val target: Long,
     val createdAt: Long,
+    override val minWorkoutMin: Long? = null,
 ) : GoalDefinition
 
-/** Insert or replace a competition goal. Idempotent on (competition, integration, metric, period). */
+/**
+ * Insert or replace a competition goal. Idempotent on (competition, integration, metric, period); a
+ * replaced goal takes the new [target] and [minWorkoutMin].
+ */
 suspend fun upsertCompetitionGoal(
     competitionID: UUID,
     integration: String,
     metric: String,
     period: GoalPeriod,
     target: Long,
+    minWorkoutMin: Long? = null,
 ): CompetitionGoal = suspendTransaction {
     // An existing goal keeps its createdAt, and so its place in the newest-first order.
     CompetitionGoals.upsert(onUpdateExclude = listOf(CompetitionGoals.createdAt)) {
@@ -58,6 +66,7 @@ suspend fun upsertCompetitionGoal(
         it[CompetitionGoals.period] = period
         it[CompetitionGoals.target] = target
         it[CompetitionGoals.createdAt] = System.currentTimeMillis()
+        it[CompetitionGoals.minWorkoutMin] = minWorkoutMin
     }
     CompetitionGoals.selectAll()
         .where {

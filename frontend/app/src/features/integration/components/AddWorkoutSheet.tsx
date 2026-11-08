@@ -6,14 +6,12 @@ import { Text, View } from "react-native"
 import { ApiError, logWorkout, useApi, type WorkoutType } from "@shared/index"
 import { Sheet, SheetField } from "../../../ui/Sheet"
 import { ChoiceButton, ErrorList, Input } from "../../../ui/primitives"
+import { WORKOUT_LABEL } from "./WorkoutCard"
 
-const TYPES: { value: WorkoutType; label: string }[] = [
-    { value: "RUN", label: "Run" },
-    { value: "WEIGHTLIFTING", label: "Weightlifting" },
-    { value: "BASKETBALL", label: "Basketball" },
-    { value: "PICKLEBALL", label: "Pickleball" },
-    { value: "OTHER", label: "Other" }
-]
+const TYPES = Object.entries(WORKOUT_LABEL).map(([value, label]) => ({
+    value: value as WorkoutType,
+    label
+}))
 
 const HOUR_MS = 60 * 60 * 1000
 

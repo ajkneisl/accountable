@@ -124,15 +124,17 @@ export function goalKey(goal: {
     return goal.competition ? `${goal.competition.id}:${key}` : key
 }
 
-/** "Ship 5 commits / week" style label. */
+/** "Ship 5 commits / week" style label, with "· 30+ min" for a minimum workout length. */
 export function goalTitle(
-    goal: Pick<Goal, "integration" | "metric" | "period" | "target">
+    goal: Pick<Goal, "integration" | "metric" | "period" | "target"> &
+        Partial<Pick<Goal, "minWorkoutMin">>
 ): string {
     const unit = unitLabel(goal.integration, goal.metric)
     const cadence = goal.period === "DAILY" ? "day" : "week"
     const target = formatAmount(goal.integration, goal.metric, goal.target)
     const limit = isLimit(goal.integration, goal.metric) ? "≤ " : ""
-    return `${limit}${target} ${unit} / ${cadence}`
+    const minimum = goal.minWorkoutMin ? ` · ${goal.minWorkoutMin}+ min` : ""
+    return `${limit}${target} ${unit} / ${cadence}${minimum}`
 }
 
 /** Compact "Jun 3, 2:14 PM" style stamp for when an integration last refreshed. */

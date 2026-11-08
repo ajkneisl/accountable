@@ -10,4 +10,11 @@ interface GoalDefinition {
     val metric: String
     val period: GoalPeriod
     val target: Long
+
+    /**
+     * For a workouts goal, the fewest minutes a workout must last to count toward it; null counts
+     * every workout.
+     */
+    val minWorkoutMin: Long?
+        get() = null
 }

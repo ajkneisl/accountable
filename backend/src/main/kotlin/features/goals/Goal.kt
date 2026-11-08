@@ -46,6 +46,9 @@ object Goals : Table("goals") {
     /** Accent the goal's card paints with; null falls back to the integration's own color. */
     val color = enumerationByName("color", 16, HabitColor::class).nullable()
 
+    /** See [GoalDefinition.minWorkoutMin]. */
+    val minWorkoutMin = long("min_workout_min").nullable()
+
     override val primaryKey = PrimaryKey(userID, integration, metric, period)
 }
 
@@ -59,6 +62,7 @@ object Goals : Table("goals") {
  * @param target Target count to hit each [period] window. Must be positive.
  * @param createdAt Ms epoch when the goal was created.
  * @param color Card accent, or null to use the integration's default.
+ * @param minWorkoutMin Shortest workout that counts, for a workouts goal; null counts every one.
  */
 @MappedTable(Goals::class)
 data class Goal(
@@ -69,11 +73,12 @@ data class Goal(
     override val target: Long,
     val createdAt: Long,
     val color: HabitColor? = null,
+    override val minWorkoutMin: Long? = null,
 ) : GoalDefinition
 
 /**
  * Insert or replace a goal. Idempotent on (userID, integration, metric, period). A replaced goal
- * keeps its color.
+ * keeps its color but takes the new [minWorkoutMin].
  */
 suspend fun upsertGoal(
     userID: UUID,
@@ -81,6 +86,7 @@ suspend fun upsertGoal(
     metric: String,
     period: GoalPeriod,
     target: Long,
+    minWorkoutMin: Long? = null,
 ): Goal = suspendTransaction {
     val createdAt = System.currentTimeMillis()
     Goals.upsert {
@@ -90,6 +96,7 @@ suspend fun upsertGoal(
         it[Goals.period] = period
         it[Goals.target] = target
         it[Goals.createdAt] = createdAt
+        it[Goals.minWorkoutMin] = minWorkoutMin
     }
     Goals.selectAll()
         .where {

@@ -28,6 +28,8 @@ export interface Goal {
     color?: GoalColor | null
     /** The competition this goal belongs to; null (or absent) for a personal goal. */
     competition?: GoalCompetition | null
+    /** For a workouts goal, the fewest minutes a workout must last to count; null counts every one. */
+    minWorkoutMin?: number | null
 }
 
 /** The competition a {@link Goal} comes from. */
@@ -41,6 +43,8 @@ export interface CreateGoalRequest {
     metric: string
     period: GoalPeriod
     target: number
+    /** Only for an `apple_fitness` workouts goal: the shortest workout, in minutes, that counts. */
+    minWorkoutMin?: number
 }
 
 /** Fields to change on a goal; omitted ones are left as they are. */

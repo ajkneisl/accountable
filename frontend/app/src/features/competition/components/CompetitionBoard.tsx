@@ -57,7 +57,8 @@ function goalLabel(board: CompetitionGoalBoard): string {
     const unit = unitLabel(board.integration, board.metric)
     const cadence = board.period === "DAILY" ? "day" : "week"
     const target = formatAmount(board.integration, board.metric, board.target)
-    return `${target} ${unit} / ${cadence}`
+    const minimum = board.minWorkoutMin ? ` · ${board.minWorkoutMin}+ min` : ""
+    return `${target} ${unit} / ${cadence}${minimum}`
 }
 
 function Standings({
@@ -366,13 +367,14 @@ export function CompetitionBoard({
         }
     }, [api, competition.id, offset, refreshKey])
 
-    // Adding a goal that already exists replaces its target.
+    // Adding a goal that already exists replaces it, so carry its minimum over.
     async function save(board: CompetitionGoalBoard, target: number) {
         await addCompetitionGoal(api, competition.id, {
             integration: board.integration,
             metric: board.metric,
             period: board.period,
-            target
+            target,
+            ...(board.minWorkoutMin ? { minWorkoutMin: board.minWorkoutMin } : {})
         })
         onChanged()
     }

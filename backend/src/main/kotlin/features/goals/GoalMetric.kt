@@ -2,6 +2,7 @@ package features.goals
 
 import api.suspendTransaction
 import integrations.AppleFitnessTable
+import integrations.AppleFitnessWorkouts
 import integrations.AppleSleepTable
 import integrations.AppleStepsTable
 import integrations.GitHubTable
@@ -143,10 +144,39 @@ suspend fun weekValues(
 }
 
 /**
+ * Per-day count of [goal]'s qualifying workouts in [start, end), if [goal] is a workouts goal with a
+ * [GoalDefinition.minWorkoutMin]; null otherwise. The day rollup counts every workout, so these are
+ * counted from the workouts themselves. Must run inside a transaction.
+ */
+private fun qualifyingWorkoutsByDay(
+    userID: UUID,
+    goal: GoalDefinition,
+    start: Long,
+    end: Long,
+): Map<Long, Long>? {
+    val minMinutes = goal.minWorkoutMin ?: return null
+    if (goal.integration != "apple_fitness" || goal.metric != "workouts") return null
+    return AppleFitnessWorkouts.selectAll()
+        .where {
+            (AppleFitnessWorkouts.userID eq userID) and
+                (AppleFitnessWorkouts.dayStart greaterEq start) and
+                (AppleFitnessWorkouts.dayStart less end) and
+                (AppleFitnessWorkouts.durationMin greaterEq minMinutes)
+        }
+        .groupingBy { it[AppleFitnessWorkouts.dayStart] }
+        .eachCount()
+        .mapValues { it.value.toLong() }
+}
+
+/**
  * Sum [goal]'s metric column over [start, end). Returns 0 if the metric is not registered or no
  * rows fall in the window.
  */
 suspend fun sumMetric(userID: UUID, goal: GoalDefinition, start: Long, end: Long): Long {
+    if (goal.minWorkoutMin != null) {
+        suspendTransaction { qualifyingWorkoutsByDay(userID, goal, start, end) }
+            ?.let { return it.values.sum() }
+    }
     val metric = GoalMetrics.byKey[goal.integration to goal.metric] ?: return 0L
     return suspendTransaction {
         metric.table
@@ -176,6 +206,7 @@ suspend fun metricByDay(
 ): Map<Long, Long> {
     val metric = GoalMetrics.byKey[goal.integration to goal.metric] ?: return emptyMap()
     return suspendTransaction {
+        qualifyingWorkoutsByDay(userID, goal, start, end)?.let { return@suspendTransaction it }
         metric.table
             .selectAll()
             .where {

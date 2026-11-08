@@ -93,12 +93,17 @@ const SOURCES: Source[] = [
     }
 ]
 
+/** Minimum workout lengths offered for a workouts goal, in minutes; null is any length. */
+const MIN_WORKOUT_CHOICES: (number | null)[] = [null, 15, 20, 30, 45, 60]
+
 /** The goal a {@link GoalSheet} composes, handed to its `onSubmit`. */
 export interface GoalDraft {
     integration: string
     metric: string
     period: GoalPeriod
     target: number
+    /** Shortest workout that counts, for a workouts goal; absent counts every one. */
+    minWorkoutMin?: number
 }
 
 /**
@@ -143,10 +148,14 @@ export function GoalSheet({
     const [target, setTarget] = useState(
         SOURCES[initial].defaults?.target ?? "5"
     )
+    const [minWorkout, setMinWorkout] = useState<number | null>(null)
     const [submitting, setSubmitting] = useState(false)
     const [errors, setErrors] = useState<string[]>([])
 
     const source = SOURCES[sourceIdx]
+    const showMinWorkout =
+        source.integration === "apple_fitness" &&
+        metric === "workouts"
     const targetNum = Number(target)
     const unit = unitLabel(source.integration, metric)
     // Targets are typed in display units (hours of sleep) but stored as counted.
@@ -182,7 +191,10 @@ export function GoalSheet({
                 integration: source.integration,
                 metric,
                 period,
-                target: stored
+                target: stored,
+                ...(showMinWorkout && minWorkout !== null
+                    ? { minWorkoutMin: minWorkout }
+                    : {})
             })
         } catch (err) {
             if (err instanceof ApiError) setErrors(err.messages)
@@ -307,6 +319,29 @@ export function GoalSheet({
                     </Text>
                 </View>
             </SheetField>
+
+            {showMinWorkout && (
+                <SheetField label="Minimum length">
+                    <View className="flex-row flex-wrap gap-2">
+                        {MIN_WORKOUT_CHOICES.map((m) => (
+                            <ChoiceButton
+                                key={m ?? "any"}
+                                selected={minWorkout === m}
+                                onPress={() => setMinWorkout(m)}
+                            >
+                                <Text className="text-center text-[16px] font-semibold text-ink">
+                                    {m === null ? "Any" : `${m} min`}
+                                </Text>
+                            </ChoiceButton>
+                        ))}
+                    </View>
+                    <Text className="text-[13px] text-ink-3">
+                        {minWorkout === null
+                            ? "Every workout counts."
+                            : `Only workouts of ${minWorkout} minutes or more count.`}
+                    </Text>
+                </SheetField>
+            )}
 
             <ErrorList errors={errors} />
         </Sheet>
