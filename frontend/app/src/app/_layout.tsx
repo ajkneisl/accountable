@@ -21,8 +21,6 @@ import {
     useColors,
     useScheme
 } from "../theme"
-// Defines the background sync task, which iOS may run before anything renders.
-import "../features/integration/backgroundSync"
 import "../../global.css"
 
 // Re-apply the appearance picked in Settings as early as possible.

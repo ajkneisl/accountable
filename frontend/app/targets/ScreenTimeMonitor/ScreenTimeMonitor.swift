@@ -16,6 +16,12 @@ private let EVENT_PREFIX = "minutes."
 /** Ms epoch of the last time iOS woke this extension, so the app can tell it's running. */
 private let LAST_EVENT_KEY = "screenTime.lastEventAt"
 
+/**
+ * How long after midnight a threshold too big for the new day still counts as
+ * yesterday's, delivered late. Past this it can't be either day's real use.
+ */
+private let LATE_DELIVERY_MINUTES = 30
+
 /** Days older than this are dropped; the app syncs far more often. */
 private let KEEP_DAYS = 60
 
@@ -34,23 +40,26 @@ class ScreenTimeMonitor: DeviceActivityMonitor {
     guard event.rawValue.hasPrefix(EVENT_PREFIX),
       let minutes = Int(event.rawValue.dropFirst(EVENT_PREFIX.count))
     else { return }
-    record(minutes: minutes, on: dayOf(threshold: minutes, at: Date()))
+    guard let day = dayOf(threshold: minutes, at: Date()) else { return }
+    record(minutes: minutes, on: day)
   }
 
   /**
-   * The day a [threshold] of minutes reported at [now] belongs to. Each day's
-   * interval starts at midnight, so today can't have more use than minutes
-   * since midnight: a bigger threshold is yesterday's, delivered late.
+   * The day a [threshold] of minutes reported at [now] belongs to, or nil if
+   * it can't be real. Each day's interval starts at midnight, so today can't
+   * have more use than minutes since midnight. A bigger threshold just after
+   * midnight is yesterday's, delivered late; any later, it's a bad report
+   * (iOS has fired thresholds early), and recording it would stick, since a
+   * day's total never comes back down.
    */
-  private func dayOf(threshold minutes: Int, at now: Date) -> Date {
+  private func dayOf(threshold minutes: Int, at now: Date) -> Date? {
     let calendar = Calendar.current
     let midnight = calendar.startOfDay(for: now)
     // A minute's slack for the threshold being crossed right at the boundary.
     let sinceMidnight = Int(now.timeIntervalSince(midnight) / 60) + 1
-    guard minutes > sinceMidnight,
-      let yesterday = calendar.date(byAdding: .day, value: -1, to: midnight)
-    else { return now }
-    return yesterday
+    if minutes <= sinceMidnight { return now }
+    guard sinceMidnight <= LATE_DELIVERY_MINUTES else { return nil }
+    return calendar.date(byAdding: .day, value: -1, to: midnight)
   }
 
   /** Raise [day]'s total to [minutes]; thresholds only ever grow within a day. */

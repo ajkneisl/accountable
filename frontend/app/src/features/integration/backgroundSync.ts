@@ -5,7 +5,7 @@
 // keychain itself and skips anything that isn't linked.
 //
 // The task has to be defined when the JS bundle loads, before iOS hands it the
-// work, so the root layout imports this module.
+// work, so the app entry (index.ts) imports this module.
 
 import * as BackgroundTask from "expo-background-task"
 import * as TaskManager from "expo-task-manager"

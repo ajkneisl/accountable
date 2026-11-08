@@ -289,8 +289,9 @@ export interface ImportedScreenTimeDay {
 
 /**
  * POST /api/integrations/screen_time/import — store per-day screen time totals
- * (at most 400 per call). Each day replaces what was stored for it, so this is
- * safe to repeat. Resolves to how many days were written.
+ * (at most 400 per call). A past day keeps the larger of its stored and posted
+ * totals, while today takes the posted one, so this is safe to repeat. Resolves
+ * to how many days' totals changed.
  */
 export function importScreenTime(
     config: ApiConfig,

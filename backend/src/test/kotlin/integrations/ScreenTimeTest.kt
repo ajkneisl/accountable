@@ -87,6 +87,22 @@ class ScreenTimeTest {
     }
 
     @Test
+    fun `a lower total for today replaces the stored one`() = runBlocking {
+        val now = System.currentTimeMillis()
+        importScreenTime(testUserID, listOf(ImportedScreenTimeDay(day = now, minutes = 1020)))
+
+        assertEquals(1, importScreenTime(testUserID, listOf(ImportedScreenTimeDay(day = now, minutes = 180))))
+        assertEquals(180L, ScreenTime.getDay(testUserID, now)?.data?.minutes)
+    }
+
+    @Test
+    fun `re-sending today's total reports no change`() = runBlocking {
+        val today = listOf(ImportedScreenTimeDay(day = System.currentTimeMillis(), minutes = 60))
+        assertEquals(1, importScreenTime(testUserID, today))
+        assertEquals(0, importScreenTime(testUserID, today))
+    }
+
+    @Test
     fun `a day repeated in one import keeps the larger total`() = runBlocking {
         importScreenTime(
             testUserID,

@@ -30,7 +30,7 @@ private const val DAY_MS = MINUTES_PER_DAY * 60_000
 
 /**
  * POST /api/integrations/screen_time/import — store per-day screen time totals from the phone.
- * Idempotent: each day keeps the larger of its stored and posted totals.
+ * Idempotent: a past day keeps the larger of its stored and posted totals; today takes the posted one.
  */
 private val SCREEN_TIME_IMPORT_ROUTE: suspend RoutingContext.() -> Unit = {
     val userID = call.userID()
