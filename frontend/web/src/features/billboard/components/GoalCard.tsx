@@ -2,7 +2,7 @@
 // value against the daily target for a daily goal), a Mon–Sun chart, and pace.
 // [fill] stretches the chart to the card's height for widgets.
 
-import type { Goal } from "@shared/index"
+import { type Goal, requiredDaysOf } from "@shared/index"
 import {
     PACE_LABEL,
     dailyTarget,
@@ -39,9 +39,10 @@ export function GoalCard({
     // the daily target, and the days hit so far in place of the percentage.
     const daily = goal.period === "DAILY"
     const today = localWeekday()
-    const daysHit = goal.weekVals
-        .slice(0, today + 1)
-        .filter((v) => meetsTarget(goal, v, goal.target)).length
+    const dueDays = requiredDaysOf(goal).filter((d) => d <= today)
+    const daysHit = dueDays.filter((d) =>
+        meetsTarget(goal, goal.weekVals[d] ?? 0, goal.target)
+    ).length
 
     return (
         <div
@@ -95,7 +96,7 @@ export function GoalCard({
                 <div className="flex-1">{PACE_LABEL[pace]}</div>
                 <div className="mono">
                     {formatWeekRange(goal.weekStart)} ·{" "}
-                    {daily ? `${daysHit}/${today + 1} days` : `${pct}%`}
+                    {daily ? `${daysHit}/${dueDays.length} days` : `${pct}%`}
                 </div>
             </div>
         </div>

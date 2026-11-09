@@ -2,6 +2,7 @@
 // web/src/features/dashboard/types.ts — the logic is platform-agnostic, only the
 // TileVariant import differs.
 
+import { requiredDaysLabel, requiredDaysOf } from "@shared/index"
 import type { Goal, GoalColor } from "@shared/index"
 import type { TileVariant } from "../../ui/primitives"
 import type { Scheme } from "../../theme"
@@ -124,17 +125,22 @@ export function goalKey(goal: {
     return goal.competition ? `${goal.competition.id}:${key}` : key
 }
 
-/** "Ship 5 commits / week" style label, with "· 30+ min" for a minimum workout length. */
+/**
+ * "Ship 5 commits / week" style label, with "· 30+ min" for a minimum workout
+ * length and "· Mon, Wed, Fri" for a daily goal that's only due some days.
+ */
 export function goalTitle(
     goal: Pick<Goal, "integration" | "metric" | "period" | "target"> &
-        Partial<Pick<Goal, "minWorkoutMin">>
+        Partial<Pick<Goal, "minWorkoutMin" | "requiredDays">>
 ): string {
     const unit = unitLabel(goal.integration, goal.metric)
     const cadence = goal.period === "DAILY" ? "day" : "week"
     const target = formatAmount(goal.integration, goal.metric, goal.target)
     const limit = isLimit(goal.integration, goal.metric) ? "≤ " : ""
     const minimum = goal.minWorkoutMin ? ` · ${goal.minWorkoutMin}+ min` : ""
-    return `${limit}${target} ${unit} / ${cadence}${minimum}`
+    const days = requiredDaysOf(goal)
+    const schedule = days.length < 7 ? ` · ${requiredDaysLabel(days)}` : ""
+    return `${limit}${target} ${unit} / ${cadence}${minimum}${schedule}`
 }
 
 /** Compact "Jun 3, 2:14 PM" style stamp for when an integration last refreshed. */
@@ -167,6 +173,11 @@ export function formatWeekRange(weekStart: number): string {
 /** Weekday (0 = Monday … 6 = Sunday) of [now] in the device's time zone. */
 export function localWeekday(now = Date.now()): number {
     return (new Date(now).getDay() + 6) % 7
+}
+
+/** Whether [goal] has nothing due on the day of [now]. */
+export function isRestDay(goal: Goal, now = Date.now()): boolean {
+    return !requiredDaysOf(goal).includes(localWeekday(now))
 }
 
 export type PaceStatus = "onTrack" | "atRisk" | "behind"
@@ -233,9 +244,11 @@ export function paceStatusFor(goal: {
  * Pace of [goal.progress]. Weekly goals follow [paceStatusFor]; a daily goal is
  * on track once met and only at risk until then, since the day is still
  * running. A daily limit is on track until it's broken, and then can't recover.
+ * With nothing due today, a daily goal is simply on track.
  */
 export function goalPace(goal: Goal, now = Date.now()): PaceStatus {
     if (goal.period === "DAILY") {
+        if (isRestDay(goal, now)) return "onTrack"
         if (isLimit(goal.integration, goal.metric))
             return goal.progress <= goal.target ? "onTrack" : "behind"
         return goal.progress >= goal.target ? "onTrack" : "atRisk"
@@ -262,6 +275,7 @@ export function targetByNow(goal: Goal, now = Date.now()): number {
  * limit is fully on track while within its share, then shrinks as it goes over.
  */
 export function onTrackFraction(goal: Goal, now = Date.now()): number {
+    if (isRestDay(goal, now)) return 1
     const target = targetByNow(goal, now)
     if (isLimit(goal.integration, goal.metric))
         return goal.progress <= target ? 1 : target / goal.progress

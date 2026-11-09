@@ -5,6 +5,7 @@
 // the week) and an all-reset entry at the next Monday. That way the widget stays
 // honest when the app isn't opened, until the next sync replaces the timeline.
 
+import { requiredDaysOf } from "@shared/index"
 import { isRunningInExpoGo } from "expo"
 import type { Goal } from "@shared/index"
 import {
@@ -69,7 +70,10 @@ function propsFor(
         // sleep, not minutes); the bars only compare against dayTarget.
         const scale = unitScale(g.integration, g.metric)
         const shown = (v: number) => Math.round((v / scale) * 10) / 10
-        const weekly = g.period === "WEEKLY" ? g.target : g.target * 7
+        const weekly =
+            g.period === "WEEKLY"
+                ? g.target
+                : g.target * requiredDaysOf(g).length
         const fresh = day > 6
         const weekTotal = fresh ? 0 : g.weekTotal
         const days = Array.from({ length: 7 }, (_, i) =>

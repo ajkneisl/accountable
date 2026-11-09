@@ -7,7 +7,13 @@
 import { useState } from "react"
 import { Pressable, Text, View } from "react-native"
 import { router } from "expo-router"
-import { ApiError, createGoal, type GoalPeriod, useApi } from "@shared/index"
+import {
+    ApiError,
+    createGoal,
+    EVERY_DAY,
+    type GoalPeriod,
+    useApi
+} from "@shared/index"
 import { Sheet, SheetField } from "../../../ui/Sheet"
 import {
     ChoiceButton,
@@ -20,6 +26,7 @@ import {
 import { useAppData } from "../../common/AppData"
 import { isLimit, unitLabel, unitScale } from "../types"
 import { MinWorkoutField, takesMinWorkout } from "./MinWorkoutField"
+import { RequiredDaysField } from "./RequiredDaysField"
 
 type Source = {
     integration: string
@@ -102,6 +109,8 @@ export interface GoalDraft {
     target: number
     /** Shortest workout that counts, for a workouts goal; absent counts every one. */
     minWorkoutMin?: number
+    /** Weekdays a daily goal is due, 0 = Monday; absent means every day. */
+    requiredDays?: number[]
 }
 
 /**
@@ -114,6 +123,7 @@ export function GoalSheet({
     description,
     submitLabel,
     submittingLabel,
+    pickDays = false,
     onSubmit,
     onClose
 }: {
@@ -121,6 +131,8 @@ export function GoalSheet({
     description: string
     submitLabel: string
     submittingLabel: string
+    /** Offer a daily goal's required days. Competition goals are due every day. */
+    pickDays?: boolean
     onSubmit: (draft: GoalDraft) => Promise<void>
     onClose: () => void
 }) {
@@ -147,11 +159,13 @@ export function GoalSheet({
         SOURCES[initial].defaults?.target ?? "5"
     )
     const [minWorkout, setMinWorkout] = useState<number | null>(null)
+    const [requiredDays, setRequiredDays] = useState(EVERY_DAY)
     const [submitting, setSubmitting] = useState(false)
     const [errors, setErrors] = useState<string[]>([])
 
     const source = SOURCES[sourceIdx]
     const showMinWorkout = takesMinWorkout(source.integration, metric)
+    const showDays = pickDays && period === "DAILY"
     const targetNum = Number(target)
     const unit = unitLabel(source.integration, metric)
     // Targets are typed in display units (hours of sleep) but stored as counted.
@@ -190,7 +204,8 @@ export function GoalSheet({
                 target: stored,
                 ...(showMinWorkout && minWorkout !== null
                     ? { minWorkoutMin: minWorkout }
-                    : {})
+                    : {}),
+                ...(showDays ? { requiredDays } : {})
             })
         } catch (err) {
             if (err instanceof ApiError) setErrors(err.messages)
@@ -297,6 +312,13 @@ export function GoalSheet({
                 </View>
             </SheetField>
 
+            {showDays && (
+                <RequiredDaysField
+                    value={requiredDays}
+                    onChange={setRequiredDays}
+                />
+            )}
+
             <SheetField
                 label={isLimit(source.integration, metric) ? "Limit" : "Target"}
             >
@@ -340,6 +362,7 @@ export function NewGoalSheet({
             description="Track a metric from one of your connected sources."
             submitLabel="Create goal"
             submittingLabel="Creating…"
+            pickDays
             onClose={onClose}
             onSubmit={async (draft) => {
                 await createGoal(api, draft)

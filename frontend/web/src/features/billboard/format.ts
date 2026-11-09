@@ -1,6 +1,7 @@
 // Display helpers for goal data. Mirrors app/src/features/dashboard/types.ts so a
 // goal reads (and paces) the same on the billboard as it does in the app.
 
+import { requiredDaysLabel, requiredDaysOf } from "@shared/index"
 import type { Goal, GoalColor, Habit } from "@shared/index"
 import type { TileVariant } from "../common/primitives"
 import { HABIT_PALETTE } from "./grid"
@@ -124,17 +125,26 @@ export function goalTitle(goal: {
     metric: string
     period: string
     target: number
+    requiredDays?: number[] | null
 }): string {
     const unit = unitLabel(goal.integration, goal.metric)
     const cadence = goal.period === "DAILY" ? "day" : "week"
     const target = formatAmount(goal.integration, goal.metric, goal.target)
     const limit = isLimit(goal.integration, goal.metric) ? "≤ " : ""
-    return `${limit}${target} ${unit} / ${cadence}`
+    const days = requiredDaysOf(goal)
+    const schedule = days.length < 7 ? ` · ${requiredDaysLabel(days)}` : ""
+    return `${limit}${target} ${unit} / ${cadence}${schedule}`
 }
 
-/** Weekly-equivalent target: weekly goals as-is, daily goals × 7. */
-export function weeklyTarget(goal: { period: string; target: number }): number {
-    return goal.period === "WEEKLY" ? goal.target : goal.target * 7
+/** Weekly-equivalent target: weekly goals as-is, daily goals × the days they're due. */
+export function weeklyTarget(goal: {
+    period: string
+    target: number
+    requiredDays?: number[] | null
+}): number {
+    return goal.period === "WEEKLY"
+        ? goal.target
+        : goal.target * requiredDaysOf(goal).length
 }
 
 /** "Jun 16 – 22" / "Jun 30 – Jul 6" label for the Monday-anchored week starting at [weekStart]. */

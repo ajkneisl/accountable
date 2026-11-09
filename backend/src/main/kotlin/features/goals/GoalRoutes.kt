@@ -36,6 +36,8 @@ import user.zoneOf
  * @param target Positive target count for the [period] window.
  * @param minWorkoutMin For an `apple_fitness` workouts goal, the shortest workout (in minutes) that
  *   counts toward it. Omit to count every workout.
+ * @param requiredDays For a daily goal, the weekdays it's due (0 = Monday … 6 = Sunday). Omit for
+ *   every day.
  */
 @Serializable
 data class CreateGoalRequest(
@@ -44,6 +46,7 @@ data class CreateGoalRequest(
     val period: GoalPeriod,
     val target: Long,
     val minWorkoutMin: Long? = null,
+    val requiredDays: List<Int>? = null,
 )
 
 /**
@@ -54,12 +57,14 @@ data class CreateGoalRequest(
  * @param color New card accent.
  * @param minWorkoutMin New shortest workout (minutes) that counts toward a workouts goal; 0 removes
  *   the minimum.
+ * @param requiredDays New weekdays a daily goal is due (0 = Monday … 6 = Sunday).
  */
 @Serializable
 data class UpdateGoalRequest(
     val target: Long? = null,
     val color: HabitColor? = null,
     val minWorkoutMin: Long? = null,
+    val requiredDays: List<Int>? = null,
 )
 
 /**
@@ -79,6 +84,7 @@ data class UpdateGoalRequest(
  * @param color Card accent, or null to use the integration's default.
  * @param competition The competition this goal belongs to, or null for a personal goal.
  * @param minWorkoutMin Shortest workout that counts, for a workouts goal; null counts every one.
+ * @param requiredDays Weekdays the goal is due, 0 = Monday. All seven unless a daily goal narrows it.
  */
 @Serializable
 data class GoalResponse(
@@ -95,6 +101,7 @@ data class GoalResponse(
     val color: HabitColor? = null,
     val competition: GoalCompetition? = null,
     val minWorkoutMin: Long? = null,
+    val requiredDays: List<Int> = daysIn(EVERY_DAY),
 )
 
 /** The competition a [GoalResponse] comes from. */
@@ -134,6 +141,14 @@ fun validateMinWorkout(integration: String, metric: String, minWorkoutMin: Long?
     }
 }
 
+/** 400 unless [days] is absent, or a non-empty set of weekdays on a daily goal. */
+private fun validateRequiredDays(period: GoalPeriod, days: List<Int>?) {
+    if (days == null) return
+    if (period != GoalPeriod.DAILY) Error.text("only daily goals can require specific days")
+    if (days.isEmpty()) Error.text("pick at least one day")
+    if (days.any { it !in 0..6 }) Error.text("days must be between 0 (Monday) and 6 (Sunday)")
+}
+
 /** POST /api/goals — create or replace a goal for the authenticated user. */
 private val GOAL_CREATE_ROUTE: suspend RoutingContext.() -> Unit = {
     val userID = call.userID()
@@ -142,9 +157,18 @@ private val GOAL_CREATE_ROUTE: suspend RoutingContext.() -> Unit = {
     validateMetric(req.integration, req.metric)
     if (req.target <= 0) Error.text("target must be positive")
     validateMinWorkout(req.integration, req.metric, req.minWorkoutMin)
+    validateRequiredDays(req.period, req.requiredDays)
 
     val goal =
-        upsertGoal(userID, req.integration, req.metric, req.period, req.target, req.minWorkoutMin)
+        upsertGoal(
+            userID,
+            req.integration,
+            req.metric,
+            req.period,
+            req.target,
+            req.minWorkoutMin,
+            req.requiredDays?.let(::dayMask) ?: EVERY_DAY,
+        )
     Cache.invalidateUser(userID)
     call.respond(buildGoalResponse(userID, goal, System.currentTimeMillis(), zoneOf(userID)))
 }
@@ -211,6 +235,7 @@ private suspend fun buildGoalResponse(
         color = color,
         competition = competition,
         minWorkoutMin = goal.minWorkoutMin,
+        requiredDays = daysIn(goal.requiredDays),
     )
 }
 
@@ -252,22 +277,32 @@ private val GOAL_WEEK_ROUTE: suspend RoutingContext.() -> Unit = {
 }
 
 /**
- * PATCH /api/goals/{integration}/{metric}/{period} — change a goal's target and/or color; responds
- * with the updated goal.
+ * PATCH /api/goals/{integration}/{metric}/{period} — change a goal's target, color, minimum workout
+ * length and/or required days; responds with the updated goal.
  */
 private val GOAL_UPDATE_ROUTE: suspend RoutingContext.() -> Unit = {
     val userID = call.userID()
     val (integration, metric, period) = call.goalPath()
     val req = call.receive<UpdateGoalRequest>()
-    if (req.target == null && req.color == null && req.minWorkoutMin == null) {
+    if (req.target == null && req.color == null && req.minWorkoutMin == null && req.requiredDays == null) {
         Error.text("nothing to update")
     }
     if (req.target != null && req.target <= 0) Error.text("target must be positive")
     if (req.minWorkoutMin != 0L) validateMinWorkout(integration, metric, req.minWorkoutMin)
+    validateRequiredDays(period, req.requiredDays)
 
-    if (!updateGoal(userID, integration, metric, period, req.target, req.color, req.minWorkoutMin)) {
-        Error.notFound("goal")
-    }
+    val updated =
+        updateGoal(
+            userID,
+            integration,
+            metric,
+            period,
+            req.target,
+            req.color,
+            req.minWorkoutMin,
+            req.requiredDays?.let(::dayMask),
+        )
+    if (!updated) Error.notFound("goal")
     Cache.invalidateUser(userID)
     val goal = goalFor(userID, integration, metric, period) ?: Error.notFound("goal")
     call.respond(buildGoalResponse(userID, goal, System.currentTimeMillis(), zoneOf(userID)))

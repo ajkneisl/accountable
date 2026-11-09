@@ -9,8 +9,8 @@ import { Mono } from "../../../ui/primitives"
 import { CardFigure } from "./CardFigure"
 
 const STREAK_EXPLANATION =
-    "A day counts when you hit every daily goal. Weekly goals are checked once " +
-    "the week ends."
+    "A day counts when you hit every daily goal due that day. Days with nothing " +
+    "due don't break it. Weekly goals are checked once the week ends."
 
 /** Streak count with an info button that explains how days are counted. */
 export function StreakFigure({ streak }: { streak: number }) {

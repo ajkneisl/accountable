@@ -1,13 +1,19 @@
-// Edit sheet for a goal: its target, minimum workout length (workouts goals) and
-// accent color, plus the delete button
+// Edit sheet for a goal: its target, minimum workout length (workouts goals),
+// required days (daily goals) and accent color, plus the delete button
 // (here rather than on the card so it can't be hit by accident). Source, metric
 // and cadence are the goal's identity on the backend, so changing those means
 // deleting the goal and creating a new one. A competition's shared goal uses it
-// too, without the color: members are drawn in their own colors there.
+// too, without the color (members are drawn in their own colors there) or
+// required days.
 
 import { useState } from "react"
 import { Text, View } from "react-native"
-import { ApiError, type Goal, type GoalColor } from "@shared/index"
+import {
+    ApiError,
+    type Goal,
+    type GoalColor,
+    requiredDaysOf
+} from "@shared/index"
 import { confirm } from "../../../ui/confirm"
 import { Sheet, SheetField } from "../../../ui/Sheet"
 import { Button, ErrorList, Input } from "../../../ui/primitives"
@@ -20,6 +26,7 @@ import {
     unitScale
 } from "../types"
 import { MinWorkoutField, takesMinWorkout } from "./MinWorkoutField"
+import { RequiredDaysField } from "./RequiredDaysField"
 
 function messages(err: unknown): string[] {
     if (err instanceof ApiError) return err.messages
@@ -35,18 +42,20 @@ export function EditGoalSheet({
     onDelete
 }: {
     goal: Pick<Goal, "integration" | "metric" | "period" | "target" | "color"> &
-        Partial<Pick<Goal, "minWorkoutMin">>
+        Partial<Pick<Goal, "minWorkoutMin" | "requiredDays">>
     /** A competition's shared goal: no color, and deleting removes it for everyone. */
     shared?: boolean
     onClose: () => void
     /**
      * [target] is in stored units (minutes of sleep, not hours). [minWorkoutMin]
      * is null when every workout counts, or for a goal that doesn't take one.
+     * [requiredDays] is only meaningful for a personal daily goal.
      */
     onSave: (
         target: number,
         color: GoalColor,
-        minWorkoutMin: number | null
+        minWorkoutMin: number | null,
+        requiredDays: number[]
     ) => Promise<void>
     onDelete: () => Promise<void>
 }) {
@@ -60,6 +69,8 @@ export function EditGoalSheet({
     const [minWorkout, setMinWorkout] = useState<number | null>(
         goal.minWorkoutMin ?? null
     )
+    const showDays = !shared && goal.period === "DAILY"
+    const [requiredDays, setRequiredDays] = useState(requiredDaysOf(goal))
     const [submitting, setSubmitting] = useState(false)
     const [deleting, setDeleting] = useState(false)
     const [errors, setErrors] = useState<string[]>([])
@@ -77,7 +88,12 @@ export function EditGoalSheet({
         setErrors([])
         setSubmitting(true)
         try {
-            await onSave(stored, color, showMinWorkout ? minWorkout : null)
+            await onSave(
+                stored,
+                color,
+                showMinWorkout ? minWorkout : null,
+                requiredDays
+            )
             onClose()
         } catch (err) {
             setErrors(messages(err))
@@ -112,6 +128,11 @@ export function EditGoalSheet({
     }
 
     const busy = submitting || deleting
+    const editable = [
+        "target",
+        ...(showMinWorkout ? ["minimum length"] : []),
+        ...(showDays ? ["days"] : [])
+    ].join(", ")
 
     return (
         <Sheet
@@ -119,9 +140,7 @@ export function EditGoalSheet({
             description={
                 shared
                     ? "Change what every member is measured against."
-                    : showMinWorkout
-                      ? "Change its target, minimum length or color."
-                      : "Change its target or color."
+                    : `Change its ${editable} or color.`
             }
             onClose={onClose}
             action={{
@@ -165,6 +184,13 @@ export function EditGoalSheet({
                     </Text>
                 </View>
             </SheetField>
+
+            {showDays && (
+                <RequiredDaysField
+                    value={requiredDays}
+                    onChange={setRequiredDays}
+                />
+            )}
 
             {showMinWorkout && (
                 <MinWorkoutField value={minWorkout} onChange={setMinWorkout} />

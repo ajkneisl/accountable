@@ -88,6 +88,7 @@ fun initDb() {
         // create() skips tables that already exist, so columns added later need adding by hand.
         exec("ALTER TABLE goals ADD COLUMN IF NOT EXISTS color VARCHAR(16)")
         exec("ALTER TABLE goals ADD COLUMN IF NOT EXISTS min_workout_min BIGINT")
+        exec("ALTER TABLE goals ADD COLUMN IF NOT EXISTS required_days INTEGER NOT NULL DEFAULT 127")
         exec("ALTER TABLE competition_goals ADD COLUMN IF NOT EXISTS min_workout_min BIGINT")
         exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS color VARCHAR(16)")
         exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS feed_details BOOLEAN NOT NULL DEFAULT TRUE")

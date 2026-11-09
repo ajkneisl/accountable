@@ -10,6 +10,7 @@ import features.goals.GoalPeriod
 import features.goals.direction
 import features.goals.goalsFor
 import features.goals.isMet
+import features.goals.isRequiredOn
 import features.goals.progressFor
 import features.goals.weekValues
 import features.goals.weekWindow
@@ -36,18 +37,21 @@ private const val MIN_STREAK = 2
 private const val MAX_LISTED = 3
 
 /**
- * How today's goals and habits stand, or null if the user has neither. Daily goals count once
- * they're met (or, for a limit, while under it); weekly goals while they're on pace.
+ * How today's goals and habits stand, or null if the user has neither due. Daily goals count once
+ * they're met (or, for a limit, while under it); weekly goals while they're on pace. What can still
+ * be done today is listed apart from what can't.
  */
 suspend fun goalsStatus(userID: UUID, now: Long): Push? {
     val zone = zoneOf(userID)
-    val goals = goalsFor(userID)
+    val today = Instant.ofEpochMilli(now).atZone(zone).dayOfWeek
+    val goals = goalsFor(userID).filter { it.isRequiredOn(today) }
     val habits = habitsFor(userID)
     if (goals.isEmpty() && habits.isEmpty()) return null
     val habitsLeft = habitsLeftToday(userID, habits, now, zone).map { it.first }
 
-    val weekday = Instant.ofEpochMilli(now).atZone(zone).dayOfWeek.value - 1
+    val weekday = today.value - 1
     val behind = goals.mapNotNull { goal -> shortfall(goal, progressFor(userID, goal, now), weekday) }
+    val (toGo, offTrack) = behind.partition { it.fixable }
 
     val body =
         if (behind.isEmpty() && habitsLeft.isEmpty()) {
@@ -55,11 +59,13 @@ suspend fun goalsStatus(userID: UUID, now: Long): Push? {
         } else {
             buildList {
                     if (goals.isNotEmpty()) {
-                        val onTrack = goals.size - behind.size
-                        add(
-                            if (behind.isEmpty()) "All ${goals.size} goals on track."
-                            else "$onTrack of ${goals.size} goals on track. Still to go: ${listed(behind)}."
-                        )
+                        if (behind.isEmpty()) {
+                            add("All ${goals.size} goals on track.")
+                        } else {
+                            add("${goals.size - behind.size} of ${goals.size} goals on track.")
+                            if (toGo.isNotEmpty()) add("Still to go: ${listed(toGo.map { it.text })}.")
+                            if (offTrack.isNotEmpty()) add("Off track: ${listed(offTrack.map { it.text })}.")
+                        }
                     }
                     if (habitsLeft.isNotEmpty()) add("Habits left: ${listed(habitsLeft)}.")
                     else if (habits.isNotEmpty()) add("Every habit's done.")
@@ -71,18 +77,19 @@ suspend fun goalsStatus(userID: UUID, now: Long): Push? {
 
 /**
  * A reminder for streaks that end at midnight unless today is finished, or null if none are at
- * risk. The goal streak counts only when what's missing today can still be done: a daily limit
- * that's already been broken can't be undone, so it isn't nagged about.
+ * risk. The goal streak counts only when what's missing today can still be done (see
+ * [fixableToday]); otherwise it's already lost, so it isn't nagged about.
  */
 suspend fun streakRisk(userID: UUID, now: Long): Push? {
     val zone = zoneOf(userID)
     val lines = mutableListOf<String>()
 
     val goals = goalsFor(userID)
-    val daily = goals.filter { it.period == GoalPeriod.DAILY }
+    val today = Instant.ofEpochMilli(now).atZone(zone).dayOfWeek
+    val daily = goals.filter { it.period == GoalPeriod.DAILY && it.isRequiredOn(today) }
     if (daily.isNotEmpty()) {
         val unmet = daily.filterNot { it.isMet(progressFor(userID, it, now)) }
-        val fixable = unmet.isNotEmpty() && unmet.all { it.direction == GoalDirection.AT_LEAST }
+        val fixable = unmet.isNotEmpty() && unmet.all(::fixableToday)
         // Today is unfinished, so this is the run ending yesterday.
         val streak = if (fixable) streakFor(userID, goals, now) else 0
         if (streak >= MIN_STREAK) {
@@ -161,21 +168,31 @@ private fun metWeek(goal: GoalDefinition, total: Long): Boolean {
 }
 
 /**
- * What [goal] still needs at [progress], or null if it's on track. [weekday] is today, 0 = Monday,
- * for a weekly goal's pace: the target spread over the days already over (for a limit, the days
- * through today).
+ * Whether a daily [goal] that's unmet can still be met today. A broken limit can't be undone, and
+ * sleep counts toward the morning it ended, so by the time anything is sent today's is final.
  */
-private fun shortfall(goal: GoalDefinition, progress: Long, weekday: Int): String? {
-    val limit = goal.direction == GoalDirection.AT_MOST
+private fun fixableToday(goal: GoalDefinition): Boolean =
+    goal.direction == GoalDirection.AT_LEAST && goal.integration != "apple_sleep"
+
+/** How a goal is falling short: what's [fixable] says what's left, the rest just name the goal. */
+private data class Shortfall(val text: String, val fixable: Boolean)
+
+/**
+ * How [goal] is falling short at [progress], or null if it's on track. [weekday] is today, 0 =
+ * Monday, for a weekly goal's pace: the target spread over the days already over (for a limit, the
+ * days through today).
+ */
+private fun shortfall(goal: GoalDefinition, progress: Long, weekday: Int): Shortfall? {
     if (goal.period == GoalPeriod.DAILY) {
         if (goal.isMet(progress)) return null
-        return if (limit) "${label(goal)} over today's limit" else left(goal, goal.target - progress, today = true)
+        return if (fixableToday(goal)) Shortfall(left(goal, goal.target - progress, today = true), true)
+        else Shortfall(label(goal), false)
     }
-    if (limit) {
-        return if (progress * 7 <= goal.target * (weekday + 1)) null else "${label(goal)} over pace"
+    if (goal.direction == GoalDirection.AT_MOST) {
+        return if (progress * 7 <= goal.target * (weekday + 1)) null else Shortfall(label(goal), false)
     }
     if (progress * 7 >= goal.target * weekday) return null
-    return left(goal, goal.target - progress, today = false)
+    return Shortfall(left(goal, goal.target - progress, today = false), true)
 }
 
 /** "3,100 more steps" (today) or "2 workouts this week". */
@@ -210,9 +227,13 @@ private fun unit(goal: GoalDefinition, value: Long): String {
     }
 }
 
-/** What a limit goal is called in a sentence. */
+/** What a goal that's off track is called in a list. */
 private fun label(goal: GoalDefinition): String =
-    if (goal.integration == "screen_time") "Screen time" else unit(goal, 2).replaceFirstChar { it.uppercase() }
+    when (goal.integration) {
+        "screen_time" -> "screen time"
+        "apple_sleep" -> "sleep"
+        else -> unit(goal, 2)
+    }
 
 /** Each habit not checked off today, with its streak through yesterday. */
 private suspend fun habitsLeftToday(

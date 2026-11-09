@@ -130,7 +130,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
             goal: Goal,
             target: number,
             color: GoalColor,
-            minWorkoutMin: number | null
+            minWorkoutMin: number | null,
+            requiredDays: number[]
         ) => {
             const updated = await updateGoal(
                 api,
@@ -143,7 +144,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
                     // 0 removes a minimum; other goals don't have one to change.
                     ...(takesMinWorkout(goal.integration, goal.metric)
                         ? { minWorkoutMin: minWorkoutMin ?? 0 }
-                        : {})
+                        : {}),
+                    ...(goal.period === "DAILY" ? { requiredDays } : {})
                 }
             )
             setData((prev) => ({
@@ -210,8 +212,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
                     key={goalKey(editing)}
                     goal={editing}
                     onClose={closeEditGoal}
-                    onSave={(target, color, minWorkoutMin) =>
-                        saveGoal(editing, target, color, minWorkoutMin)
+                    onSave={(target, color, minWorkoutMin, requiredDays) =>
+                        saveGoal(
+                            editing,
+                            target,
+                            color,
+                            minWorkoutMin,
+                            requiredDays
+                        )
                     }
                     onDelete={() => removeGoal(editing)}
                 />

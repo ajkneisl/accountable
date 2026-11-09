@@ -9,7 +9,13 @@
 import { useEffect, useMemo, useState } from "react"
 import { Pressable, Text, View } from "react-native"
 import { router } from "expo-router"
-import { type Goal, type GoalWeek, getGoalWeek, useApi } from "@shared/index"
+import {
+    type Goal,
+    type GoalWeek,
+    getGoalWeek,
+    requiredDaysOf,
+    useApi
+} from "@shared/index"
 import { useScheme } from "../../../theme"
 import {
     Button,
@@ -27,6 +33,7 @@ import {
     goalTitle,
     integrationVisual,
     isLimit,
+    isRestDay,
     localWeekday,
     meetsTarget,
     unitLabel
@@ -174,19 +181,23 @@ export function GoalCard({
 
     // Daily goals read per day, not as a ×7 weekly sum: the headline is today's
     // value (a past week's daily average) against the daily target, and the
-    // week label counts the days the target was hit.
+    // week label counts the days the target was hit. Only days the goal was due
+    // are scored.
     const daily = goal.period === "DAILY"
     const daysCounted = offset === 0 ? localWeekday() + 1 : 7
-    const daysHit = vals
-        .slice(0, daysCounted)
-        .filter((v) => meetsTarget(goal, v, goal.target)).length
+    const dueDays = requiredDaysOf(goal).filter((d) => d < daysCounted)
+    const dueVals = dueDays.map((d) => vals[d] ?? 0)
+    const daysHit = dueVals.filter((v) =>
+        meetsTarget(goal, v, goal.target)
+    ).length
     const headline =
         day !== null
             ? (vals[day] ?? 0)
             : daily
               ? offset === 0
                   ? (vals[localWeekday()] ?? 0)
-                  : total / 7
+                  : dueVals.reduce((sum, v) => sum + v, 0) /
+                    Math.max(1, dueVals.length)
               : total
     // Noon, so a DST change can't tip the label onto the neighbouring day.
     const dayLabel =
@@ -266,9 +277,11 @@ export function GoalCard({
                                 {unit}
                                 {/* A weekly goal's week is in the footer already. */}
                                 {daily &&
-                                    (offset === 0
-                                        ? " · today"
-                                        : " · daily avg")}
+                                    (offset !== 0
+                                        ? " · daily avg"
+                                        : isRestDay(goal)
+                                          ? " · rest day"
+                                          : " · today")}
                             </Text>
                         )}
                     </View>
@@ -279,6 +292,7 @@ export function GoalCard({
                 vals={vals}
                 target={dailyTargetFor(goal)}
                 limit={isLimit(goal.integration, goal.metric)}
+                requiredDays={requiredDaysOf(goal)}
                 color={goalFill(goal, scheme)}
                 selected={day}
                 onSelect={setDay}
@@ -299,7 +313,7 @@ export function GoalCard({
                     {offset === 0 ? "This week" : rangeLabel} /{" "}
                     <Text className="font-bold text-ink">
                         {daily
-                            ? `${daysHit}/${daysCounted} days`
+                            ? `${daysHit}/${dueDays.length} days`
                             : `${Math.round((total / Math.max(1, weeklyTarget)) * 100)}%`}
                     </Text>
                 </Mono>

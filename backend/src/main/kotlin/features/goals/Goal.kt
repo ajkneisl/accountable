@@ -49,6 +49,9 @@ object Goals : Table("goals") {
     /** See [GoalDefinition.minWorkoutMin]. */
     val minWorkoutMin = long("min_workout_min").nullable()
 
+    /** See [GoalDefinition.requiredDays]. */
+    val requiredDays = integer("required_days").default(EVERY_DAY)
+
     override val primaryKey = PrimaryKey(userID, integration, metric, period)
 }
 
@@ -63,6 +66,7 @@ object Goals : Table("goals") {
  * @param createdAt Ms epoch when the goal was created.
  * @param color Card accent, or null to use the integration's default.
  * @param minWorkoutMin Shortest workout that counts, for a workouts goal; null counts every one.
+ * @param requiredDays Weekdays a daily goal is due; see [GoalDefinition.requiredDays].
  */
 @MappedTable(Goals::class)
 data class Goal(
@@ -74,11 +78,12 @@ data class Goal(
     val createdAt: Long,
     val color: HabitColor? = null,
     override val minWorkoutMin: Long? = null,
+    override val requiredDays: Int = EVERY_DAY,
 ) : GoalDefinition
 
 /**
  * Insert or replace a goal. Idempotent on (userID, integration, metric, period). A replaced goal
- * keeps its color but takes the new [minWorkoutMin].
+ * keeps its color but takes the new [minWorkoutMin] and [requiredDays].
  */
 suspend fun upsertGoal(
     userID: UUID,
@@ -87,6 +92,7 @@ suspend fun upsertGoal(
     period: GoalPeriod,
     target: Long,
     minWorkoutMin: Long? = null,
+    requiredDays: Int = EVERY_DAY,
 ): Goal = suspendTransaction {
     val createdAt = System.currentTimeMillis()
     Goals.upsert {
@@ -97,6 +103,7 @@ suspend fun upsertGoal(
         it[Goals.target] = target
         it[Goals.createdAt] = createdAt
         it[Goals.minWorkoutMin] = minWorkoutMin
+        it[Goals.requiredDays] = requiredDays
     }
     Goals.selectAll()
         .where {
@@ -137,7 +144,7 @@ suspend fun goalFor(
 }
 
 /**
- * Change a goal's target, color and/or minimum workout length; null fields are left as they are,
+ * Change a goal's target, color, minimum workout length and/or required days; null fields are left as they are,
  * and a [minWorkoutMin] of 0 removes the minimum. Returns true if [userID] has the goal.
  */
 suspend fun updateGoal(
@@ -148,6 +155,7 @@ suspend fun updateGoal(
     target: Long?,
     color: HabitColor?,
     minWorkoutMin: Long? = null,
+    requiredDays: Int? = null,
 ): Boolean = suspendTransaction {
     Goals.update({
         (Goals.userID eq userID) and
@@ -158,6 +166,7 @@ suspend fun updateGoal(
         if (target != null) it[Goals.target] = target
         if (color != null) it[Goals.color] = color
         if (minWorkoutMin != null) it[Goals.minWorkoutMin] = minWorkoutMin.takeIf { min -> min > 0 }
+        if (requiredDays != null) it[Goals.requiredDays] = requiredDays
     } > 0
 }
 

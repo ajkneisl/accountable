@@ -30,6 +30,8 @@ export interface Goal {
     competition?: GoalCompetition | null
     /** For a workouts goal, the fewest minutes a workout must last to count; null counts every one. */
     minWorkoutMin?: number | null
+    /** Weekdays the goal is due, 0 = Monday … 6 = Sunday. Absent means every day. */
+    requiredDays?: number[] | null
 }
 
 /** The competition a {@link Goal} comes from. */
@@ -45,6 +47,8 @@ export interface CreateGoalRequest {
     target: number
     /** Only for an `apple_fitness` workouts goal: the shortest workout, in minutes, that counts. */
     minWorkoutMin?: number
+    /** Only for a daily goal: the weekdays it's due, 0 = Monday. Omit for every day. */
+    requiredDays?: number[]
 }
 
 /** Fields to change on a goal; omitted ones are left as they are. */
@@ -53,6 +57,8 @@ export interface UpdateGoalRequest {
     color?: GoalColor
     /** Shortest workout, in minutes, that counts toward a workouts goal; 0 removes the minimum. */
     minWorkoutMin?: number
+    /** Weekdays a daily goal is due, 0 = Monday. */
+    requiredDays?: number[]
 }
 
 /** One Monday-anchored week of a goal's metric, returned by {@link getGoalWeek}. */
@@ -67,6 +73,27 @@ export interface GoalWeek {
     total: number
     target: number
     period: GoalPeriod
+}
+
+export const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6]
+
+const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+/** The weekdays [goal] is due, 0 = Monday. A weekly goal isn't tied to particular days. */
+export function requiredDaysOf(goal: {
+    period: string
+    requiredDays?: number[] | null
+}): number[] {
+    return goal.period === "DAILY"
+        ? (goal.requiredDays ?? EVERY_DAY)
+        : EVERY_DAY
+}
+
+/** "Every day", "Weekdays" or "Mon, Wed, Fri" for sorted [days]. */
+export function requiredDaysLabel(days: number[]): string {
+    if (days.length === 7) return "Every day"
+    if (days.join() === "0,1,2,3,4") return "Weekdays"
+    return days.map((d) => DAY_NAMES[d]).join(", ")
 }
 
 /** GET /api/goals — list the authenticated user's goals. */

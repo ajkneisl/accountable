@@ -12,6 +12,7 @@ import features.goals.sumInRange
 import features.goals.sumMetric
 import features.goals.upsertGoal
 import features.streak.DayStatus
+import features.goals.dayMask
 import features.streak.streakFor
 import features.streak.streakHistory
 import integrations.GitHubTable
@@ -245,6 +246,51 @@ class StreakTest {
         // floor at the start of -5 keeps offsets 0..-5 (6 days) and rejects -6
         val streak = streakFor(user, listOf(dailyCommitGoal(user)), now, floor = dayStart(-5))
         assertEquals(6, streak)
+    }
+
+    // --- streakFor: required days ---
+    // `now` is a Wednesday, so offsets 0, -2, -5, -7 are Wed, Mon, Fri, Wed.
+
+    private fun mwfCommitGoal(userID: UUID) =
+        Goal(userID, "github", "commits", GoalPeriod.DAILY, 1, now, requiredDays = dayMask(listOf(0, 2, 4)))
+
+    @Test
+    fun `rest days neither break a streak nor add to it`() = runBlocking {
+        val user = newUser()
+        for (offset in listOf(0, -2, -5, -7)) seedGithub(user, offset, 1)
+        assertEquals(4, streakFor(user, listOf(mwfCommitGoal(user)), now))
+    }
+
+    @Test
+    fun `a missed required day still ends the streak`() = runBlocking {
+        val user = newUser()
+        for (offset in listOf(0, -5, -7)) seedGithub(user, offset, 1) // Monday missed
+        assertEquals(1, streakFor(user, listOf(mwfCommitGoal(user)), now))
+    }
+
+    @Test
+    fun `an unfinished required today holds the run through rest days`() = runBlocking {
+        val user = newUser()
+        for (offset in listOf(-2, -5)) seedGithub(user, offset, 1)
+        assertEquals(2, streakFor(user, listOf(mwfCommitGoal(user)), now))
+    }
+
+    @Test
+    fun `a goal due every day is unaffected by rest day handling`() = runBlocking {
+        val user = newUser()
+        for (offset in listOf(0, -1, -2)) seedGithub(user, offset, 1)
+        assertEquals(3, streakFor(user, listOf(dailyCommitGoal(user)), now))
+    }
+
+    @Test
+    fun `streakHistory marks days with nothing due as NONE`() = runBlocking {
+        val user = newUser()
+        upsertGoal(user, "github", "commits", GoalPeriod.DAILY, 1, requiredDays = dayMask(listOf(0)))
+        seedGithub(user, -2, 1)
+        assertEquals(
+            listOf(DayStatus.ON, DayStatus.NONE, DayStatus.NONE),
+            streakHistory(user, 3, now),
+        )
     }
 
     // --- streakFor: weekly interaction ---

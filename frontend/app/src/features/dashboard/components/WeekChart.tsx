@@ -23,6 +23,7 @@ export function WeekChart({
     vals,
     target,
     limit = false,
+    requiredDays,
     color: colorProp,
     selected = null,
     onSelect,
@@ -32,6 +33,8 @@ export function WeekChart({
     target: number
     /** The target is a ceiling: days at or under it count as hit. */
     limit?: boolean
+    /** Days the target applies to (0 = Monday); others are labelled as off. Absent means all. */
+    requiredDays?: number[]
     /** Fill for days that hit the target. */
     color?: string
     /** The highlighted day (0 = Monday), or null for none. */
@@ -116,7 +119,7 @@ export function WeekChart({
                         key={i}
                         className={`flex-1 text-center text-[10px] ${
                             selected === i ? "font-bold text-ink" : "text-ink-3"
-                        }`}
+                        } ${requiredDays && !requiredDays.includes(i) ? "opacity-40" : ""}`}
                     >
                         {d}
                     </Mono>

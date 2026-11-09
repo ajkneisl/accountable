@@ -33,6 +33,9 @@ import notifications.NotificationOptOuts
 import notifications.NotificationWorker
 import notifications.PushDevices
 import notifications.competitionRecaps
+import features.goals.dayMask
+import integrations.AppleSleepTable
+import integrations.ScreenTimeTable
 import notifications.goalsStatus
 import notifications.setEnabled
 import notifications.streakRisk
@@ -75,6 +78,8 @@ class NotificationTest {
                 NotificationOptOuts,
                 GitHubTable,
                 AppleStepsTable,
+                AppleSleepTable,
+                ScreenTimeTable,
             )
             NotificationOptOuts.deleteAll()
             PushDevices.deleteAll()
@@ -85,6 +90,8 @@ class NotificationTest {
             Habits.deleteAll()
             Goals.deleteAll()
             AppleStepsTable.deleteAll()
+            AppleSleepTable.deleteAll()
+            ScreenTimeTable.deleteAll()
             GitHubTable.deleteAll()
             UserIntegrations.deleteAll()
             Users.deleteAll()
@@ -158,6 +165,77 @@ class NotificationTest {
                 "Read (2 days) isn't done yet today.",
             streakRisk(user, now)!!.body,
         )
+    }
+
+    /** Record [minutes] asleep on the day [offset] days from today. */
+    private fun seedSleep(userID: UUID, offset: Int, minutes: Long) = transaction {
+        AppleSleepTable.upsert {
+            it[AppleSleepTable.userID] = userID
+            it[date] = today + offset * MS_PER_DAY
+            it[AppleSleepTable.minutes] = minutes
+        }
+    }
+
+    @Test
+    fun `goals status doesn't ask for more of last night's sleep`() = runBlocking {
+        val user = newUser()
+        upsertGoal(user, "apple_sleep", "minutes", GoalPeriod.DAILY, 480)
+        upsertGoal(user, "apple_steps", "steps", GoalPeriod.DAILY, 10_000)
+        seedSleep(user, 0, 450)
+        seedSteps(user, 0, 6_900)
+
+        assertEquals(
+            "0 of 2 goals on track. Still to go: 3,100 more steps. Off track: sleep.",
+            goalsStatus(user, now)!!.body,
+        )
+    }
+
+    @Test
+    fun `goals status lists a broken limit as off track, not still to go`() = runBlocking {
+        val user = newUser()
+        upsertGoal(user, "screen_time", "minutes", GoalPeriod.DAILY, 120)
+        transaction {
+            ScreenTimeTable.upsert {
+                it[ScreenTimeTable.userID] = user
+                it[date] = today
+                it[ScreenTimeTable.minutes] = 200
+            }
+        }
+
+        assertEquals("0 of 1 goals on track. Off track: screen time.", goalsStatus(user, now)!!.body)
+    }
+
+    @Test
+    fun `streak risk stays quiet when today's sleep fell short`() = runBlocking {
+        val user = newUser()
+        upsertGoal(user, "apple_sleep", "minutes", GoalPeriod.DAILY, 480)
+        (-3..-1).forEach { seedSleep(user, it, 500) }
+        seedSleep(user, 0, 450)
+
+        assertNull(streakRisk(user, now))
+    }
+
+    /** Every weekday except today, so a goal with this schedule is resting. */
+    private fun everyDayButToday(): Int =
+        dayMask((0..6).filter { it != todayDate.dayOfWeek.value - 1 })
+
+    @Test
+    fun `goals status leaves out a goal that isn't due today`() = runBlocking {
+        val user = newUser()
+        upsertGoal(user, "apple_steps", "steps", GoalPeriod.DAILY, 10_000, requiredDays = everyDayButToday())
+        assertNull(goalsStatus(user, now))
+
+        upsertGoal(user, "github", "commits", GoalPeriod.DAILY, 2)
+        assertEquals("0 of 1 goals on track. Still to go: 2 more commits.", goalsStatus(user, now)!!.body)
+    }
+
+    @Test
+    fun `streak risk stays quiet on a rest day`() = runBlocking {
+        val user = newUser()
+        upsertGoal(user, "apple_steps", "steps", GoalPeriod.DAILY, 10_000, requiredDays = everyDayButToday())
+        (-3..-1).forEach { seedSteps(user, it, 12_000) }
+
+        assertNull(streakRisk(user, now))
     }
 
     @Test

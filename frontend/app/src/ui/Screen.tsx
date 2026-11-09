@@ -28,7 +28,7 @@ export function Screen({
     bottomRight?: ReactNode
 }) {
     const colors = useColors()
-    // Inside native tabs the bottom inset includes the floating tab bar, so
+    // Inside the tabs the bottom inset includes the floating tab bar, so
     // padding by it lets the last card scroll clear of the bar. A floating
     // button needs room too, so the last card can scroll out from under it.
     const insets = useSafeAreaInsets()

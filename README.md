@@ -30,7 +30,7 @@ Pick something you want to do more of (or less of), set a target, and Beacc keep
 | **GitHub** | Make 5 commits a week |
 | **LeetCode** | Solve easy, medium or hard problems |
 
-Goals can be **daily** (hit it every day) or **weekly** (hit it by Sunday). Each one shows this week's progress day by day, whether you're on pace, and lets you look back at earlier weeks. Give each goal its own color, and change its target whenever you like.
+Goals can be **daily** (every day, or just the days you pick, like weekdays or Mon/Wed/Fri) or **weekly** (hit it by Sunday). Each one shows this week's progress day by day, whether you're on pace, and lets you look back at earlier weeks. Give each goal its own color, and change its target whenever you like.
 
 <p align="center">
   <img src="docs/screenshots/goals.png" width="260" alt="The Goals tab: your streak, then each goal's week day by day" />

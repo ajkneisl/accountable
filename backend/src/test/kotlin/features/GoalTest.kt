@@ -2,6 +2,8 @@ package com.accountable.features
 
 import features.goals.GoalPeriod
 import features.goals.Goals
+import features.goals.dayMask
+import features.goals.daysIn
 import features.goals.deleteGoal
 import features.goals.goalFor
 import features.goals.updateGoal
@@ -40,6 +42,21 @@ class GoalTest {
 
     private fun newUser(): UUID =
         createUser("u${UUID.randomUUID().toString().take(8)}", "${UUID.randomUUID()}@e.com", "hash", "UTC").id
+
+    @Test
+    fun `required days default to every day and can be narrowed`() = runBlocking {
+        val user = newUser()
+        val created = upsertGoal(user, "github", "commits", GoalPeriod.DAILY, 1)
+        assertEquals(listOf(0, 1, 2, 3, 4, 5, 6), daysIn(created.requiredDays))
+
+        val mwf = listOf(0, 2, 4)
+        assertTrue(updateGoal(user, "github", "commits", GoalPeriod.DAILY, null, null, requiredDays = dayMask(mwf)))
+        assertEquals(mwf, daysIn(goalFor(user, "github", "commits", GoalPeriod.DAILY)!!.requiredDays))
+
+        // Editing something else leaves them alone.
+        updateGoal(user, "github", "commits", GoalPeriod.DAILY, 5, null)
+        assertEquals(mwf, daysIn(goalFor(user, "github", "commits", GoalPeriod.DAILY)!!.requiredDays))
+    }
 
     @Test
     fun `new goals have no color`() = runBlocking {

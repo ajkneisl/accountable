@@ -5,6 +5,7 @@ import features.goals.GoalPeriod
 import features.goals.currentWindow
 import features.goals.goalsFor
 import features.goals.isMet
+import features.goals.isRequiredOn
 import features.goals.metricByDay
 import features.goals.sumInRange
 import java.time.Instant
@@ -25,9 +26,12 @@ private const val MAX_STREAK_DAYS = 366
  * would read 0 every morning, however long the run before it.
  *
  * Walks backward day by day from today. A day [D] counts iff:
- * - every daily goal's metric on [D] met its target (see [isMet]), AND
+ * - every daily goal due on [D] (see [isRequiredOn]) met its target (see [isMet]), AND
  * - if [D] is in a *completed* week (i.e. before this week), every weekly goal's metric summed
  *   across that week reached its target.
+ *
+ * A day with nothing due passes without adding to the count, so a Mon/Wed/Fri goal keeps its streak
+ * through Tuesday and goes up by one on Wednesday.
  *
  * Weekly goals for the current (in-progress) week never break the streak — they're still being
  * worked on. The walk also stops once [dayStart] would dip below [floor], which lets competition
@@ -63,8 +67,9 @@ suspend fun streakFor(
         if (dayStart < floor) return streak
         val dayEnd = startMs(day.plusDays(1), zone)
 
+        val due = dailyGoals.filter { it.isRequiredOn(day.dayOfWeek) }
         val dailyPassed =
-            dailyGoals.all { goal -> goal.isMet(dailyValues.getValue(goal).sumInRange(dayStart, dayEnd)) }
+            due.all { goal -> goal.isMet(dailyValues.getValue(goal).sumInRange(dayStart, dayEnd)) }
         if (!dailyPassed) {
             if (day != today) return streak
             day = day.minusDays(1)
@@ -80,7 +85,7 @@ suspend fun streakFor(
             if (!weeklyPassed) return streak
         }
 
-        streak++
+        if (due.isNotEmpty() || weeklyGoals.isNotEmpty()) streak++
         day = day.minusDays(1)
     }
     return streak
@@ -122,7 +127,7 @@ enum class DayStatus {
     MISS,
     /** The current UTC day — outcome depends on goal progress so far. */
     TODAY,
-    /** The user had no goals to evaluate. */
+    /** No goal was due on this day: the user has none, or it's a rest day for all of them. */
     NONE,
 }
 
@@ -147,8 +152,9 @@ suspend fun streakHistory(userID: UUID, days: Int, now: Long): List<DayStatus> {
         val day = today.minusDays(offset.toLong())
         val dayStart = startMs(day, zone)
         val dayEnd = startMs(day.plusDays(1), zone)
+        val due = dailyGoals.filter { it.isRequiredOn(day.dayOfWeek) }
         val dailyPassed =
-            dailyGoals.all { goal -> goal.isMet(dailyValues.getValue(goal).sumInRange(dayStart, dayEnd)) }
+            due.all { goal -> goal.isMet(dailyValues.getValue(goal).sumInRange(dayStart, dayEnd)) }
         val weeklyPassed =
             if (dayStart < currentWeekStart) {
                 val (weekStart, weekEnd) = currentWindow(GoalPeriod.WEEKLY, dayStart, zone)
@@ -160,6 +166,7 @@ suspend fun streakHistory(userID: UUID, days: Int, now: Long): List<DayStatus> {
         when {
             !dailyPassed -> DayStatus.MISS
             !weeklyPassed -> DayStatus.MISS
+            due.isEmpty() && weeklyGoals.isEmpty() -> DayStatus.NONE
             offset == 0 -> DayStatus.TODAY
             else -> DayStatus.ON
         }
