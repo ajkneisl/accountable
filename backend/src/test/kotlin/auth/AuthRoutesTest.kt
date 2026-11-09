@@ -1,5 +1,8 @@
 package com.accountable.auth
 
+import auth.DisplayAccessRequest
+import auth.DisplayAccessResponse
+import auth.DisplayTokenResponse
 import auth.LoginRequest
 import auth.RefreshRequest
 import auth.RegisterRequest
@@ -7,9 +10,12 @@ import auth.TokenResponse
 import configureModule
 import user.RefreshTokens
 import user.Users
+import user.deleteAllTokensForUser
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.bearerAuth
+import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
@@ -24,6 +30,7 @@ import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.deleteAll
+import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -195,4 +202,59 @@ class AuthRoutesTest {
         assertEquals(HttpStatusCode.NoContent, res.status)
     }
 
+
+    @Test
+    fun `display token trades for read-only access and survives reuse`() = authTest { client ->
+        val tokens = client.register(username = "kiosk")
+        val link: DisplayTokenResponse =
+            client.post("/api/auth/display") { bearerAuth(tokens.accessToken) }.body()
+        // Copying the link again hands back the same token.
+        val again: DisplayTokenResponse =
+            client.post("/api/auth/display") { bearerAuth(tokens.accessToken) }.body()
+        assertEquals(link.token, again.token)
+
+        suspend fun access(): HttpResponse =
+            client.post("/api/auth/display/access") {
+                contentType(ContentType.Application.Json)
+                setBody(DisplayAccessRequest(link.token))
+            }
+        val display: DisplayAccessResponse = access().body()
+        assertEquals(HttpStatusCode.OK, access().status)
+
+        // It reads, but can't write — not even to mint another link.
+        assertEquals(
+            HttpStatusCode.OK,
+            client.get("/api/user") { bearerAuth(display.accessToken) }.status,
+        )
+        assertEquals(
+            HttpStatusCode.Unauthorized,
+            client.post("/api/auth/display") { bearerAuth(display.accessToken) }.status,
+        )
+        // Nor is it a refresh token.
+        val refresh =
+            client.post("/api/auth/refresh") {
+                contentType(ContentType.Application.Json)
+                setBody(RefreshRequest(link.token))
+            }
+        assertEquals(HttpStatusCode.Unauthorized, refresh.status)
+    }
+
+    @Test
+    fun `display access fails for unknown token and once tokens are revoked`() = authTest { client ->
+        val tokens = client.register(username = "revoked")
+        val link: DisplayTokenResponse =
+            client.post("/api/auth/display") { bearerAuth(tokens.accessToken) }.body()
+
+        suspend fun access(token: String): HttpStatusCode =
+            client.post("/api/auth/display/access") {
+                contentType(ContentType.Application.Json)
+                setBody(DisplayAccessRequest(token))
+            }.status
+        assertEquals(HttpStatusCode.Unauthorized, access("not-a-real-token"))
+        assertEquals(HttpStatusCode.OK, access(link.token))
+
+        val userID = transaction { Users.selectAll().single { it[Users.username] == "revoked" }[Users.id] }
+        deleteAllTokensForUser(userID)
+        assertEquals(HttpStatusCode.Unauthorized, access(link.token))
+    }
 }

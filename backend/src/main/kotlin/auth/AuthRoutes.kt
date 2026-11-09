@@ -1,12 +1,17 @@
 package auth
 
+import api.Error
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.auth.authenticate
+import io.ktor.server.auth.jwt.JWTPrincipal
+import io.ktor.server.auth.principal
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
+import java.util.UUID
 import kotlinx.serialization.Serializable
 
 /**
@@ -92,6 +97,30 @@ private val USER_LOGOUT_ROUTE: suspend RoutingContext.() -> Unit = {
     call.respond(HttpStatusCode.NoContent)
 }
 
+/**
+ * POST /api/auth/display
+ *
+ * The signed-in user's billboard link token, created on first use.
+ */
+private val DISPLAY_TOKEN_ROUTE: suspend RoutingContext.() -> Unit = {
+    val userID =
+        call.principal<JWTPrincipal>()!!.subject?.let(UUID::fromString) ?: Error.text("invalid token")
+    call.respond(DisplayTokenResponse(Auth.displayToken(userID)))
+}
+
+/** @param token The token from a billboard link. */
+@Serializable data class DisplayAccessRequest(val token: String)
+
+/**
+ * POST /api/auth/display/access
+ *
+ * Trade a billboard link's token for read-only access.
+ */
+private val DISPLAY_ACCESS_ROUTE: suspend RoutingContext.() -> Unit = {
+    val req = call.receive<DisplayAccessRequest>()
+    call.respond(Auth.displayAccess(req.token))
+}
+
 /** @param identifier The account's username, or its email address. */
 @Serializable data class ForgotPasswordRequest(val identifier: String)
 
@@ -136,6 +165,12 @@ fun Route.authRoutes() {
 
         // POST /api/auht/logout
         post("/logout", USER_LOGOUT_ROUTE)
+
+        // POST /api/auth/display
+        authenticate("jwt") { post("/display", DISPLAY_TOKEN_ROUTE) }
+
+        // POST /api/auth/display/access
+        post("/display/access", DISPLAY_ACCESS_ROUTE)
 
         // POST /api/auth/password/forgot
         post("/password/forgot", FORGOT_PASSWORD_ROUTE)

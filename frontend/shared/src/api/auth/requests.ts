@@ -117,3 +117,29 @@ export function resetPassword(
         { expectJson: false }
     )
 }
+
+/**
+ * POST /api/auth/display — the token for the signed-in user's billboard link.
+ * It's the same on every call and doesn't expire; changing the password
+ * revokes it.
+ */
+export function getDisplayToken(config: ApiConfig): Promise<{ token: string }> {
+    return request(config, "POST", "/auth/display", undefined, { auth: true })
+}
+
+/** Read-only access for a billboard display. */
+export interface DisplayAccessResponse {
+    accessToken: string
+    accessTokenExpiresAt: number
+}
+
+/**
+ * POST /api/auth/display/access — trade a billboard link's token for a
+ * short-lived access token that can only read. The link's token isn't used up.
+ */
+export function displayAccess(
+    config: ApiConfig,
+    token: string
+): Promise<DisplayAccessResponse> {
+    return request(config, "POST", "/auth/display/access", { token })
+}

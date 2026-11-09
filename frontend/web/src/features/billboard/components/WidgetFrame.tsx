@@ -13,6 +13,7 @@ import {
     useNow,
     useWakeLock
 } from "../hooks"
+import { CopyLinkButton } from "./CopyLinkButton"
 import { Placeholder } from "./primitives"
 
 export function WidgetFrame<T>({
@@ -59,6 +60,7 @@ export function WidgetFrame<T>({
                     <Link to="/billboard" className="btn btn-line btn-sm">
                         ← Billboard
                     </Link>
+                    <CopyLinkButton />
                     <button
                         type="button"
                         onClick={toggleFullscreen}

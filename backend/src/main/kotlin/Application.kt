@@ -11,6 +11,7 @@ import features.habits.habitRoutes
 import features.streak.streakRoutes
 import integrations.api.IntegrationRefreshWorker
 import integrations.api.integrationRoutes
+import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
@@ -31,6 +32,7 @@ import io.ktor.server.plugins.doublereceive.DoubleReceive
 import io.ktor.server.plugins.requestvalidation.RequestValidation
 import io.ktor.server.plugins.requestvalidation.RequestValidationException
 import io.ktor.server.plugins.statuspages.StatusPages
+import io.ktor.server.request.httpMethod
 import io.ktor.server.response.respond
 import io.ktor.server.routing.get
 import io.ktor.server.routing.route
@@ -88,8 +90,15 @@ fun Application.configureModule() {
             realm = JwtConfig.REALM
             verifier(JwtConfig.verifier)
             validate { credential ->
-                if (credential.payload.subject.isNullOrBlank()) null
-                else JWTPrincipal(credential.payload)
+                val payload = credential.payload
+                val readOnly =
+                    payload.getClaim(JwtConfig.SCOPE_CLAIM).asString() == JwtConfig.DISPLAY_SCOPE
+                when {
+                    payload.subject.isNullOrBlank() -> null
+                    // A billboard link's token can look, but never change anything.
+                    readOnly && request.httpMethod != HttpMethod.Get -> null
+                    else -> JWTPrincipal(payload)
+                }
             }
         }
     }

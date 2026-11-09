@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { useAtom, useAtomValue } from "jotai"
 import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom"
 import { ApiError, getSelf, syncTimezone, useApi } from "@shared/index"
-import { tokenStore, userAtom } from "./auth"
+import { isDisplaySession, tokenStore, userAtom } from "./auth"
 import { Footer } from "./features/common/Footer"
 import Landing from "./features/landing"
 import Login from "./features/auth/Login"
@@ -56,7 +56,11 @@ function App() {
         let cancelled = false
         getSelf(api)
             .catch((err) => {
-                if (err instanceof ApiError && err.status === 401)
+                if (
+                    err instanceof ApiError &&
+                    err.status === 401 &&
+                    !isDisplaySession
+                )
                     tokenStore.clear()
                 return null
             })
@@ -64,7 +68,8 @@ function App() {
                 if (cancelled) return
                 setUser(me)
                 setHydrating(false)
-                if (me) void syncTimezone(api, me.timezone)
+                // A display is read-only, so it can't (and shouldn't) set the timezone.
+                if (me && !isDisplaySession) void syncTimezone(api, me.timezone)
             })
 
         return () => {

@@ -91,7 +91,8 @@ fun deleteToken(token: String): Int = transaction {
     RefreshTokens.deleteWhere { sql -> sql.run { RefreshTokens.token eq token } }
 }
 
-/** Delete all tokens for a [userID]. */
+/** Delete all tokens for a [userID], including the one in their billboard link. */
 fun deleteAllTokensForUser(userID: UUID): Int = transaction {
+    setDisplayToken(userID, null)
     RefreshTokens.deleteWhere { sql -> sql.run { RefreshTokens.userID eq userID } }
 }

@@ -11,6 +11,7 @@ import {
     type ApiConfig,
     type SelfResponse,
     type TokenResponse,
+    displayAccess,
     logout,
     refresh,
     useApi
@@ -39,12 +40,48 @@ function clearCookie(name: string) {
     document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`
 }
 
+/** URL parameter carrying a billboard link's token: `/billboard/goals#token=…`. */
+const DISPLAY_PARAM = "token"
+
+/**
+ * The token from a billboard link, if this page was opened with one. It's read
+ * from the fragment (which browsers never send to a server), or the query string
+ * for kiosks that drop fragments.
+ */
+function readDisplayToken(): string | null {
+    const hash = new URLSearchParams(location.hash.replace(/^#/, ""))
+    return (
+        hash.get(DISPLAY_PARAM) ??
+        new URLSearchParams(location.search).get(DISPLAY_PARAM)
+    )
+}
+
+/**
+ * Set when the page was opened from a billboard link. The session then runs off
+ * that token alone — no cookies or storage — so a kiosk only ever needs its URL:
+ * the token never expires, and each load trades it for read-only access.
+ */
+const displayToken = readDisplayToken()
+
+/** True when this page is a read-only display running off a billboard link. */
+export const isDisplaySession = displayToken !== null
+
+/** The display's current access token; renewed from {@link displayToken} on a 401. */
+let displayAccessToken: string | null = null
+
+/** The link that opens [path] as a read-only display, given the account's token. */
+export function displayLink(path: string, token: string): string {
+    return `${location.origin}${path}#${DISPLAY_PARAM}=${encodeURIComponent(token)}`
+}
+
 export const tokenStore = {
     getAccess: () => readCookie(ACCESS_COOKIE),
     getRefresh: () => readCookie(REFRESH_COOKIE),
     /** True when there's any stored session worth validating at load. */
     hasSession: () =>
-        readCookie(ACCESS_COOKIE) != null || readCookie(REFRESH_COOKIE) != null,
+        isDisplaySession ||
+        readCookie(ACCESS_COOKIE) != null ||
+        readCookie(REFRESH_COOKIE) != null,
     set(tokens: TokenResponse) {
         writeCookie(
             ACCESS_COOKIE,
@@ -108,11 +145,48 @@ async function refreshSession(rejectedToken: string | null): Promise<boolean> {
     return inflightRefresh
 }
 
-export const apiConfig: ApiConfig = {
-    baseUrl,
-    getAccessToken: tokenStore.getAccess,
-    onUnauthorized: refreshSession
+let inflightDisplay: Promise<boolean> | null = null
+
+/**
+ * {@link ApiConfig.onUnauthorized} for a display: trade the link's token for
+ * fresh read-only access. Only the server rejecting the token (the link was
+ * revoked) ends the display; a network blip is retried on the next poll.
+ */
+async function refreshDisplay(rejectedToken: string | null): Promise<boolean> {
+    if (displayAccessToken && displayAccessToken !== rejectedToken) return true
+
+    inflightDisplay ??= (async () => {
+        try {
+            const access = await displayAccess(apiConfig, displayToken!)
+            displayAccessToken = access.accessToken
+            return true
+        } catch (err) {
+            if (err instanceof ApiError) {
+                displayAccessToken = null
+                getDefaultStore().set(userAtom, null)
+            }
+            return false
+        }
+    })().finally(() => {
+        inflightDisplay = null
+    })
+
+    return inflightDisplay
 }
+
+// A display never touches the cookies, so opening a billboard link in a browser
+// that's signed in leaves that session alone.
+export const apiConfig: ApiConfig = isDisplaySession
+    ? {
+          baseUrl,
+          getAccessToken: () => displayAccessToken,
+          onUnauthorized: refreshDisplay
+      }
+    : {
+          baseUrl,
+          getAccessToken: tokenStore.getAccess,
+          onUnauthorized: refreshSession
+      }
 
 /** Returns a handler that revokes the session, clears tokens, and returns home. */
 export function useSignOut() {

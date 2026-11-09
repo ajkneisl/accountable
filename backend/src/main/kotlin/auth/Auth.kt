@@ -10,9 +10,12 @@ import user.deleteAllTokensForUser
 import user.deleteUser
 import user.deleteToken
 import user.findActiveTokens
+import user.findDisplayToken
+import user.findUserByDisplayToken
 import user.findUserByEmail
 import user.findUserByID
 import user.findUserByUsername
+import user.setDisplayToken
 import user.updateEmail
 import user.updatePassword
 import api.verify.verify
@@ -38,6 +41,18 @@ data class TokenResponse(
     val refreshToken: String,
     val refreshTokenExpiresAt: Long,
 )
+
+/** @param token The token to put in a billboard link. */
+@Serializable data class DisplayTokenResponse(val token: String)
+
+/**
+ * Read-only access for a billboard display.
+ *
+ * @param accessToken An access token the server only accepts on GET requests.
+ * @param accessTokenExpiresAt When [accessToken] expires.
+ */
+@Serializable
+data class DisplayAccessResponse(val accessToken: String, val accessTokenExpiresAt: Long)
 
 /** Handle authorization! */
 object Auth {
@@ -145,6 +160,27 @@ object Auth {
     /** Log out a [refreshToken]. */
     fun logout(refreshToken: String) {
         deleteToken(refreshToken)
+    }
+
+    /**
+     * The token for [userID]'s billboard link, created on first use. It's the same every time, so
+     * copying the link again doesn't sign out a display already using it; it lasts until the
+     * password changes.
+     */
+    fun displayToken(userID: UUID): String = transaction {
+        findDisplayToken(userID) ?: generateOpaqueToken().also { setDisplayToken(userID, it) }
+    }
+
+    /**
+     * Trade a billboard link's [displayToken] for read-only access. Unlike a refresh token it isn't
+     * used up, so a display can reload its link for as long as the link stands.
+     */
+    fun displayAccess(displayToken: String): DisplayAccessResponse {
+        val user = findUserByDisplayToken(displayToken) ?: Error.unauthorized("invalid display token")
+        return DisplayAccessResponse(
+            accessToken = JwtConfig.issueDisplayToken(user.id, user.username),
+            accessTokenExpiresAt = System.currentTimeMillis() + JwtConfig.DISPLAY_TOKEN_TTL_MS,
+        )
     }
 
     /** Issue tokens for a [user]. */

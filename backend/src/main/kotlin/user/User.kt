@@ -43,6 +43,12 @@ object Users : Table("users") {
     /** [User.feedDetails] */
     val feedDetails = bool("feed_details").default(true)
 
+    /**
+     * The token in the user's billboard link, or null until they copy one. It only ever trades for
+     * read-only access, see [auth.Auth.displayAccess].
+     */
+    val displayToken = varchar("display_token", 128).nullable().uniqueIndex()
+
     override val primaryKey = PrimaryKey(id)
 }
 
@@ -160,6 +166,21 @@ fun deleteUser(id: UUID): Boolean = transaction {
     val deleted = Users.deleteWhere { sql -> sql.run { Users.id eq id } } > 0
     if (deleted) zoneCache.remove(id)
     deleted
+}
+
+/** The token in [id]'s billboard link, or null if they've never copied one. */
+fun findDisplayToken(id: UUID): String? = transaction {
+    Users.select(Users.displayToken).where { Users.id eq id }.firstOrNull()?.get(Users.displayToken)
+}
+
+/** Set (or with null, revoke) the token in [id]'s billboard link. */
+fun setDisplayToken(id: UUID, token: String?): Boolean = transaction {
+    Users.update({ Users.id eq id }) { it[Users.displayToken] = token } > 0
+}
+
+/** The user whose billboard link carries [token]. */
+fun findUserByDisplayToken(token: String): User? = transaction {
+    Users.selectAll().where { Users.displayToken eq token }.limit(1).firstOrNull()?.toEntity<User>()
 }
 
 /** Find a user by [username]. */

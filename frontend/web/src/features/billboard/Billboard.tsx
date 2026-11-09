@@ -5,9 +5,10 @@ import type { ReactNode } from "react"
 import { useAtomValue } from "jotai"
 import { Link } from "react-router-dom"
 import { listHabits, useApi } from "@shared/index"
-import { useSignOut, userAtom } from "../../auth"
+import { isDisplaySession, useSignOut, userAtom } from "../../auth"
 import { LogoLink } from "../common/primitives"
 import { CompetitionBoard } from "./components/CompetitionBoard"
+import { CopyLinkButton } from "./components/CopyLinkButton"
 import { GoalCard } from "./components/GoalCard"
 import { HabitCard } from "./components/HabitCard"
 import { loadCompetitions, loadGoals } from "./data"
@@ -81,13 +82,16 @@ export default function Billboard() {
                 <LogoLink />
                 <div className="flex items-center gap-3 text-[13px]">
                     <span className="text-ink-3">{user?.username}</span>
-                    <button
-                        type="button"
-                        onClick={signOut}
-                        className="btn btn-line btn-sm"
-                    >
-                        Sign out
-                    </button>
+                    <CopyLinkButton />
+                    {!isDisplaySession && (
+                        <button
+                            type="button"
+                            onClick={signOut}
+                            className="btn btn-line btn-sm"
+                        >
+                            Sign out
+                        </button>
+                    )}
                 </div>
             </header>
 
