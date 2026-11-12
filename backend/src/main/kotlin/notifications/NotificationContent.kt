@@ -1,5 +1,6 @@
 package notifications
 
+import features.competition.Competition
 import features.competition.competitionDetailView
 import features.competition.competitionsFor
 import features.competition.goalsForCompetition
@@ -7,6 +8,7 @@ import features.competition.membersOf
 import features.goals.GoalDefinition
 import features.goals.GoalDirection
 import features.goals.GoalPeriod
+import features.goals.currentWindow
 import features.goals.direction
 import features.goals.goalsFor
 import features.goals.isMet
@@ -19,6 +21,8 @@ import features.habits.checkinsFor
 import features.habits.habitStreak
 import features.habits.habitsFor
 import features.streak.streakFor
+import integrations.ImportedWorkout
+import integrations.api.startOfDay
 import java.time.Instant
 import java.time.ZoneId
 import java.util.Locale
@@ -32,6 +36,10 @@ import user.zoneOf
 
 /** A streak shorter than this isn't worth a reminder. */
 private const val MIN_STREAK = 2
+
+/** A daily step goal counts as nearly met from this share of its target; a weekly one from more. */
+private const val DAILY_CLOSE_PERCENT = 80
+private const val WEEKLY_CLOSE_PERCENT = 90
 
 /** Most items a notification lists before summing up the rest. */
 private const val MAX_LISTED = 3
@@ -120,42 +128,174 @@ suspend fun competitionRecaps(userID: UUID, now: Long): List<Push> =
         val members = membersOf(competition.id)
         if (goals.isEmpty() || members.size < 2) return@mapNotNull null
 
-        val detail = competitionDetailView(competition)
-        val standings =
-            detail.members
-                .map { member ->
-                    val id = UUID.fromString(member.userID)
-                    val zone = zoneOf(id)
-                    val (weekStart, _) = weekWindow(now, zone, 1)
-                    val hits = goals.count { metWeek(it, weekValues(id, it, weekStart, zone).sum()) }
-                    Standing(member.username, id == userID, hits, member.streak)
-                }
-                .sortedWith(compareByDescending<Standing> { it.hits }.thenByDescending { it.streak })
-
-        val me = standings.first { it.isMe }
-        val rank = 1 + standings.count { it.beats(me) }
-        val tiedWith = standings.filter { !it.isMe && !it.beats(me) && !me.beats(it) }
-        val leader = standings.first()
+        val placing = placingOf(competition, goals, userID, now, weeksAgo = 1, ::metWeek)
+        val (me, rank, size, tiedWith, leader) = placing
         val hit = "${me.hits} of ${goals.size} goals hit"
 
         val body =
             when {
                 rank == 1 && tiedWith.isEmpty() -> "You won last week with $hit."
-                rank == 1 -> "You tied for 1st with ${listed(tiedWith.map { it.username })}, $hit."
+                rank == 1 -> "You tied for 1st with ${listed(tiedWith)}, $hit."
                 else ->
-                    "You finished ${ordinal(rank)} of ${standings.size} with $hit. " +
+                    "You finished ${ordinal(rank)} of $size with $hit. " +
                         "${leader.username} took 1st with ${leader.hits}."
             }
-        Push(
-            competition.name,
-            body,
-            path = "/competition/${competition.id}",
-            thread = "competition-${competition.id}",
-        )
+        competitionPush(competition, body)
     }
+
+/**
+ * Where [userID] stands so far this week in each of their competitions that has goals and someone
+ * to compete against. Ranked as on the board: by goals on pace, then streak.
+ */
+suspend fun competitionStandings(userID: UUID, now: Long): List<Push> {
+    val weekday = Instant.ofEpochMilli(now).atZone(zoneOf(userID)).dayOfWeek.value - 1
+    return competitionsFor(userID).mapNotNull { competition ->
+        val goals = goalsForCompetition(competition.id)
+        if (goals.isEmpty() || membersOf(competition.id).size < 2) return@mapNotNull null
+
+        val placing =
+            placingOf(competition, goals, userID, now, weeksAgo = 0) { goal, total ->
+                onPace(goal, total, weekday)
+            }
+        val (me, rank, size, tiedWith, leader) = placing
+        val pace = "on pace for ${me.hits} of ${goals.size} goals"
+
+        val body =
+            when {
+                rank == 1 && tiedWith.isEmpty() -> "You're in 1st of $size, $pace."
+                rank == 1 -> "You're tied for 1st with ${listed(tiedWith)}, $pace."
+                else ->
+                    "You're ${ordinal(rank)} of $size, $pace. " +
+                        "${leader.username} leads with ${leader.hits}."
+            }
+        competitionPush(competition, body)
+    }
+}
+
+/**
+ * Progress on [userID]'s workout goals after [added], the workouts an import just brought in. Null
+ * unless one of them was today (a backfill isn't news) and counts toward a goal that's due.
+ */
+suspend fun workoutProgress(userID: UUID, added: List<ImportedWorkout>, now: Long): Push? {
+    val zone = zoneOf(userID)
+    val dayStart = startOfDay(now, zone)
+    val todays = added.filter { startOfDay(it.happenedAt, zone) == dayStart }
+    if (todays.isEmpty()) return null
+
+    val today = Instant.ofEpochMilli(now).atZone(zone).dayOfWeek
+    val lines =
+        goalsFor(userID)
+            .filter { it.integration == "apple_fitness" && it.isRequiredOn(today) }
+            .filter { goal ->
+                when (goal.metric) {
+                    "workouts" -> todays.any { it.durationMin >= (goal.minWorkoutMin ?: 0) }
+                    "calories" -> todays.any { it.calories > 0 }
+                    else -> false
+                }
+            }
+            .map { goal ->
+                val progress = progressFor(userID, goal, now)
+                val period = if (goal.period == GoalPeriod.DAILY) "today" else "this week"
+                val target = "${amount(goal, goal.target)} ${unit(goal, goal.target)} $period"
+                if (goal.isMet(progress)) "You've hit your goal of $target."
+                else "${amount(goal, progress)} of $target, ${amount(goal, goal.target - progress)} to go."
+            }
+    if (lines.isEmpty()) return null
+    return Push("Workout logged", lines.joinToString(" "), path = "/goals", thread = "workout-progress")
+}
+
+/**
+ * A nudge when one of [userID]'s step goals is nearly met, or null if none is, or it's already
+ * gone out for that goal's current day or week.
+ */
+suspend fun stepsClose(userID: UUID, now: Long): Push? {
+    val zone = zoneOf(userID)
+    val today = Instant.ofEpochMilli(now).atZone(zone).dayOfWeek
+    for (goal in goalsFor(userID)) {
+        if (goal.integration != "apple_steps" || !goal.isRequiredOn(today)) continue
+        val daily = goal.period == GoalPeriod.DAILY
+        val progress = progressFor(userID, goal, now)
+        val closeFrom = if (daily) DAILY_CLOSE_PERCENT else WEEKLY_CLOSE_PERCENT
+        if (progress >= goal.target || progress * 100 < goal.target * closeFrom) continue
+        val periodStart = currentWindow(goal.period, now, zone).first
+        if (!claimSend(userID, "steps-close:${goal.period}", periodStart)) continue
+
+        val left = goal.target - progress
+        val body =
+            "${amount(goal, left)} more ${unit(goal, left)} to reach " +
+                "${amount(goal, goal.target)} ${if (daily) "today" else "this week"}."
+        return Push("Almost at your step goal", body, path = "/goals", thread = "steps-close")
+    }
+    return null
+}
+
+private fun competitionPush(competition: Competition, body: String) =
+    Push(
+        competition.name,
+        body,
+        path = "/competition/${competition.id}",
+        thread = "competition-${competition.id}",
+    )
 
 private data class Standing(val username: String, val isMe: Boolean, val hits: Int, val streak: Int) {
     fun beats(other: Standing) = hits > other.hits || (hits == other.hits && streak > other.streak)
+}
+
+/** Where one member placed: their [rank] among [size], who they're [tiedWith], and the [leader]. */
+private data class Placing(
+    val me: Standing,
+    val rank: Int,
+    val size: Int,
+    val tiedWith: List<String>,
+    val leader: Standing,
+)
+
+/**
+ * Where [userID] places in [competition] for the week [weeksAgo] weeks back, each member's own
+ * Monday to Sunday. [hit] decides whether a week's total counts for a goal; members are then ranked
+ * by goals hit, then streak.
+ */
+private suspend fun placingOf(
+    competition: Competition,
+    goals: List<GoalDefinition>,
+    userID: UUID,
+    now: Long,
+    weeksAgo: Int,
+    hit: (GoalDefinition, Long) -> Boolean,
+): Placing {
+    val standings =
+        competitionDetailView(competition)
+            .members
+            .map { member ->
+                val id = UUID.fromString(member.userID)
+                val zone = zoneOf(id)
+                val (weekStart, _) = weekWindow(now, zone, weeksAgo)
+                val hits = goals.count { hit(it, weekValues(id, it, weekStart, zone).sum()) }
+                Standing(member.username, id == userID, hits, member.streak)
+            }
+            .sortedWith(compareByDescending<Standing> { it.hits }.thenByDescending { it.streak })
+
+    val me = standings.first { it.isMe }
+    return Placing(
+        me = me,
+        rank = 1 + standings.count { it.beats(me) },
+        size = standings.size,
+        tiedWith = standings.filter { !it.isMe && !it.beats(me) && !me.beats(it) }.map { it.username },
+        leader = standings.first(),
+    )
+}
+
+/**
+ * Whether a week's [total] so far has [goal] on pace on [weekday] (0 = Monday), as the board
+ * judges it: the weekly target spread over the days already over (for a limit, the days through
+ * today). A daily goal is held to its target × 7.
+ */
+private fun onPace(goal: GoalDefinition, total: Long, weekday: Int): Boolean {
+    val target = if (goal.period == GoalPeriod.WEEKLY) goal.target else goal.target * 7
+    return when (goal.direction) {
+        GoalDirection.AT_LEAST -> total * 7 >= target * weekday
+        GoalDirection.AT_MOST -> total * 7 <= target * (weekday + 1)
+    }
 }
 
 /** Whether a finished week's [total] met [goal]; a daily goal is held to its target × 7. */

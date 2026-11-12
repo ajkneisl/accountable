@@ -12,7 +12,11 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.post
 import java.util.UUID
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
+import notifications.NotificationKind
+import notifications.sendNow
+import notifications.stepsClose
 
 /** Most days accepted by a single import call, matching sleep's limit. */
 private const val MAX_IMPORT = 400
@@ -46,6 +50,10 @@ private val STEPS_IMPORT_ROUTE: suspend RoutingContext.() -> Unit = {
     if (imported > 0) {
         Cache.invalidateUser(userID)
         publishFeed(userID)
+        // Off the request, so a slow push doesn't hold up a sync running in the background.
+        call.application.launch {
+            sendNow(userID, NotificationKind.STEPS_CLOSE) { stepsClose(userID, System.currentTimeMillis()) }
+        }
     }
     call.respond(ImportStepsResponse(imported))
 }

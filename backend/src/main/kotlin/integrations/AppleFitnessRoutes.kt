@@ -17,7 +17,11 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import java.util.UUID
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
+import notifications.NotificationKind
+import notifications.sendNow
+import notifications.workoutProgress
 
 /**
  * Request body for manually logging a workout. The future iOS bridge will POST the same shape
@@ -81,12 +85,20 @@ private val WORKOUT_IMPORT_ROUTE: suspend RoutingContext.() -> Unit = {
         if (it.durationMin < 0) Error.text("durationMin must be non-negative")
         if (it.calories < 0) Error.text("calories must be non-negative")
     }
-    val imported = importWorkouts(userID, req.workouts)
-    if (imported > 0) {
+    val imported = importWorkoutsDetailed(userID, req.workouts)
+    if (imported.changed > 0) {
         Cache.invalidateUser(userID)
         publishFeed(userID)
     }
-    call.respond(ImportWorkoutsResponse(imported))
+    if (imported.added.isNotEmpty()) {
+        // Off the request, so a slow push doesn't hold up a sync running in the background.
+        call.application.launch {
+            sendNow(userID, NotificationKind.WORKOUT_PROGRESS) {
+                workoutProgress(userID, imported.added, System.currentTimeMillis())
+            }
+        }
+    }
+    call.respond(ImportWorkoutsResponse(imported.changed))
 }
 
 /** DELETE /api/integrations/apple_fitness/workouts/{id} — remove a workout. */

@@ -96,14 +96,16 @@ export async function hasRequestedAppleHealthAccess(): Promise<boolean> {
 
 /**
  * Have iOS wake the app whenever a workout or sleep is saved to Health, even
- * after it was terminated. The native observer is registered at launch from persisted config,
- * so this only needs calling once per connect (repeating it is harmless).
+ * after it was terminated, and for new steps too — which iOS delivers hourly
+ * at most, whatever frequency is asked for. The native observer is registered
+ * at launch from persisted config, so this only needs calling once per connect
+ * (repeating it is harmless).
  */
 export async function enableBackgroundSync(): Promise<void> {
     const hk = getHealthKit()
     if (!hk) return
     await hk.configureBackgroundTypes(
-        [WORKOUTS, SLEEP],
+        [WORKOUTS, SLEEP, STEPS],
         hk.UpdateFrequency.immediate
     )
 }
@@ -124,6 +126,18 @@ export function onHealthDataChanged(onChange: () => void): () => void {
         hk.subscribeToChanges(type, () => onChange())
     )
     return () => subs.forEach((sub) => void sub.remove())
+}
+
+/**
+ * Call [onChange] when Health's steps change. Apart from
+ * {@link onHealthDataChanged} because steps arrive every few minutes while the
+ * app is open, so the caller will want to throttle what it does about them.
+ */
+export function onStepsChanged(onChange: () => void): () => void {
+    const hk = getHealthKit()
+    if (!hk) return () => {}
+    const sub = hk.subscribeToChanges(STEPS, () => onChange())
+    return () => void sub.remove()
 }
 
 /** HealthKit activity → the backend's coarse workout types. */

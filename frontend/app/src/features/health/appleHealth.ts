@@ -24,6 +24,11 @@ export function onHealthDataChanged(_onChange: () => void): () => void {
     return () => {}
 }
 
+/** Call [onChange] when Health's steps change. Returns an unsubscribe. */
+export function onStepsChanged(_onChange: () => void): () => void {
+    return () => {}
+}
+
 /** Import workouts since [since] (ms epoch). Resolves to how many were new. */
 export async function syncAppleHealthWorkouts(
     _api: ApiConfig,

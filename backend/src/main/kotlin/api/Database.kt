@@ -14,6 +14,7 @@ import features.feed.FeedLikes
 import features.feed.FeedPostGoals
 import features.feed.FeedPosts
 import notifications.NotificationOptOuts
+import notifications.NotificationSends
 import notifications.PushDevices
 import auth.PasswordResets
 import user.RefreshTokens
@@ -80,6 +81,7 @@ fun initDb() {
             AppleHealthImports,
             PushDevices,
             NotificationOptOuts,
+            NotificationSends,
             *IntegrationTables.all.toTypedArray(),
             FeedPosts,
             FeedPostGoals,

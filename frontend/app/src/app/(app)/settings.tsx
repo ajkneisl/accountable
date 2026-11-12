@@ -134,6 +134,9 @@ function SwitchRow({
 const NOTIFICATIONS: { kind: NotificationKind; label: string }[] = [
     { kind: "GOALS_STATUS", label: "Goals check-in" },
     { kind: "STREAK_RISK", label: "Streak reminder" },
+    { kind: "WORKOUT_PROGRESS", label: "Goal progress after a workout" },
+    { kind: "STEPS_CLOSE", label: "Almost at your step goal" },
+    { kind: "COMPETITION_STANDINGS", label: "Competition standings" },
     { kind: "COMPETITION_RECAP", label: "Competition recap" },
     { kind: "FEED_LIKES", label: "Likes on your updates" }
 ]

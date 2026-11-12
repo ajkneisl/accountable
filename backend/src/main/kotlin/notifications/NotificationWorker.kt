@@ -23,6 +23,9 @@ const val STREAK_RISK_HOUR = 21
 /** Local hour (24h) on Monday of the [NotificationKind.COMPETITION_RECAP] — 9am. */
 const val COMPETITION_RECAP_HOUR = 9
 
+/** Local hour (24h), Tuesday to Sunday, of the [NotificationKind.COMPETITION_STANDINGS] — 1pm. */
+const val COMPETITION_STANDINGS_HOUR = 13
+
 /**
  * Hourly background worker that sends each user's scheduled notifications as their local clock
  * reaches each one's hour. Like [IntegrationRefreshWorker], it wakes at the top of each UTC hour,
@@ -59,11 +62,15 @@ object NotificationWorker {
                 if (local.dayOfWeek == DayOfWeek.MONDAY && local.hour == COMPETITION_RECAP_HOUR) {
                     add(NotificationKind.COMPETITION_RECAP)
                 }
+                // Monday has the recap, and nothing to be behind on yet.
+                if (local.dayOfWeek != DayOfWeek.MONDAY && local.hour == COMPETITION_STANDINGS_HOUR) {
+                    add(NotificationKind.COMPETITION_STANDINGS)
+                }
             } - optOutsFor(userID)
         if (due.isEmpty()) return emptyList()
 
         // Goal progress has to be current to be worth reporting; otherwise it's as of 11pm.
-        if (NotificationKind.GOALS_STATUS in due || NotificationKind.STREAK_RISK in due) {
+        if (due.any { it != NotificationKind.COMPETITION_RECAP }) {
             IntegrationRefreshWorker.refreshUser(userID, now)
         }
         return due.flatMap { kind ->
@@ -71,8 +78,11 @@ object NotificationWorker {
                 NotificationKind.GOALS_STATUS -> listOfNotNull(goalsStatus(userID, now))
                 NotificationKind.STREAK_RISK -> listOfNotNull(streakRisk(userID, now))
                 NotificationKind.COMPETITION_RECAP -> competitionRecaps(userID, now)
-                // Sent when the like happens; never in `due`.
-                NotificationKind.FEED_LIKES -> emptyList()
+                NotificationKind.COMPETITION_STANDINGS -> competitionStandings(userID, now)
+                // Sent as they happen; never in `due`.
+                NotificationKind.FEED_LIKES,
+                NotificationKind.WORKOUT_PROGRESS,
+                NotificationKind.STEPS_CLOSE -> emptyList()
             }
         }
     }

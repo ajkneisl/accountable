@@ -6,12 +6,18 @@ import { request, type ApiConfig } from "../http"
  * - STREAK_RISK: 9pm, a streak that ends at midnight unless today is finished
  * - COMPETITION_RECAP: Monday 9am, where they finished last week in each competition
  * - FEED_LIKES: as it happens, someone liked one of their feed updates
+ * - COMPETITION_STANDINGS: 1pm Tuesday to Sunday, where they stand this week
+ * - WORKOUT_PROGRESS: as it happens, workout goal progress after a workout
+ * - STEPS_CLOSE: as it happens, a step goal is nearly met
  */
 export type NotificationKind =
     | "GOALS_STATUS"
     | "STREAK_RISK"
     | "COMPETITION_RECAP"
     | "FEED_LIKES"
+    | "COMPETITION_STANDINGS"
+    | "WORKOUT_PROGRESS"
+    | "STEPS_CLOSE"
 
 export interface NotificationSettings {
     /** Whether each kind is on; every kind is present in a response. */

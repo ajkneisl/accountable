@@ -15,7 +15,13 @@ import features.habits.HabitColor
 import features.habits.Habits
 import features.habits.createHabit
 import features.habits.setCheckin
+import integrations.AppleFitnessTable
+import integrations.AppleFitnessWorkouts
+import integrations.AppleHealthImports
 import integrations.AppleStepsTable
+import integrations.ImportedWorkout
+import integrations.WorkoutType
+import integrations.importWorkoutsDetailed
 import integrations.GitHubTable
 import integrations.api.UserIntegrations
 import integrations.api.startOfUtcDay
@@ -30,6 +36,10 @@ import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import notifications.NotificationKind
 import notifications.NotificationOptOuts
+import notifications.NotificationSends
+import notifications.competitionStandings
+import notifications.stepsClose
+import notifications.workoutProgress
 import notifications.NotificationWorker
 import notifications.PushDevices
 import notifications.competitionRecaps
@@ -76,12 +86,20 @@ class NotificationTest {
                 CompetitionGoals,
                 PushDevices,
                 NotificationOptOuts,
+                NotificationSends,
+                AppleFitnessWorkouts,
+                AppleHealthImports,
+                AppleFitnessTable,
                 GitHubTable,
                 AppleStepsTable,
                 AppleSleepTable,
                 ScreenTimeTable,
             )
             NotificationOptOuts.deleteAll()
+            NotificationSends.deleteAll()
+            AppleHealthImports.deleteAll()
+            AppleFitnessWorkouts.deleteAll()
+            AppleFitnessTable.deleteAll()
             PushDevices.deleteAll()
             CompetitionGoals.deleteAll()
             CompetitionMembers.deleteAll()
@@ -288,5 +306,89 @@ class NotificationTest {
 
         setEnabled(user, mapOf(NotificationKind.GOALS_STATUS to false))
         assertTrue(NotificationWorker.pushesDue(user, now).isEmpty())
+    }
+
+    @Test
+    fun `competition standings rank the week so far`() = runBlocking {
+        val leader = newUser("leader")
+        val other = newUser("other")
+        val competition = createCompetition(leader, "Steps")
+        joinCompetition(other, competition.id)
+        upsertCompetitionGoal(competition.id, "apple_steps", "steps", GoalPeriod.DAILY, 1_000)
+        // Wednesday: on pace means Monday's and Tuesday's share, 2,000 so far.
+        seedSteps(leader, -2, 2_500)
+        seedSteps(other, -1, 1_500)
+
+        assertEquals(
+            "You're in 1st of 2, on pace for 1 of 1 goals.",
+            competitionStandings(leader, now).single().body,
+        )
+        val standing = competitionStandings(other, now).single()
+        assertEquals("/competition/${competition.id}", standing.path)
+        assertEquals("You're 2nd of 2, on pace for 0 of 1 goals. leader leads with 1.", standing.body)
+    }
+
+    @Test
+    fun `competition standings go out at 1pm except on Monday`() = runBlocking {
+        val user = newUser()
+        val competition = createCompetition(user, "Steps")
+        joinCompetition(newUser(), competition.id)
+        upsertCompetitionGoal(competition.id, "apple_steps", "steps", GoalPeriod.DAILY, 1_000)
+        val onePm = now - 4 * 60 * 60 * 1000
+
+        assertEquals("Steps", NotificationWorker.pushesDue(user, onePm).single().title)
+        assertTrue(NotificationWorker.pushesDue(user, onePm - 2 * MS_PER_DAY).isEmpty())
+    }
+
+    @Test
+    fun `workout progress reports the goals today's workout counts toward`() = runBlocking {
+        val user = newUser()
+        upsertGoal(user, "apple_fitness", "workouts", GoalPeriod.WEEKLY, 3, minWorkoutMin = 20)
+        upsertGoal(user, "apple_fitness", "calories", GoalPeriod.DAILY, 300)
+        val earlier = ImportedWorkout("hk-1", WorkoutType.RUN, 30, 250, now - MS_PER_DAY)
+        val run = ImportedWorkout("hk-2", WorkoutType.RUN, 30, 320, now - 60 * 60 * 1000)
+
+        // A workout from an earlier day is a backfill, not news.
+        assertNull(workoutProgress(user, importWorkoutsDetailed(user, listOf(earlier)).added, now))
+
+        val push = workoutProgress(user, importWorkoutsDetailed(user, listOf(earlier, run)).added, now)!!
+        assertEquals("Workout logged", push.title)
+        assertTrue(
+            push.body in
+                listOf(
+                    "2 of 3 workouts this week, 1 to go. You've hit your goal of 300 calories today.",
+                    "You've hit your goal of 300 calories today. 2 of 3 workouts this week, 1 to go.",
+                ),
+            push.body,
+        )
+    }
+
+    @Test
+    fun `workout progress skips a workout too short to count`() = runBlocking {
+        val user = newUser()
+        upsertGoal(user, "apple_fitness", "workouts", GoalPeriod.WEEKLY, 3, minWorkoutMin = 20)
+        val walk = ImportedWorkout("hk-1", WorkoutType.WALK, 10, 40, now - 60 * 60 * 1000)
+
+        assertNull(workoutProgress(user, importWorkoutsDetailed(user, listOf(walk)).added, now))
+    }
+
+    @Test
+    fun `steps close goes out once a day, only when the goal is nearly met`() = runBlocking {
+        val user = newUser()
+        upsertGoal(user, "apple_steps", "steps", GoalPeriod.DAILY, 10_000)
+
+        seedSteps(user, 0, 7_900)
+        assertNull(stepsClose(user, now))
+
+        seedSteps(user, 0, 8_800)
+        assertEquals("1,200 more steps to reach 10,000 today.", stepsClose(user, now)!!.body)
+        seedSteps(user, 0, 9_400)
+        assertNull(stepsClose(user, now))
+
+        // The next day starts over.
+        seedSteps(user, 1, 9_000)
+        assertEquals("1,000 more steps to reach 10,000 today.", stepsClose(user, now + MS_PER_DAY)!!.body)
+        seedSteps(user, 1, 10_500)
+        assertNull(stepsClose(user, now + MS_PER_DAY))
     }
 }

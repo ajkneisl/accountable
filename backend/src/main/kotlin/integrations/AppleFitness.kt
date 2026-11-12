@@ -268,11 +268,10 @@ data class ImportedWorkout(
  * Import Apple Health workouts for [userID]. One whose [ImportedWorkout.externalID] was imported
  * before isn't added again, but its stored type is corrected if the app now recognizes it
  * differently (e.g. it was imported as OTHER before that type existed). A workout the user deleted
- * stays deleted. Refreshes the day-rollup once per day with a new workout. Returns how many
- * workouts were added or retyped.
+ * stays deleted. Refreshes the day-rollup once per day with a new workout.
  */
-suspend fun importWorkouts(userID: UUID, workouts: List<ImportedWorkout>): Int {
-    if (workouts.isEmpty()) return 0
+suspend fun importWorkoutsDetailed(userID: UUID, workouts: List<ImportedWorkout>): WorkoutImport {
+    if (workouts.isEmpty()) return WorkoutImport(emptyList(), 0)
     ensureAppleFitnessEnabled(userID)
     val zone = zoneOf(userID)
 
@@ -321,7 +320,17 @@ suspend fun importWorkouts(userID: UUID, workouts: List<ImportedWorkout>): Int {
     }
 
     fresh.map { startOfDay(it.happenedAt, zone) }.distinct().forEach { AppleFitness.refresh(userID, it) }
-    return fresh.size + retyped
+    return WorkoutImport(fresh, retyped)
+}
+
+/** [importWorkoutsDetailed], for callers that only need how many workouts were added or retyped. */
+suspend fun importWorkouts(userID: UUID, workouts: List<ImportedWorkout>): Int =
+    importWorkoutsDetailed(userID, workouts).changed
+
+/** What an import did: the workouts that were new, and how many known ones changed type. */
+data class WorkoutImport(val added: List<ImportedWorkout>, val retyped: Int) {
+    val changed: Int
+        get() = added.size + retyped
 }
 
 /** Remove a workout owned by [userID]. Returns true if it existed. */

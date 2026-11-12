@@ -3,7 +3,8 @@
 // account — so it's kept in the keychain alongside the session.
 //
 // While connected, workouts, sleep and steps sync in the background: HealthKit
-// background delivery wakes the app (even if it was closed) whenever either is saved,
+// background delivery wakes the app (even if it was closed) whenever a workout or
+// sleep is saved, and about hourly while steps are being taken,
 // the app boots, this provider mounts, and the change listener runs a sync. It
 // also syncs on launch and on return to the foreground, once the last sync is
 // more than a few minutes old. The periodic background task (see
@@ -30,6 +31,7 @@ import {
     hasRequestedAppleHealthAccess,
     isAppleHealthSupported,
     onHealthDataChanged,
+    onStepsChanged,
     requestAppleHealthAccess,
     syncAppleHealthSleep,
     syncAppleHealthSteps,
@@ -248,9 +250,14 @@ export function AppleHealthProvider({ children }: { children: ReactNode }) {
             void sync(lastSyncRef.current)
             requestScreenTimeSync()
         })
+        // Steps change constantly, so they only sync once the last one is stale.
+        // In the background that's the hourly wake, which is what lets the server
+        // notice a step goal is nearly met.
+        const unsubscribeSteps = onStepsChanged(syncIfStale)
         return () => {
             sub.remove()
             unsubscribe()
+            unsubscribeSteps()
         }
     }, [connected, sync, syncIfStale])
 
