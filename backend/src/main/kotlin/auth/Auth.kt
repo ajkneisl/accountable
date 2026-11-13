@@ -9,6 +9,7 @@ import user.createUser
 import user.deleteAllTokensForUser
 import user.deleteUser
 import user.deleteToken
+import user.deleteTokensReplacing
 import user.findActiveTokens
 import user.findDisplayToken
 import user.findUserByDisplayToken
@@ -148,17 +149,33 @@ object Auth {
         if (password.none(Char::isDigit)) add("password must contain a digit")
     }
 
-    /** Create an access token from a [refreshToken]. */
+    /**
+     * Trade a [refreshToken] for a new pair of tokens.
+     *
+     * The reply can be lost on its way to a phone (no signal, or the app suspended mid-request),
+     * which would leave the client holding only a spent token, signed out for nothing. So the traded
+     * token isn't deleted here but once the client uses its replacement, which shows the
+     * replacement arrived. Until then it can be traded again, for a pair that takes the lost one's
+     * place.
+     */
     fun refresh(refreshToken: String): TokenResponse = transaction {
         val active = findActiveTokens(refreshToken) ?: Error.unauthorized("invalid refresh token")
         val user = findUserByID(active.userID) ?: Error.unauthorized("invalid refresh token")
 
-        deleteToken(refreshToken)
-        issueTokens(user)
+        // The client has this token, so it no longer needs the one it replaced.
+        active.replaces?.let(::deleteToken)
+        // And a replacement already issued for this one never reached the client.
+        deleteTokensReplacing(refreshToken)
+        issueTokens(user, replaces = refreshToken)
     }
 
-    /** Log out a [refreshToken]. */
-    fun logout(refreshToken: String) {
+    /**
+     * Log out a [refreshToken], along with the token it replaced and any issued to replace it, which
+     * [refresh] may have left usable.
+     */
+    fun logout(refreshToken: String): Unit = transaction {
+        findActiveTokens(refreshToken)?.replaces?.let(::deleteToken)
+        deleteTokensReplacing(refreshToken)
         deleteToken(refreshToken)
     }
 
@@ -183,11 +200,11 @@ object Auth {
         )
     }
 
-    /** Issue tokens for a [user]. */
-    private fun issueTokens(user: User): TokenResponse {
+    /** Issue tokens for a [user], in exchange for the refresh token [replaces] if there was one. */
+    private fun issueTokens(user: User, replaces: String? = null): TokenResponse {
         val access = JwtConfig.issueAccessToken(user.id, user.username)
         val refreshValue = generateOpaqueToken()
-        val refresh = createToken(refreshValue, user.id)
+        val refresh = createToken(refreshValue, user.id, replaces = replaces)
 
         return TokenResponse(
             accessToken = access,

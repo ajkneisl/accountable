@@ -94,50 +94,89 @@ export async function hasRequestedAppleHealthAccess(): Promise<boolean> {
     }
 }
 
+/** What changed in Health: a workout or sleep ("data"), or steps. */
+export type HealthChange = "data" | "steps"
+
+// HealthKit keeps a single native callback per type, and reconfiguring
+// background delivery drops it. So the native subscription is owned here, at
+// module level, and fans out to any number of JS listeners: it's made once,
+// remade after every reconfigure, and outlives whatever screens are mounted.
+const changeListeners = new Set<(change: HealthChange) => void>()
+let nativeSubs: { remove: () => unknown }[] = []
+/** Changes that arrived before anything was listening, e.g. on a background wake. */
+const undelivered = new Set<HealthChange>()
+
+function emit(change: HealthChange): void {
+    if (changeListeners.size === 0) undelivered.add(change)
+    else changeListeners.forEach((listener) => listener(change))
+}
+
+function subscribeNative(hk: HealthKit): void {
+    nativeSubs.forEach((sub) => void sub.remove())
+    nativeSubs = [
+        hk.subscribeToChanges(WORKOUTS, () => emit("data")),
+        hk.subscribeToChanges(SLEEP, () => emit("data")),
+        hk.subscribeToChanges(STEPS, () => emit("steps"))
+    ]
+}
+
+let configuring: Promise<void> = Promise.resolve()
+
 /**
  * Have iOS wake the app whenever a workout or sleep is saved to Health, even
  * after it was terminated, and for new steps too — which iOS delivers hourly
  * at most, whatever frequency is asked for. The native observer is registered
  * at launch from persisted config, so this only needs calling once per connect
- * (repeating it is harmless).
+ * (repeating it is harmless). Configuring drops the native callbacks, so they
+ * are always subscribed again afterwards.
  */
-export async function enableBackgroundSync(): Promise<void> {
+export function enableBackgroundSync(): Promise<void> {
     const hk = getHealthKit()
-    if (!hk) return
-    await hk.configureBackgroundTypes(
-        [WORKOUTS, SLEEP, STEPS],
-        hk.UpdateFrequency.immediate
-    )
+    if (!hk) return Promise.resolve()
+    const run = async () => {
+        await hk.configureBackgroundTypes(
+            [WORKOUTS, SLEEP, STEPS],
+            hk.UpdateFrequency.immediate
+        )
+        subscribeNative(hk)
+    }
+    // One at a time, so a subscribe never lands between another's two steps.
+    const next = configuring.then(run, run)
+    configuring = next.catch(() => {})
+    return next
+}
+
+/**
+ * Start receiving Health changes without reconfiguring: on a launch, the
+ * observers persisted by {@link enableBackgroundSync} are already running, and
+ * this picks up the event that woke the app, which the native side holds until
+ * JS subscribes. A no-op once subscribed.
+ */
+export function listenForHealthChanges(): void {
+    const hk = getHealthKit()
+    if (hk && nativeSubs.length === 0) subscribeNative(hk)
 }
 
 export async function disableBackgroundSync(): Promise<void> {
+    nativeSubs.forEach((sub) => void sub.remove())
+    nativeSubs = []
+    undelivered.clear()
     await getHealthKit()?.clearBackgroundTypes()
 }
 
 /**
- * Call [onChange] when Health's workouts or sleep change — including the event
- * that woke the app in the background, which the native side holds until JS
- * subscribes.
+ * Call [onChange] when Health's workouts, sleep or steps change, including a
+ * change that arrived before anything listened. Steps arrive every few minutes
+ * while the app is open, so the caller will want to throttle those.
  */
-export function onHealthDataChanged(onChange: () => void): () => void {
-    const hk = getHealthKit()
-    if (!hk) return () => {}
-    const subs = [WORKOUTS, SLEEP].map((type) =>
-        hk.subscribeToChanges(type, () => onChange())
-    )
-    return () => subs.forEach((sub) => void sub.remove())
-}
-
-/**
- * Call [onChange] when Health's steps change. Apart from
- * {@link onHealthDataChanged} because steps arrive every few minutes while the
- * app is open, so the caller will want to throttle what it does about them.
- */
-export function onStepsChanged(onChange: () => void): () => void {
-    const hk = getHealthKit()
-    if (!hk) return () => {}
-    const sub = hk.subscribeToChanges(STEPS, () => onChange())
-    return () => void sub.remove()
+export function onHealthChange(
+    onChange: (change: HealthChange) => void
+): () => void {
+    changeListeners.add(onChange)
+    const missed = [...undelivered]
+    undelivered.clear()
+    missed.forEach(onChange)
+    return () => void changeListeners.delete(onChange)
 }
 
 /** HealthKit activity → the backend's coarse workout types. */

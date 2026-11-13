@@ -21,6 +21,7 @@ import {
 import { AppState } from "react-native"
 import { type ApiConfig, useApi } from "@shared/index"
 import { useAppData } from "../common/AppData"
+import { isSyncRunning } from "../integration/syncGuard"
 import {
     chooseScreenTimeApps,
     connectScreenTime,
@@ -92,7 +93,8 @@ export function ScreenTimeProvider({ children }: { children: ReactNode }) {
     const [syncing, setSyncing] = useState(false)
     const [status, setStatus] = useState<ScreenTimeStatus>(screenTimeStatus)
     const [error, setError] = useState<string | null>(null)
-    const inFlight = useRef(false)
+    /** When the sync now running started, or null (see syncGuard). */
+    const inFlight = useRef<number | null>(null)
     const lastSyncRef = useRef<number | null>(null)
 
     // Re-read the native state after launch settles and on every return to the
@@ -112,8 +114,9 @@ export function ScreenTimeProvider({ children }: { children: ReactNode }) {
     }, [supported])
 
     const sync = useCallback(async () => {
-        if (inFlight.current) return
-        inFlight.current = true
+        if (isSyncRunning(inFlight.current)) return
+        const started = Date.now()
+        inFlight.current = started
         setSyncing(true)
         setError(null)
         try {
@@ -126,8 +129,11 @@ export function ScreenTimeProvider({ children }: { children: ReactNode }) {
         } catch (err) {
             setError(err instanceof Error ? err.message : "Sync failed")
         } finally {
-            inFlight.current = false
-            setSyncing(false)
+            // Unless a newer sync has taken over from this one.
+            if (inFlight.current === started) {
+                inFlight.current = null
+                setSyncing(false)
+            }
         }
     }, [api, reload])
 

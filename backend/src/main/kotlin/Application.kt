@@ -33,6 +33,7 @@ import io.ktor.server.plugins.requestvalidation.RequestValidation
 import io.ktor.server.plugins.requestvalidation.RequestValidationException
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.request.httpMethod
+import io.ktor.server.request.path
 import io.ktor.server.response.respond
 import io.ktor.server.routing.get
 import io.ktor.server.routing.route
@@ -91,14 +92,19 @@ fun Application.configureModule() {
             verifier(JwtConfig.verifier)
             validate { credential ->
                 val payload = credential.payload
-                val readOnly =
-                    payload.getClaim(JwtConfig.SCOPE_CLAIM).asString() == JwtConfig.DISPLAY_SCOPE
-                when {
-                    payload.subject.isNullOrBlank() -> null
-                    // A billboard link's token can look, but never change anything.
-                    readOnly && request.httpMethod != HttpMethod.Get -> null
-                    else -> JWTPrincipal(payload)
-                }
+                val allowed =
+                    when (payload.getClaim(JwtConfig.SCOPE_CLAIM).asString()) {
+                        // A normal session's token.
+                        null -> true
+                        // A billboard link's token can look, but never change anything.
+                        JwtConfig.DISPLAY_SCOPE -> request.httpMethod == HttpMethod.Get
+                        // The Screen Time extension's token can post totals, and nothing else.
+                        JwtConfig.SCREEN_TIME_SCOPE ->
+                            request.httpMethod == HttpMethod.Post &&
+                                request.path() == JwtConfig.SCREEN_TIME_IMPORT_PATH
+                        else -> false
+                    }
+                if (allowed && !payload.subject.isNullOrBlank()) JWTPrincipal(payload) else null
             }
         }
     }

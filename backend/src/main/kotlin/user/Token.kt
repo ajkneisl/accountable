@@ -27,6 +27,9 @@ object RefreshTokens : Table("refresh_tokens") {
     /** [RefreshTokens.createdAt] */
     val createdAt = long("created_at").clientDefault { System.currentTimeMillis() }
 
+    /** [RefreshToken.replaces] */
+    val replaces = varchar("replaces", 128).nullable()
+
     override val primaryKey = PrimaryKey(token)
 }
 
@@ -37,6 +40,8 @@ object RefreshTokens : Table("refresh_tokens") {
  * @param userID The user who holds the token.
  * @param expiresAt When the token expires.
  * @param createdAt When the token was created.
+ * @param replaces The token this one was issued in exchange for, if any. That one stays usable
+ *   until this one is used, in case this one never reached the client.
  */
 @MappedTable(RefreshTokens::class)
 data class RefreshToken(
@@ -44,6 +49,7 @@ data class RefreshToken(
     val userID: UUID,
     val expiresAt: Long,
     val createdAt: Long,
+    val replaces: String? = null,
 )
 
 /**
@@ -67,11 +73,13 @@ fun findActiveTokens(token: String, now: Long = System.currentTimeMillis()): Ref
  * @param token The token string itself.
  * @param userID The author for the token.
  * @param ttlMs How many seconds after now when this w
+ * @param replaces The token this one is issued in exchange for, if any.
  */
 fun createToken(
     token: String,
     userID: UUID,
     ttlMs: Long = RefreshTokens.REFRESH_TOKEN_TTL_MS,
+    replaces: String? = null,
 ): RefreshToken = transaction {
     val now = System.currentTimeMillis()
     val expiresAt = now + ttlMs
@@ -81,14 +89,20 @@ fun createToken(
         it[RefreshTokens.userID] = userID
         it[RefreshTokens.expiresAt] = expiresAt
         it[RefreshTokens.createdAt] = now
+        it[RefreshTokens.replaces] = replaces
     }
 
-    RefreshToken(token, userID, expiresAt, now)
+    RefreshToken(token, userID, expiresAt, now, replaces)
 }
 
 /** Delete a token by it's [token] string. */
 fun deleteToken(token: String): Int = transaction {
     RefreshTokens.deleteWhere { sql -> sql.run { RefreshTokens.token eq token } }
+}
+
+/** Delete every token that was issued in exchange for [token]. */
+fun deleteTokensReplacing(token: String): Int = transaction {
+    RefreshTokens.deleteWhere { sql -> sql.run { RefreshTokens.replaces eq token } }
 }
 
 /** Delete all tokens for a [userID], including the one in their billboard link. */

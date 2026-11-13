@@ -2,7 +2,14 @@
 // (modules/screen-time) schedules one all-day activity with an event every few
 // minutes of use, named "minutes.<threshold>". iOS wakes this extension as each
 // is crossed, and it keeps the highest threshold per local day in the shared
-// App Group, where the app reads it back and posts it to the backend.
+// App Group.
+//
+// It also posts the totals to the backend itself, at most every
+// POST_INTERVAL, since this extension is the only thing iOS reliably runs as
+// screen time accrues; the app may not be woken for hours. It can't sign in, so
+// the app leaves the API URL and a token that only imports screen time in the
+// App Group (see setSession in BeaccScreenTimeModule). The app still posts
+// everything recorded whenever it runs, which covers whatever this missed.
 //
 // The App Group keys and event naming are shared with BeaccScreenTimeModule;
 // keep the two in step.
@@ -15,6 +22,26 @@ private let DAYS_KEY = "screenTime.days"
 private let EVENT_PREFIX = "minutes."
 /** Ms epoch of the last time iOS woke this extension, so the app can tell it's running. */
 private let LAST_EVENT_KEY = "screenTime.lastEventAt"
+
+/** The backend's base URL and a screen-time-only token, left here by the app. */
+private let API_URL_KEY = "screenTime.apiUrl"
+private let TOKEN_KEY = "screenTime.token"
+/** Seconds epoch of this extension's last successful post, and of its last try. */
+private let LAST_POST_KEY = "screenTime.lastPostAt"
+private let LAST_ATTEMPT_KEY = "screenTime.lastAttemptAt"
+
+/** Post to the backend no more often than this. */
+private let POST_INTERVAL: TimeInterval = 30 * 60
+
+/**
+ * After a post that didn't go through, wait this long before another. iOS can
+ * deliver many thresholds at once, and offline each would otherwise sit
+ * through its own timeout.
+ */
+private let RETRY_INTERVAL: TimeInterval = 60
+
+/** iOS suspends the extension once a callback returns, so a post is waited on this long. */
+private let POST_TIMEOUT: TimeInterval = 10
 
 /**
  * How long after midnight a threshold too big for the new day still counts as
@@ -30,6 +57,8 @@ class ScreenTimeMonitor: DeviceActivityMonitor {
   override func intervalDidStart(for activity: DeviceActivityName) {
     super.intervalDidStart(for: activity)
     record(minutes: 0)
+    // Whatever the throttle held back last night, so yesterday ends up final.
+    post(force: true)
   }
 
   override func eventDidReachThreshold(
@@ -42,6 +71,65 @@ class ScreenTimeMonitor: DeviceActivityMonitor {
     else { return }
     guard let day = dayOf(threshold: minutes, at: Date()) else { return }
     record(minutes: minutes, on: day)
+    // Yesterday's total just changed after midnight's post called it final.
+    post(force: !Calendar.current.isDateInToday(day))
+  }
+
+  /**
+   * Post today's and yesterday's totals to the backend, unless the last post
+   * was under [POST_INTERVAL] ago (or the last try under [RETRY_INTERVAL] ago)
+   * and [force] isn't set. Does nothing while signed out. A failure (offline,
+   * or a token that has expired because the app hasn't run in a month) is left
+   * for the next threshold or the app's own sync.
+   */
+  private func post(force: Bool = false) {
+    guard let defaults = UserDefaults(suiteName: GROUP_ID),
+      let base = defaults.string(forKey: API_URL_KEY),
+      let token = defaults.string(forKey: TOKEN_KEY),
+      let url = URL(string: base + "/integrations/screen_time/import")
+    else { return }
+
+    let now = Date()
+    let seconds = now.timeIntervalSince1970
+    if !force {
+      // A negative gap means the clock moved back; don't let that block posting.
+      let sincePost = seconds - defaults.double(forKey: LAST_POST_KEY)
+      if sincePost >= 0, sincePost < POST_INTERVAL { return }
+      let sinceAttempt = seconds - defaults.double(forKey: LAST_ATTEMPT_KEY)
+      if sinceAttempt >= 0, sinceAttempt < RETRY_INTERVAL { return }
+    }
+
+    let calendar = Calendar.current
+    let recorded = defaults.dictionary(forKey: DAYS_KEY) as? [String: Int] ?? [:]
+    let recent = [now, calendar.date(byAdding: .day, value: -1, to: now)].compactMap { $0 }
+    let days: [[String: Any]] = recent.compactMap { date in
+      guard let minutes = recorded[dayKey(date)],
+        // Local noon, which the backend files under that day.
+        let noon = calendar.date(bySettingHour: 12, minute: 0, second: 0, of: date)
+      else { return nil }
+      return ["day": Int(noon.timeIntervalSince1970 * 1000), "minutes": minutes]
+    }
+    guard !days.isEmpty,
+      let body = try? JSONSerialization.data(withJSONObject: ["days": days])
+    else { return }
+
+    var request = URLRequest(url: url, timeoutInterval: POST_TIMEOUT)
+    request.httpMethod = "POST"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    request.httpBody = body
+    defaults.set(seconds, forKey: LAST_ATTEMPT_KEY)
+
+    let session = URLSession(configuration: .ephemeral)
+    let done = DispatchSemaphore(value: 0)
+    session.dataTask(with: request) { _, response, _ in
+      if let status = (response as? HTTPURLResponse)?.statusCode, (200..<300).contains(status) {
+        defaults.set(seconds, forKey: LAST_POST_KEY)
+      }
+      done.signal()
+    }.resume()
+    _ = done.wait(timeout: .now() + POST_TIMEOUT + 1)
+    session.finishTasksAndInvalidate()
   }
 
   /**

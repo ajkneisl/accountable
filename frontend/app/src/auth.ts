@@ -96,7 +96,13 @@ export const tokenStore = {
  * the boot spinner or go straight to the sign-in screen.
  */
 export async function hydrateSession(): Promise<boolean> {
-    accessToken = await read(ACCESS_KEY)
+    try {
+        accessToken = await SecureStore.getItemAsync(ACCESS_KEY)
+    } catch {
+        // The keychain can't be read right now: a background wake before the
+        // phone's first unlock since it restarted. That says nothing about the
+        // session, so whatever is in memory stands.
+    }
     return accessToken != null
 }
 
@@ -131,16 +137,27 @@ let inflightRefresh: Promise<boolean> | null = null
 
 /**
  * {@link ApiConfig.onUnauthorized}: trade the refresh token for a new pair after
- * a 401. Refresh tokens are single-use, so concurrent 401s share one exchange, and
- * a request that was rejected with an already-replaced token just retries. When
- * the server rejects the refresh token the session is over and the user is
- * signed out; a network failure leaves the tokens alone and surfaces the 401.
+ * a 401. Each exchange replaces the refresh token, so concurrent 401s share one,
+ * and a request that was rejected with an already-replaced token just retries.
+ * If the reply to an exchange is lost, the server still accepts the old refresh
+ * token until the new one is used, so the next attempt recovers. When the server
+ * rejects the refresh token the session is over and the user is signed out; a
+ * network failure, or a keychain that can't be read, leaves the tokens alone
+ * and surfaces the 401.
  */
 async function refreshSession(rejectedToken: string | null): Promise<boolean> {
     if (accessToken && accessToken !== rejectedToken) return true
 
     inflightRefresh ??= (async () => {
-        const stored = await tokenStore.getRefresh()
+        let stored: string | null
+        try {
+            stored = await SecureStore.getItemAsync(REFRESH_KEY)
+        } catch {
+            // Unreadable isn't missing. A background wake can land while the
+            // keychain is locked, and ending the session over that would sign
+            // the user out for nothing.
+            return false
+        }
         if (!stored) {
             await endSession()
             return false

@@ -323,3 +323,25 @@ export function importScreenTime(
         { auth: true }
     )
 }
+
+/** A token the phone's Screen Time extension posts with; see {@link screenTimeToken}. */
+export interface ScreenTimeToken {
+    token: string
+    /** Ms epoch the token stops working. */
+    expiresAt: number
+}
+
+/**
+ * POST /api/integrations/screen_time/token — a long-lived token accepted only by
+ * {@link importScreenTime}'s endpoint, for the iOS Screen Time extension, which
+ * posts totals on its own but can't sign in or renew a session.
+ */
+export function screenTimeToken(config: ApiConfig): Promise<ScreenTimeToken> {
+    return request(
+        config,
+        "POST",
+        "/integrations/screen_time/token",
+        undefined,
+        { auth: true }
+    )
+}

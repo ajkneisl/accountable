@@ -3,10 +3,16 @@
 // crossed and records the day's highest one in the shared App Group (see
 // modules/screen-time). This reads those per-day totals through the native
 // module and posts them, each replacing that day's stored total, so a sync can
-// always safely re-send everything recorded.
+// always safely re-send everything recorded. The extension posts recent days
+// itself as they accrue, with a token of its own that each sync keeps fresh
+// (see renewExtensionToken).
 
 import { requireOptionalNativeModule } from "expo"
-import { type ApiConfig, importScreenTime } from "@shared/index"
+import {
+    type ApiConfig,
+    importScreenTime,
+    screenTimeToken
+} from "@shared/index"
 import type { ScreenTimeStatus } from "./screenTime"
 
 interface BeaccScreenTime {
@@ -21,6 +27,7 @@ interface BeaccScreenTime {
     /** Recorded days as local "yyyy-MM-dd" dates. */
     readDays(): { date: string; minutes: number }[]
     lastEventAt(): number | null
+    setSession(apiUrl: string, token: string | null): void
     clear(): void
 }
 
@@ -93,6 +100,30 @@ export function screenTimeStatus(): ScreenTimeStatus {
 
 export function forgetScreenTime(): void {
     native?.clear()
+    tokenRenewedAt = 0
+}
+
+/** The extension's token lasts 30 days; it's replaced once it's this old. */
+const TOKEN_RENEW_MS = 86_400_000
+
+/** When this launch last gave the extension a token; 0 if it hasn't. */
+let tokenRenewedAt = 0
+
+/**
+ * Give the monitor extension a token to post totals with. It can't sign in, so
+ * the backend issues one that only imports screen time and lasts long enough
+ * to outlive stretches of the app never running. Fetched once per launch and
+ * daily after that; on failure the extension keeps whatever it had.
+ */
+async function renewExtensionToken(api: ApiConfig): Promise<void> {
+    if (!native || Date.now() - tokenRenewedAt < TOKEN_RENEW_MS) return
+    try {
+        const { token } = await screenTimeToken(api)
+        native.setSession(api.baseUrl.replace(/\/$/, ""), token)
+        tokenRenewedAt = Date.now()
+    } catch {
+        // Offline, or a backend without the endpoint; the app's own syncs still post.
+    }
 }
 
 /** Local noon of a "yyyy-MM-dd" date, which the backend files under that day. */
@@ -103,6 +134,7 @@ function localNoon(date: string): number {
 
 export async function syncScreenTime(api: ApiConfig): Promise<number> {
     if (!native) return 0
+    await renewExtensionToken(api)
     const now = Date.now()
     const days = native
         .readDays()

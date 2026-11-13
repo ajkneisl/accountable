@@ -4,11 +4,12 @@
 //
 // While connected, workouts, sleep and steps sync in the background: HealthKit
 // background delivery wakes the app (even if it was closed) whenever a workout or
-// sleep is saved, and about hourly while steps are being taken,
-// the app boots, this provider mounts, and the change listener runs a sync. It
-// also syncs on launch and on return to the foreground, once the last sync is
-// more than a few minutes old. The periodic background task (see
-// integration/backgroundSync) syncs too, through syncAppleHealthInBackground.
+// sleep is saved, and about hourly while steps are being taken. If the UI is
+// up, this provider's change listener runs the sync; a wake with no UI (the app
+// was closed) is handled by integration/backgroundSync instead, through
+// watchAppleHealth and syncAppleHealthInBackground. The provider also syncs on
+// launch and on return to the foreground, once the last sync is more than a
+// few minutes old, and the periodic background task syncs too.
 
 import {
     createContext,
@@ -24,15 +25,17 @@ import { AppState } from "react-native"
 import * as SecureStore from "expo-secure-store"
 import { type ApiConfig, useApi } from "@shared/index"
 import { useAppData } from "../common/AppData"
+import { isSyncRunning } from "../integration/syncGuard"
 import { requestScreenTimeSync } from "../screenTime/ScreenTimeData"
 import {
     disableBackgroundSync,
     enableBackgroundSync,
     hasRequestedAppleHealthAccess,
     isAppleHealthSupported,
-    onHealthDataChanged,
-    onStepsChanged,
+    listenForHealthChanges,
+    onHealthChange,
     requestAppleHealthAccess,
+    type HealthChange,
     syncAppleHealthSleep,
     syncAppleHealthSteps,
     syncAppleHealthWorkouts
@@ -155,6 +158,35 @@ async function importSince(
     return imported > 0 || sleepChanged > 0 || stepsChanged > 0
 }
 
+/** The import now running: where it reads from, and when it started. */
+let running: {
+    from: number | null
+    started: number
+    result: Promise<boolean>
+} | null = null
+
+/**
+ * {@link importSince}, one at a time: a call made while the same import is
+ * running shares its result. A launch can start one from the background wake
+ * and another from the provider mounting, and they'd both read and post the
+ * same thing.
+ */
+function importOnce(
+    api: ApiConfig,
+    from: number | null,
+    now: number
+): Promise<boolean> {
+    if (running && running.from === from && isSyncRunning(running.started))
+        return running.result
+    const mine = { from, started: now, result: importSince(api, from, now) }
+    running = mine
+    const done = () => {
+        if (running === mine) running = null
+    }
+    mine.result.then(done, done)
+    return mine.result
+}
+
 /**
  * Sync from the stored last sync if Health is linked, for the background task,
  * which runs without the provider. Only an explicit link counts: the permission
@@ -166,7 +198,35 @@ export async function syncAppleHealthInBackground(
     if (!isAppleHealthSupported()) return
     if ((await readKey(CONNECTED_KEY)) !== "1") return
     const synced = await readKey(LAST_SYNC_KEY)
-    await importSince(api, synced ? Number(synced) : null, Date.now())
+    await importOnce(api, synced ? Number(synced) : null, Date.now())
+}
+
+/** Whether a mounted provider is handling Health changes itself. */
+let providerListening = false
+
+/**
+ * Call [onChange] for Health changes that no mounted provider is handling: iOS
+ * woke the app in the background with no UI, so nothing else will sync. Starts
+ * the native subscription if Health is linked, which also delivers the change
+ * that caused the wake.
+ */
+export async function watchAppleHealth(
+    onChange: (change: HealthChange) => void
+): Promise<void> {
+    if (!isAppleHealthSupported()) return
+    onHealthChange((change) => {
+        if (!providerListening) onChange(change)
+    })
+    let linked: boolean
+    try {
+        linked = (await SecureStore.getItemAsync(CONNECTED_KEY)) === "1"
+    } catch {
+        // The keychain can't be read (the phone hasn't been unlocked since it
+        // restarted), which doesn't mean Health isn't linked. Listen anyway,
+        // or this launch would never hear a change; each sync checks the link.
+        linked = true
+    }
+    if (linked) listenForHealthChanges()
 }
 
 export function AppleHealthProvider({ children }: { children: ReactNode }) {
@@ -177,27 +237,31 @@ export function AppleHealthProvider({ children }: { children: ReactNode }) {
     const [lastSync, setLastSync] = useState<number | null>(null)
     const [syncing, setSyncing] = useState(false)
     const [error, setError] = useState<string | null>(null)
-    const inFlight = useRef(false)
+    /** When the sync now running started, or null (see syncGuard). */
+    const inFlight = useRef<number | null>(null)
     // Read by the change listener, which shouldn't resubscribe on every sync.
     const lastSyncRef = useRef<number | null>(null)
 
     const sync = useCallback(
         async (from: number | null) => {
-            if (inFlight.current) return
-            inFlight.current = true
+            if (isSyncRunning(inFlight.current)) return
+            const now = Date.now()
+            inFlight.current = now
             setSyncing(true)
             setError(null)
             try {
-                const now = Date.now()
-                const changed = await importSince(api, from, now)
+                const changed = await importOnce(api, from, now)
                 setLastSync(now)
                 lastSyncRef.current = now
                 if (changed) reload()
             } catch (err) {
                 setError(err instanceof Error ? err.message : "Sync failed")
             } finally {
-                inFlight.current = false
-                setSyncing(false)
+                // Unless a newer sync has taken over from this one.
+                if (inFlight.current === now) {
+                    inFlight.current = null
+                    setSyncing(false)
+                }
             }
         },
         [api, reload]
@@ -244,20 +308,26 @@ export function AppleHealthProvider({ children }: { children: ReactNode }) {
             if (state === "active") syncIfStale()
         })
         // A Health change may be the only time iOS wakes the app in the
-        // background, so it brings Screen Time along too. HealthKit keeps a
-        // single callback per type, so Screen Time can't subscribe itself.
-        const unsubscribe = onHealthDataChanged(() => {
-            void sync(lastSyncRef.current)
+        // background, so it brings Screen Time along too.
+        providerListening = true
+        const unsubscribe = onHealthChange((change) => {
+            // Steps change constantly, so they only sync once the last one is
+            // stale. In the background that's the hourly wake, which is what
+            // lets the server notice a step goal is nearly met.
+            const last = lastSyncRef.current
+            if (
+                change === "steps" &&
+                last !== null &&
+                Date.now() - last <= STALE_MS
+            )
+                return
+            void sync(last)
             requestScreenTimeSync()
         })
-        // Steps change constantly, so they only sync once the last one is stale.
-        // In the background that's the hourly wake, which is what lets the server
-        // notice a step goal is nearly met.
-        const unsubscribeSteps = onStepsChanged(syncIfStale)
         return () => {
+            providerListening = false
             sub.remove()
             unsubscribe()
-            unsubscribeSteps()
         }
     }, [connected, sync, syncIfStale])
 

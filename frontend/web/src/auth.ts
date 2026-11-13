@@ -116,8 +116,8 @@ let inflightRefresh: Promise<boolean> | null = null
 
 /**
  * {@link ApiConfig.onUnauthorized}: trade the refresh token for a new pair after
- * a 401. Refresh tokens are single-use, so concurrent 401s (or another tab) share
- * one exchange, and a request rejected with an already-replaced token just
+ * a 401. Each exchange replaces the refresh token, so concurrent 401s (or another
+ * tab) share one, and a request rejected with an already-replaced token just
  * retries. The session only ends when the server rejects the refresh token — a
  * network blip leaves it alone, so a wall display recovers on its next poll.
  */

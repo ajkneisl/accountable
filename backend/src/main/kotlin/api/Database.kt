@@ -95,6 +95,7 @@ fun initDb() {
         exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS color VARCHAR(16)")
         exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS feed_details BOOLEAN NOT NULL DEFAULT TRUE")
         exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS display_token VARCHAR(128) UNIQUE")
+        exec("ALTER TABLE refresh_tokens ADD COLUMN IF NOT EXISTS replaces VARCHAR(128)")
         exec("ALTER TABLE integrations_github ADD COLUMN IF NOT EXISTS repos TEXT")
         exec("ALTER TABLE integrations_leetcode ADD COLUMN IF NOT EXISTS solves TEXT")
     }

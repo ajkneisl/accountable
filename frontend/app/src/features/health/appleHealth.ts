@@ -19,13 +19,15 @@ export async function enableBackgroundSync(): Promise<void> {}
 
 export async function disableBackgroundSync(): Promise<void> {}
 
-/** Call [onChange] when Health's workouts or sleep change. Returns an unsubscribe. */
-export function onHealthDataChanged(_onChange: () => void): () => void {
-    return () => {}
-}
+export type HealthChange = "data" | "steps"
 
-/** Call [onChange] when Health's steps change. Returns an unsubscribe. */
-export function onStepsChanged(_onChange: () => void): () => void {
+/** Start receiving Health changes without reconfiguring background delivery. */
+export function listenForHealthChanges(): void {}
+
+/** Call [onChange] when Health's workouts, sleep or steps change. Returns an unsubscribe. */
+export function onHealthChange(
+    _onChange: (change: HealthChange) => void
+): () => void {
     return () => {}
 }
 

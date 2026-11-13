@@ -4,7 +4,8 @@
 // and categories the user picked. The ScreenTimeMonitor extension
 // (targets/ScreenTimeMonitor) records the highest threshold each day reaches
 // into the shared App Group, and readDays() hands those totals to JS to post
-// to the backend.
+// to the backend. The extension also posts them itself as they accrue, using
+// the token setSession() leaves in the App Group.
 //
 // The App Group keys, activity name and event naming are shared with the
 // extension; keep the two in step.
@@ -19,6 +20,10 @@ private let SELECTION_KEY = "screenTime.selection"
 private let DAYS_KEY = "screenTime.days"
 private let LAST_EVENT_KEY = "screenTime.lastEventAt"
 private let VERSION_KEY = "screenTime.monitorVersion"
+private let API_URL_KEY = "screenTime.apiUrl"
+private let TOKEN_KEY = "screenTime.token"
+private let LAST_POST_KEY = "screenTime.lastPostAt"
+private let LAST_ATTEMPT_KEY = "screenTime.lastAttemptAt"
 private let ACTIVITY = DeviceActivityName("beacc.screenTime")
 private let EVENT_PREFIX = "minutes."
 
@@ -201,12 +206,28 @@ public class BeaccScreenTimeModule: Module {
       (shared?.object(forKey: LAST_EVENT_KEY) as? NSNumber)?.doubleValue
     }
 
-    /** Forget the selection and recorded days, e.g. on sign-out. */
+    /**
+     * Hand the extension what it needs to post totals itself: the backend's
+     * base URL and a token that only imports screen time, or nil to take it away.
+     */
+    Function("setSession") { (apiUrl: String, token: String?) in
+      shared?.set(apiUrl, forKey: API_URL_KEY)
+      if let token {
+        shared?.set(token, forKey: TOKEN_KEY)
+      } else {
+        shared?.removeObject(forKey: TOKEN_KEY)
+      }
+    }
+
+    /** Forget the selection, recorded days and the extension's token, e.g. on sign-out. */
     Function("clear") {
       DeviceActivityCenter().stopMonitoring([ACTIVITY])
       shared?.removeObject(forKey: SELECTION_KEY)
       shared?.removeObject(forKey: DAYS_KEY)
       shared?.removeObject(forKey: LAST_EVENT_KEY)
+      shared?.removeObject(forKey: LAST_POST_KEY)
+      shared?.removeObject(forKey: LAST_ATTEMPT_KEY)
+      shared?.removeObject(forKey: TOKEN_KEY)
       shared?.removeObject(forKey: VERSION_KEY)
     }
   }

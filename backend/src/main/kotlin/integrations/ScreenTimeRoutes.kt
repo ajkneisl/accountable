@@ -2,6 +2,7 @@ package integrations
 
 import api.Cache
 import api.Error
+import auth.JwtConfig
 import features.feed.publishFeed
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.auth.jwt.JWTPrincipal
@@ -48,10 +49,33 @@ private val SCREEN_TIME_IMPORT_ROUTE: suspend RoutingContext.() -> Unit = {
     call.respond(ImportScreenTimeResponse(imported))
 }
 
+/**
+ * @param token Accepted only for importing screen time.
+ * @param expiresAt Ms epoch the token stops working.
+ */
+@Serializable data class ScreenTimeTokenResponse(val token: String, val expiresAt: Long)
+
+/**
+ * POST /api/integrations/screen_time/token — a long-lived token that can only import screen time,
+ * for the phone's Screen Time extension, which posts totals on its own but can't sign in. Needs a
+ * normal session; the token itself can't mint another.
+ */
+private val SCREEN_TIME_TOKEN_ROUTE: suspend RoutingContext.() -> Unit = {
+    val principal = call.principal<JWTPrincipal>()!!
+    val username = principal.payload.getClaim("username").asString() ?: Error.text("invalid token")
+    call.respond(
+        ScreenTimeTokenResponse(
+            token = JwtConfig.issueScreenTimeToken(call.userID(), username),
+            expiresAt = System.currentTimeMillis() + JwtConfig.SCREEN_TIME_TOKEN_TTL_MS,
+        )
+    )
+}
+
 private fun ApplicationCall.userID(): UUID =
     principal<JWTPrincipal>()!!.subject?.let(UUID::fromString) ?: Error.text("invalid token")
 
 /** Mounted under /api/integrations alongside [appleStepsRoutes]. */
 fun Route.screenTimeRoutes() {
     post("/screen_time/import", SCREEN_TIME_IMPORT_ROUTE)
+    post("/screen_time/token", SCREEN_TIME_TOKEN_ROUTE)
 }

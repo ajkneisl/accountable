@@ -7,6 +7,8 @@ import auth.LoginRequest
 import auth.RefreshRequest
 import auth.RegisterRequest
 import auth.TokenResponse
+import integrations.ImportScreenTimeRequest
+import integrations.ScreenTimeTokenResponse
 import configureModule
 import user.RefreshTokens
 import user.Users
@@ -142,25 +144,56 @@ class AuthRoutesTest {
         assertTrue(res.bodyAsText().contains("invalid credentials"))
     }
 
+    private suspend fun HttpClient.refresh(refreshToken: String): HttpResponse =
+        post("/api/auth/refresh") {
+            contentType(ContentType.Application.Json)
+            setBody(RefreshRequest(refreshToken))
+        }
+
     @Test
-    fun `refresh issues new tokens and rotates the refresh token`() = authTest { client ->
+    fun `refresh issues new tokens and retires the old one once they are used`() = authTest { client ->
         val original = client.register(username = "erin")
-        val res =
-            client.post("/api/auth/refresh") {
-                contentType(ContentType.Application.Json)
-                setBody(RefreshRequest(original.refreshToken))
-            }
+        val res = client.refresh(original.refreshToken)
         assertEquals(HttpStatusCode.OK, res.status)
         val refreshed: TokenResponse = res.body()
         assertNotEquals(original.refreshToken, refreshed.refreshToken)
         assertTrue(refreshed.accessToken.isNotBlank())
 
-        val replay =
-            client.post("/api/auth/refresh") {
+        // Using the new token shows it arrived, which retires the one it replaced.
+        assertEquals(HttpStatusCode.OK, client.refresh(refreshed.refreshToken).status)
+        assertEquals(HttpStatusCode.Unauthorized, client.refresh(original.refreshToken).status)
+    }
+
+    @Test
+    fun `a refresh whose reply was lost can be repeated`() = authTest { client ->
+        val original = client.register(username = "erin")
+        val lost: TokenResponse = client.refresh(original.refreshToken).body()
+
+        // The client never saw `lost`, so all it can do is trade the original again.
+        val retry = client.refresh(original.refreshToken)
+        assertEquals(HttpStatusCode.OK, retry.status)
+        val refreshed: TokenResponse = retry.body()
+        assertNotEquals(lost.refreshToken, refreshed.refreshToken)
+
+        // Which takes the lost pair's place rather than adding to it.
+        assertEquals(HttpStatusCode.Unauthorized, client.refresh(lost.refreshToken).status)
+        assertEquals(HttpStatusCode.OK, client.refresh(refreshed.refreshToken).status)
+    }
+
+    @Test
+    fun `logout also invalidates the token being replaced`() = authTest { client ->
+        val original = client.register(username = "erin")
+        val refreshed: TokenResponse = client.refresh(original.refreshToken).body()
+
+        val logout =
+            client.post("/api/auth/logout") {
                 contentType(ContentType.Application.Json)
-                setBody(RefreshRequest(original.refreshToken))
+                setBody(RefreshRequest(refreshed.refreshToken))
             }
-        assertEquals(HttpStatusCode.Unauthorized, replay.status)
+        assertEquals(HttpStatusCode.NoContent, logout.status)
+        // Still usable until then, and it must not bring the session back.
+        assertEquals(HttpStatusCode.Unauthorized, client.refresh(original.refreshToken).status)
+        assertEquals(HttpStatusCode.Unauthorized, client.refresh(refreshed.refreshToken).status)
     }
 
     @Test
@@ -256,5 +289,40 @@ class AuthRoutesTest {
         val userID = transaction { Users.selectAll().single { it[Users.username] == "revoked" }[Users.id] }
         deleteAllTokensForUser(userID)
         assertEquals(HttpStatusCode.Unauthorized, access(link.token))
+    }
+
+    @Test
+    fun `screen time token only imports screen time`() = authTest { client ->
+        val tokens = client.register(username = "scroller")
+        val res = client.post("/api/integrations/screen_time/token") { bearerAuth(tokens.accessToken) }
+        assertEquals(HttpStatusCode.OK, res.status)
+        val scoped: ScreenTimeTokenResponse = res.body()
+        assertTrue(scoped.expiresAt > System.currentTimeMillis())
+
+        val import =
+            client.post("/api/integrations/screen_time/import") {
+                bearerAuth(scoped.token)
+                contentType(ContentType.Application.Json)
+                setBody(ImportScreenTimeRequest(emptyList()))
+            }
+        assertEquals(HttpStatusCode.OK, import.status)
+
+        // Nothing else: not reading, not another import, not minting a new token.
+        assertEquals(
+            HttpStatusCode.Unauthorized,
+            client.get("/api/user") { bearerAuth(scoped.token) }.status,
+        )
+        assertEquals(
+            HttpStatusCode.Unauthorized,
+            client.post("/api/integrations/apple_steps/import") {
+                bearerAuth(scoped.token)
+                contentType(ContentType.Application.Json)
+                setBody("""{"days":[]}""")
+            }.status,
+        )
+        assertEquals(
+            HttpStatusCode.Unauthorized,
+            client.post("/api/integrations/screen_time/token") { bearerAuth(scoped.token) }.status,
+        )
     }
 }
