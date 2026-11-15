@@ -136,21 +136,17 @@ function Standings({
 
 type LeaderboardEntry = CompetitionLeaderboard["members"][number]
 
-/** How many members can stand on the podium. */
-const PODIUM_PLACES = 3
+/** How many members are picked out above the list. */
+const TOP_PLACES = 3
+
+const ORDINAL: Record<number, string> = { 1: "1st", 2: "2nd", 3: "3rd" }
 
 /**
- * A podium block's height by rank rather than by position, so members level on
- * weeks stand level.
+ * One of the top three: their profile circle with the place they hold on its
+ * lower edge, then their name and weeks. The circle is sized by rank rather
+ * than by position, so members level on weeks look level.
  */
-const BLOCK_HEIGHT: Record<number, string> = {
-    1: "5.6em",
-    2: "4em",
-    3: "2.8em"
-}
-
-/** One member on the podium: their name and weeks over a block in their color. */
-function PodiumPlace({
+function TopPlace({
     entry,
     rank,
     color,
@@ -162,53 +158,55 @@ function PodiumPlace({
     isMe: boolean
 }) {
     const first = rank === 1
+    const size = first ? "4.6em" : "3.4em"
     return (
         <div className="flex min-w-0 max-w-[11em] flex-1 flex-col items-center">
+            <div
+                className="flex shrink-0 items-center justify-center rounded-full font-bold leading-none"
+                style={{
+                    width: size,
+                    height: size,
+                    background: color,
+                    color: onMemberFill(color)
+                }}
+            >
+                <span className={first ? "text-[1.9em]" : "text-[1.4em]"}>
+                    {(entry.username[0] ?? "?").toUpperCase()}
+                </span>
+            </div>
+            {/* Ringed in the card's color, so it reads against the circle. */}
+            <span className="mt-[-0.95em] rounded-full border-[0.2em] border-bg-card bg-ink px-[0.7em] py-[0.15em] text-[0.7em] font-bold text-bg-card">
+                {ORDINAL[rank] ?? rank}
+            </span>
             <span
-                className={`max-w-full truncate font-semibold ${
-                    first ? "text-[1.25em]" : "text-[1.05em]"
+                className={`mt-[0.3em] flex max-w-full items-baseline gap-[0.4em] font-semibold ${
+                    first ? "text-[1.2em]" : "text-[1.05em]"
                 }`}
             >
-                {entry.username}
+                <span className="truncate">{entry.username}</span>
+                {isMe && (
+                    <span className="shrink-0 text-[0.7em] font-normal text-ink-3">
+                        you
+                    </span>
+                )}
             </span>
             <span className="mono text-[0.85em] text-ink-3">
                 <b
                     className={`text-ink ${
-                        first ? "text-[2em]" : "text-[1.5em]"
+                        first ? "text-[1.6em]" : "text-[1.3em]"
                     }`}
                 >
                     {entry.weeksWon}
                 </b>
                 {entry.weeksWon === 1 ? " wk" : " wks"}
             </span>
-            <div
-                className="mt-[0.5em] flex w-full flex-col items-center rounded-t-[0.7em] pt-[0.45em] leading-none"
-                style={{
-                    height: BLOCK_HEIGHT[rank] ?? BLOCK_HEIGHT[3],
-                    background: color,
-                    color: onMemberFill(color)
-                }}
-            >
-                <span
-                    className={`font-bold ${
-                        first ? "text-[1.7em]" : "text-[1.35em]"
-                    }`}
-                >
-                    {rank}
-                </span>
-                {isMe && (
-                    <span className="mt-[0.35em] text-[0.75em] opacity-70">
-                        you
-                    </span>
-                )}
-            </div>
         </div>
     )
 }
 
 /**
- * Weeks each member has finished first: the top three on a podium, then
- * everyone else with their share of the weeks counted.
+ * Weeks each member has finished first: the top three picked out by their
+ * profile circles, then everyone else with their share of the weeks counted.
  */
 function Leaderboard({
     board,
@@ -222,24 +220,22 @@ function Leaderboard({
     // Members level on weeks share a rank.
     const rankOf = (m: LeaderboardEntry) =>
         1 + board.members.filter((o) => o.weeksWon > m.weeksWon).length
-    // Only members who've won a week stand on the podium, so nobody's up there
-    // on nothing. The list arrives sorted by weeks won.
-    const podium = board.members
+    // Only members who've won a week are picked out, so nobody's up there on
+    // nothing. The list arrives sorted by weeks won.
+    const top = board.members
         .filter((m) => m.weeksWon > 0)
-        .slice(0, PODIUM_PLACES)
-    const rest = board.members.slice(podium.length)
+        .slice(0, TOP_PLACES)
+    const rest = board.members.slice(top.length)
     // First in the middle once all three places are taken.
     const placed =
-        podium.length === PODIUM_PLACES
-            ? [podium[1], podium[0], podium[2]]
-            : podium
+        top.length === TOP_PLACES ? [top[1], top[0], top[2]] : top
 
     return (
         <>
             {placed.length > 0 && (
-                <div className="flex shrink-0 items-end justify-center gap-[0.9em] px-[1.4em] pt-[0.8em]">
+                <div className="flex shrink-0 items-end justify-center gap-[0.9em] px-[1.4em] pb-[1em] pt-[0.8em]">
                     {placed.map((m) => (
-                        <PodiumPlace
+                        <TopPlace
                             key={m.userID}
                             entry={m}
                             rank={rankOf(m)}
@@ -259,7 +255,7 @@ function Leaderboard({
                         color={color}
                         username={m.username}
                         isMe={isMe}
-                        // The first row is ruled off from the podium above it.
+                        // The first row is ruled off from the top three above it.
                         divided={i > 0 || placed.length > 0}
                         value={
                             <>

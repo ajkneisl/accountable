@@ -1,7 +1,7 @@
 // A competition's all-time leaderboard page: how many completed weeks each
 // member has finished first in the standings. The server does the counting,
-// since it spans every week since the competition began. The top three stand
-// on a podium; everyone else is listed underneath.
+// since it spans every week since the competition began. The top three are
+// picked out by their profile circles; everyone else is listed underneath.
 
 import { useEffect, useState } from "react"
 import { Text, View } from "react-native"
@@ -17,17 +17,17 @@ import { MemberRow } from "./MemberRow"
 
 type Entry = CompetitionLeaderboard["members"][number]
 
-/** How many members can stand on the podium. */
-const PODIUM_PLACES = 3
+/** How many members are picked out above the list. */
+const TOP_PLACES = 3
+
+const ORDINAL: Record<number, string> = { 1: "1st", 2: "2nd", 3: "3rd" }
 
 /**
- * A podium block's height by rank rather than by position, so members level on
- * weeks stand level.
+ * One of the top three: their profile circle with the place they hold on its
+ * lower edge, then their name and weeks. The circle is sized by rank rather
+ * than by position, so members level on weeks look level.
  */
-const BLOCK_HEIGHT: Record<number, number> = { 1: 108, 2: 76, 3: 52 }
-
-/** One member on the podium: their name and weeks over a block in their color. */
-function PodiumPlace({
+function TopPlace({
     entry,
     rank,
     color,
@@ -40,52 +40,60 @@ function PodiumPlace({
 }) {
     const scheme = useScheme()
     const first = rank === 1
+    const size = first ? 88 : 64
     return (
         <View className="flex-1 items-center" style={{ maxWidth: 124 }}>
+            <View
+                style={{
+                    width: size,
+                    height: size,
+                    borderRadius: size / 2,
+                    backgroundColor: color
+                }}
+                className="items-center justify-center"
+            >
+                <Text
+                    style={{
+                        color: onMemberFill(color, scheme),
+                        fontSize: first ? 36 : 26
+                    }}
+                    className="font-bold"
+                >
+                    {(entry.username[0] ?? "?").toUpperCase()}
+                </Text>
+            </View>
+            {/* Ringed in the card's color, so it reads against the circle. */}
+            <View
+                style={{ marginTop: -12 }}
+                className="rounded-full border-2 border-bg-card bg-ink px-2 py-0.5"
+            >
+                <Text className="text-[11px] font-bold text-bg-card">
+                    {ORDINAL[rank] ?? rank}
+                </Text>
+            </View>
             <Text
                 numberOfLines={1}
-                className={`font-semibold text-ink ${
+                className={`mt-1.5 font-semibold text-ink ${
                     first ? "text-[17px]" : "text-[15px]"
                 }`}
             >
                 {entry.username}
+                {isMe && (
+                    <Text className="text-[11px] font-normal text-ink-3">
+                        {"  you"}
+                    </Text>
+                )}
             </Text>
-            <Mono className="mt-0.5 text-[12px] text-ink-3">
+            <Mono className="text-[12px] text-ink-3">
                 <Text
                     className={`font-bold text-ink ${
-                        first ? "text-[26px]" : "text-[19px]"
+                        first ? "text-[22px]" : "text-[17px]"
                     }`}
                 >
                     {entry.weeksWon}
                 </Text>
                 {entry.weeksWon === 1 ? " wk" : " wks"}
             </Mono>
-            <View
-                style={{
-                    height: BLOCK_HEIGHT[rank] ?? BLOCK_HEIGHT[3],
-                    backgroundColor: color,
-                    borderTopLeftRadius: 10,
-                    borderTopRightRadius: 10
-                }}
-                className="mt-2.5 w-full items-center pt-2.5"
-            >
-                <Text
-                    style={{ color: onMemberFill(color, scheme) }}
-                    className={`font-bold ${
-                        first ? "text-[24px]" : "text-[19px]"
-                    }`}
-                >
-                    {rank}
-                </Text>
-                {isMe && (
-                    <Text
-                        style={{ color: onMemberFill(color, scheme) }}
-                        className="text-[11px] opacity-70"
-                    >
-                        you
-                    </Text>
-                )}
-            </View>
         </View>
     )
 }
@@ -138,24 +146,22 @@ export function LeaderboardPage({
     const rankOf = (m: Entry) =>
         1 + board.members.filter((o) => o.weeksWon > m.weeksWon).length
     const colorOf = (m: Entry) => colorMap[m.userID] ?? FALLBACK_BAR_COLOR
-    // Only members who've won a week stand on the podium, so nobody's up there
-    // on nothing. The list arrives sorted by weeks won.
-    const podium = board.members
+    // Only members who've won a week are picked out, so nobody's up there on
+    // nothing. The list arrives sorted by weeks won.
+    const top = board.members
         .filter((m) => m.weeksWon > 0)
-        .slice(0, PODIUM_PLACES)
-    const rest = board.members.slice(podium.length)
+        .slice(0, TOP_PLACES)
+    const rest = board.members.slice(top.length)
     // First in the middle once all three places are taken.
     const placed =
-        podium.length === PODIUM_PLACES
-            ? [podium[1], podium[0], podium[2]]
-            : podium
+        top.length === TOP_PLACES ? [top[1], top[0], top[2]] : top
 
     return (
         <Card className="overflow-hidden">
             {placed.length > 0 && (
-                <View className="flex-row items-end justify-center gap-3 px-5 pt-6">
+                <View className="flex-row items-end justify-center gap-3 px-5 pb-5 pt-6">
                     {placed.map((m) => (
-                        <PodiumPlace
+                        <TopPlace
                             key={m.userID}
                             entry={m}
                             rank={rankOf(m)}
@@ -174,7 +180,7 @@ export function LeaderboardPage({
                         color={colorOf(m)}
                         username={m.username}
                         isMe={isMe}
-                        // The first row is ruled off from the podium above it.
+                        // The first row is ruled off from the top three above it.
                         divided={i > 0 || placed.length > 0}
                         value={
                             <Mono className="text-[14px] text-ink-3">
