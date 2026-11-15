@@ -24,7 +24,7 @@ import {
     type TileVariant
 } from "../../../ui/primitives"
 import { useAppData } from "../../common/AppData"
-import { isLimit, unitLabel, unitScale } from "../types"
+import { deviceDistanceUnit, isLimit, unitLabel, unitScale } from "../types"
 import { MinWorkoutField, takesMinWorkout } from "./MinWorkoutField"
 import { RequiredDaysField } from "./RequiredDaysField"
 
@@ -39,6 +39,13 @@ type Source = {
     /** Cadence and target (in display units) to start from when picked. */
     defaults?: { period: GoalPeriod; target: string }
 }
+
+/** Distance goals offer both units, the device's own first. */
+const DISTANCE_UNITS = [
+    { metric: "mi", label: "Miles" },
+    { metric: "km", label: "Kilometres" }
+]
+const MILES_FIRST = deviceDistanceUnit() === "mi"
 
 const SOURCES: Source[] = [
     {
@@ -60,6 +67,18 @@ const SOURCES: Source[] = [
             { metric: "medium", label: "Medium" },
             { metric: "hard", label: "Hard" }
         ]
+    },
+    {
+        integration: "chess_com",
+        label: "Chess.com",
+        glyph: "CH",
+        tile: "ink",
+        optionLabel: "Metric",
+        metrics: [
+            { metric: "games", label: "Games played" },
+            { metric: "wins", label: "Wins" }
+        ],
+        defaults: { period: "DAILY", target: "1" }
     },
     {
         integration: "apple_fitness",
@@ -89,6 +108,15 @@ const SOURCES: Source[] = [
         optionLabel: "Metric",
         metrics: [{ metric: "steps", label: "Steps" }],
         defaults: { period: "DAILY", target: "10000" }
+    },
+    {
+        integration: "apple_distance",
+        label: "Distance",
+        glyph: "KM",
+        tile: "lime",
+        optionLabel: "Unit",
+        metrics: MILES_FIRST ? DISTANCE_UNITS : [...DISTANCE_UNITS].reverse(),
+        defaults: { period: "DAILY", target: MILES_FIRST ? "3" : "5" }
     },
     {
         integration: "screen_time",

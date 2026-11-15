@@ -31,8 +31,32 @@ export type FeedDetail =
           manual: boolean
       }
     | { type: "apple_steps"; steps: number }
+    | { type: "apple_distance"; meters: number }
     | { type: "apple_sleep"; minutes: number }
     | { type: "screen_time"; minutes: number }
+    | {
+          type: "chess_com"
+          games: number
+          wins: number
+          draws: number
+          losses: number
+      }
+
+/**
+ * Every source this client can draw a card for: each `type` of {@link FeedDetail}.
+ * It's sent with the feed request so the server leaves out cards from sources
+ * added since, which an older app has no way to show.
+ */
+export const FEED_SOURCES: FeedDetail["type"][] = [
+    "github",
+    "leetcode",
+    "chess_com",
+    "apple_fitness",
+    "apple_steps",
+    "apple_distance",
+    "apple_sleep",
+    "screen_time"
+]
 
 /** A goal's standing on a card. */
 export interface FeedGoalChip {
@@ -76,7 +100,9 @@ export function getFeed(
     config: ApiConfig,
     before?: string
 ): Promise<FeedResponse> {
-    const query = before ? `?before=${encodeURIComponent(before)}` : ""
+    const query =
+        `?sources=${FEED_SOURCES.join(",")}` +
+        (before ? `&before=${encodeURIComponent(before)}` : "")
     return request(config, "GET", `/feed${query}`, undefined, { auth: true })
 }
 

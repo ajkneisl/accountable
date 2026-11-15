@@ -12,12 +12,16 @@ import features.goals.goalsFor
 import features.goals.isMet
 import features.goals.metricByDay
 import features.goals.sumInRange
+import integrations.AppleDistance
+import integrations.AppleDistanceTable
 import integrations.AppleFitness
 import integrations.AppleFitnessWorkouts
 import integrations.AppleSleep
 import integrations.AppleSleepTable
 import integrations.AppleSteps
 import integrations.AppleStepsTable
+import integrations.ChessCom
+import integrations.ChessComTable
 import integrations.GitHub
 import integrations.GitHubTable
 import integrations.LeetCode
@@ -124,6 +128,7 @@ private fun FeedDetail.hasActivity(): Boolean =
     when (this) {
         is GitHubDetail -> commits > 0
         is LeetCodeDetail -> solved > 0
+        is ChessDetail -> games > 0
         else -> true
     }
 
@@ -142,7 +147,10 @@ private suspend fun dayDetail(integration: String, userID: UUID, dayStart: Long)
         when (integration) {
             GitHub.name -> GitHubTable.dayRow()?.let { githubDetail(it) }
             LeetCode.name -> LeetCodeTable.dayRow()?.let { leetCodeDetail(it) }
+            ChessCom.name -> ChessComTable.dayRow()?.let { chessDetail(it) }
             AppleSteps.name -> AppleStepsTable.dayRow()?.let { StepsDetail(it[AppleStepsTable.steps]) }
+            AppleDistance.name ->
+                AppleDistanceTable.dayRow()?.let { DistanceDetail(it[AppleDistanceTable.meters]) }
             AppleSleep.name -> AppleSleepTable.dayRow()?.let { SleepDetail(it[AppleSleepTable.minutes]) }
             ScreenTime.name -> ScreenTimeTable.dayRow()?.let { ScreenTimeDetail(it[ScreenTimeTable.minutes]) }
             else -> null
@@ -158,6 +166,13 @@ private fun githubDetail(row: ResultRow): GitHubDetail {
             .orEmpty()
             .take(NAMED_ITEMS)
     return GitHubDetail(commits, named, (commits - named.sumOf { it.commits }).coerceAtLeast(0))
+}
+
+private fun chessDetail(row: ResultRow): ChessDetail {
+    val games = row[ChessComTable.games]
+    val wins = row[ChessComTable.wins]
+    val draws = row[ChessComTable.draws]
+    return ChessDetail(games, wins, draws, (games - wins - draws).coerceAtLeast(0))
 }
 
 private fun leetCodeDetail(row: ResultRow): LeetCodeDetail {

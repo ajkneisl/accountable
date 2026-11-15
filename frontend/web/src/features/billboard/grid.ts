@@ -1,6 +1,6 @@
 // Heatmap geometry, mirroring app/src/features/habits/grid.ts.
 //
-// Columns are Monday-anchored weeks (rows Mon→Sun), GitHub-style, with the last
+// Columns are Sunday-anchored weeks (rows Sun→Sat), GitHub-style, with the last
 // column holding the current week. Dates are the backend's `yyyy-MM-dd` strings
 // in the user's timezone; they're handled as UTC midnights so browser-timezone
 // DST shifts can't nudge a day across a boundary.
@@ -42,13 +42,13 @@ export function buildGrid(
 ): Cell[][] {
     const startMs = parse(start)
     const todayMs = parse(today)
-    // getUTCDay: Sun=0 … Sat=6 → Mon=0 … Sun=6.
-    const weekday = (new Date(todayMs).getUTCDay() + 6) % 7
-    const firstMonday = todayMs - weekday * DAY_MS - (cols - 1) * 7 * DAY_MS
+    // getUTCDay: Sun=0 … Sat=6, which is the row order.
+    const weekday = new Date(todayMs).getUTCDay()
+    const firstSunday = todayMs - weekday * DAY_MS - (cols - 1) * 7 * DAY_MS
 
     return Array.from({ length: cols }, (_, c) =>
         Array.from({ length: 7 }, (_, r) => {
-            const ms = firstMonday + (c * 7 + r) * DAY_MS
+            const ms = firstSunday + (c * 7 + r) * DAY_MS
             const index = Math.round((ms - startMs) / DAY_MS)
             return {
                 date: format(ms),
@@ -67,26 +67,43 @@ export function monthLabel(date: string): string {
     })
 }
 
-/** Short weekday name ("Mon") for a grid row, 0 = Monday … 6 = Sunday. */
+/** Short weekday name ("Mon") for a grid row, 0 = Sunday … 6 = Saturday. */
 export function weekdayLabel(row: number): string {
-    // 2024-01-01 was a Monday.
-    return new Date(Date.UTC(2024, 0, 1 + row)).toLocaleDateString(undefined, {
+    // 2024-01-07 was a Sunday.
+    return new Date(Date.UTC(2024, 0, 7 + row)).toLocaleDateString(undefined, {
         weekday: "short",
         timeZone: "UTC"
     })
 }
 
-/** Fill and ink for a habit's accent. `dark` fills need a light check mark. */
+/**
+ * Fill and ink for a habit's accent, and what reads [on] the fill (a check
+ * mark, a rank number). All of them are theme tokens, so each follows the
+ * billboard into dark mode by itself — including the two fills that change
+ * there, which bring a different mark with them.
+ */
 export const HABIT_PALETTE: Record<
     HabitColor,
-    { fill: string; ink: string; dark: boolean }
+    { fill: string; ink: string; on: string }
 > = {
-    LIME: { fill: "var(--lime)", ink: "var(--lime-ink)", dark: false },
-    CORAL: { fill: "var(--coral)", ink: "var(--coral-ink)", dark: false },
-    INDIGO: { fill: "var(--indigo)", ink: "var(--indigo)", dark: true },
-    INK: { fill: "var(--ink)", ink: "var(--ink)", dark: true },
-    AMBER: { fill: "#f5b82e", ink: "#6b4700", dark: false },
-    TEAL: { fill: "#14a39a", ink: "#00524c", dark: false },
-    SKY: { fill: "#4aa8f0", ink: "#0b4a7a", dark: false },
-    PLUM: { fill: "#8e3fa8", ink: "#8e3fa8", dark: true }
+    LIME: {
+        fill: "var(--lime)",
+        ink: "var(--lime-ink)",
+        on: "var(--on-light-fill)"
+    },
+    CORAL: {
+        fill: "var(--coral)",
+        ink: "var(--coral-ink)",
+        on: "var(--on-light-fill)"
+    },
+    INDIGO: {
+        fill: "var(--indigo)",
+        ink: "var(--indigo)",
+        on: "var(--on-indigo)"
+    },
+    INK: { fill: "var(--ink)", ink: "var(--ink)", on: "var(--on-ink)" },
+    AMBER: { fill: "var(--amber)", ink: "#6b4700", on: "var(--on-light-fill)" },
+    TEAL: { fill: "var(--teal)", ink: "#00524c", on: "var(--on-light-fill)" },
+    SKY: { fill: "var(--sky)", ink: "#0b4a7a", on: "var(--on-light-fill)" },
+    PLUM: { fill: "var(--plum)", ink: "var(--plum)", on: "var(--on-dark-fill)" }
 }

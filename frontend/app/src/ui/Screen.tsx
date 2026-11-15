@@ -6,6 +6,9 @@ import { RefreshControl, ScrollView, View } from "react-native"
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import { useColors } from "../theme"
 
+/** How close to the end of the content, in points, counts as reaching it. */
+const END_REACHED_WITHIN = 600
+
 export function Screen({
     children,
     refreshing = false,
@@ -16,7 +19,8 @@ export function Screen({
      */
     edges = ["top"],
     topRight,
-    bottomRight
+    bottomRight,
+    onEndReached
 }: {
     children: ReactNode
     refreshing?: boolean
@@ -26,6 +30,8 @@ export function Screen({
     topRight?: ReactNode
     /** Floats over the bottom-right corner, e.g. an add button; stays put while the content scrolls. */
     bottomRight?: ReactNode
+    /** Called as the scroll nears the end of the content, for lists that load more. */
+    onEndReached?: () => void
 }) {
     const colors = useColors()
     // Inside the tabs the bottom inset includes the floating tab bar, so
@@ -55,6 +61,22 @@ export function Screen({
             <ScrollView
                 contentContainerClassName="gap-5 px-5 pt-4"
                 contentContainerStyle={{ paddingBottom: bottom }}
+                scrollEventThrottle={onEndReached ? 100 : undefined}
+                onScroll={
+                    onEndReached &&
+                    ((e) => {
+                        const {
+                            contentOffset,
+                            contentSize,
+                            layoutMeasurement
+                        } = e.nativeEvent
+                        const left =
+                            contentSize.height -
+                            layoutMeasurement.height -
+                            contentOffset.y
+                        if (left < END_REACHED_WITHIN) onEndReached()
+                    })
+                }
                 refreshControl={
                     onRefresh && (
                         <RefreshControl

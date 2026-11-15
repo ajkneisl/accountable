@@ -1,10 +1,12 @@
 package features.goals
 
 import api.suspendTransaction
+import integrations.AppleDistanceTable
 import integrations.AppleFitnessTable
 import integrations.AppleFitnessWorkouts
 import integrations.AppleSleepTable
 import integrations.AppleStepsTable
+import integrations.ChessComTable
 import integrations.GitHubTable
 import integrations.LeetCodeTable
 import integrations.ScreenTimeTable
@@ -20,6 +22,9 @@ import org.jetbrains.exposed.sql.selectAll
 import user.zoneOf
 
 const val MS_PER_DAY = 24L * 60 * 60 * 1000
+
+/** The international mile, for distance goals set in miles: they're stored in metres. */
+const val METERS_PER_MILE = 1609.344
 
 /** Ms-epoch of the start of [this] local date in [zone]. */
 private fun LocalDate.startMs(zone: ZoneId): Long =
@@ -73,6 +78,12 @@ object GoalMetrics {
             // Stored in minutes; the app sets and shows these goals in hours.
             GoalMetric("apple_sleep", "minutes", AppleSleepTable, AppleSleepTable.minutes),
             GoalMetric("apple_steps", "steps", AppleStepsTable, AppleStepsTable.steps),
+            // Stored in metres. The two metrics are the one figure: which of them a goal names is
+            // only the unit it was set in, and is shown in, so its target is in metres either way.
+            GoalMetric("apple_distance", "km", AppleDistanceTable, AppleDistanceTable.meters),
+            GoalMetric("apple_distance", "mi", AppleDistanceTable, AppleDistanceTable.meters),
+            GoalMetric("chess_com", "games", ChessComTable, ChessComTable.games),
+            GoalMetric("chess_com", "wins", ChessComTable, ChessComTable.wins),
             // Stored in minutes like sleep, but a limit: the goal is to stay under it.
             GoalMetric(
                 "screen_time",

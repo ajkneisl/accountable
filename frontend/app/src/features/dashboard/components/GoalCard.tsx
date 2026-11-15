@@ -1,14 +1,15 @@
-// A single goal card — progress, a fixed Mon–Sun week chart, and per-goal week
-// navigation. The amount sits top right; while the Goals tab is in edit mode it
+// A single goal card — progress and a fixed Mon–Sun week chart, for the week the
+// Goals tab's heading picks for every card at once. A weekly goal adds a bar of
+// the week's total with a tick where it should be by today, so it's clear
+// whether the goal is on pace without reading the percentage. The amount sits top right; while the Goals tab is in edit mode it
 // becomes an Edit button that opens the edit sheet (target, color, delete).
-// Competition goals belong to the competition, so they're never editable here and
-// carry a chip naming it beside their source. The web card's
+// Competition goals belong to the competition, so they're never editable here; the
+// Goals tab groups them under a heading that names and opens it. The web card's
 // scroll-into-view/flash behaviour is dropped: it existed to answer sidebar deep links,
 // and there's no sidebar on mobile.
 
 import { useEffect, useMemo, useState } from "react"
-import { Pressable, Text, View } from "react-native"
-import { router } from "expo-router"
+import { Text, View } from "react-native"
 import {
     type Goal,
     type GoalWeek,
@@ -18,24 +19,26 @@ import {
 } from "@shared/index"
 import { useScheme } from "../../../theme"
 import {
+    Bar,
     Button,
     Card,
-    Chip,
-    Dot,
     IntegrationIcon,
     Mono,
+    PaceTick,
     SourceTile
 } from "../../../ui/primitives"
 import {
     formatAmount,
     formatWeekRange,
     goalFill,
+    goalOnFill,
     goalTitle,
     integrationVisual,
     isLimit,
     isRestDay,
     localWeekday,
     meetsTarget,
+    paceBar,
     unitLabel
 } from "../types"
 import { WeekChart } from "./WeekChart"
@@ -58,40 +61,6 @@ function dailyTargetFor(goal: Goal): number {
     return goal.period === "DAILY" ? goal.target : goal.target / 7
 }
 
-/** Chip naming a competition goal's competition, beside its source; opens it. */
-function CompetitionChip({
-    competition,
-    color
-}: {
-    competition: NonNullable<Goal["competition"]>
-    color: string
-}) {
-    return (
-        <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Open competition ${competition.name}`}
-            onPress={() =>
-                router.push({
-                    pathname: "/competition/[id]",
-                    params: { id: competition.id }
-                })
-            }
-            hitSlop={8}
-            className="max-w-[45%]"
-        >
-            <Chip>
-                <Dot color={color} size={6} />
-                <Text
-                    numberOfLines={1}
-                    className="shrink text-[11px] font-semibold text-ink-2"
-                >
-                    {competition.name}
-                </Text>
-            </Chip>
-        </Pressable>
-    )
-}
-
 /** Weekly-equivalent target: weekly goals as-is, daily goals × 7. */
 function weeklyTargetFor(goal: Goal): number {
     return goal.period === "WEEKLY" ? goal.target : goal.target * 7
@@ -99,9 +68,12 @@ function weeklyTargetFor(goal: Goal): number {
 
 export function GoalCard({
     goal,
+    offset,
     onEdit
 }: {
     goal: Goal
+    /** The week shown: 0 = the current week, 1 = last week, … */
+    offset: number
     /** Opens the edit sheet. Passed only while the Goals tab is in edit mode, and never for competition goals. */
     onEdit?: () => void
 }) {
@@ -110,15 +82,14 @@ export function GoalCard({
     const visual = integrationVisual(goal.integration)
     const unit = unitLabel(goal.integration, goal.metric)
 
-    // 0 = current week, 1 = last week, … Drives the per-goal week navigation.
-    const [offset, setOffset] = useState(0)
     // A day picked on the chart (0 = Monday), shown in the headline instead of
-    // the usual figure. Cleared when the week changes.
-    const [day, setDay] = useState<number | null>(null)
-    const changeWeek = (next: (o: number) => number) => {
-        setDay(null)
-        setOffset(next)
-    }
+    // the usual figure. It belongs to the week it was picked in, so changing
+    // week returns to the usual figure.
+    const [picked, setPicked] = useState<{
+        offset: number
+        day: number
+    } | null>(null)
+    const day = picked?.offset === offset ? picked.day : null
     // Past weeks are fetched on demand; the current week ships inside the goal payload.
     const [fetchedWeek, setFetchedWeek] = useState<GoalWeek | null>(null)
 
@@ -199,6 +170,19 @@ export function GoalCard({
                   : dueVals.reduce((sum, v) => sum + v, 0) /
                     Math.max(1, dueVals.length)
               : total
+    // Where a weekly total should be by now: the target spread over the days
+    // already over, or for a limit its share through today. A past week is
+    // simply held to the whole target.
+    const limit = isLimit(goal.integration, goal.metric)
+    const pace =
+        offset !== 0
+            ? weeklyTarget
+            : limit
+              ? (weeklyTarget * (localWeekday() + 1)) / 7
+              : paceBar(weeklyTarget)
+    const weekPct = Math.round((total / Math.max(1, weeklyTarget)) * 100)
+    const onPace = meetsTarget(goal, total, pace)
+
     // Noon, so a DST change can't tip the label onto the neighbouring day.
     const dayLabel =
         day !== null && week
@@ -219,17 +203,9 @@ export function GoalCard({
                     <Text className="text-base font-semibold tracking-tight text-ink">
                         {goalTitle(goal)}
                     </Text>
-                    <View className="flex-row items-center gap-2">
-                        <Text className="text-xs text-ink-3">
-                            {visual.sourceLabel}
-                        </Text>
-                        {goal.competition && (
-                            <CompetitionChip
-                                competition={goal.competition}
-                                color={goalFill(goal, scheme)}
-                            />
-                        )}
-                    </View>
+                    <Text className="text-xs text-ink-3">
+                        {visual.sourceLabel}
+                    </Text>
                 </View>
                 {onEdit ? (
                     <Button
@@ -256,15 +232,12 @@ export function GoalCard({
                         </Mono>
                         {dayLabel ? (
                             // A picked day: its own target for a daily goal (a
-                            // weekly target means nothing for one day), and the
-                            // date in full ink so it's clearly not the usual figure.
+                            // weekly target means nothing for one day). The
+                            // footer names the day.
                             <Text className="text-[11px] text-ink-3">
                                 {daily
-                                    ? `/ ${formatAmount(goal.integration, goal.metric, goal.target)} ${unit} · `
-                                    : `${unit} · `}
-                                <Text className="font-semibold text-ink">
-                                    {dayLabel}
-                                </Text>
+                                    ? `/ ${formatAmount(goal.integration, goal.metric, goal.target)} ${unit}`
+                                    : unit}
                             </Text>
                         ) : (
                             <Text className="text-[11px] text-ink-3">
@@ -291,43 +264,72 @@ export function GoalCard({
             <WeekChart
                 vals={vals}
                 target={dailyTargetFor(goal)}
-                limit={isLimit(goal.integration, goal.metric)}
+                limit={limit}
                 requiredDays={requiredDaysOf(goal)}
                 color={goalFill(goal, scheme)}
                 selected={day}
-                onSelect={setDay}
+                onSelect={(d) =>
+                    setPicked(d === null ? null : { offset, day: d })
+                }
                 selectableDays={offset === 0 ? localWeekday() + 1 : 7}
             />
 
-            <View className="flex-row items-center justify-between">
-                <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Previous week"
-                    onPress={() => changeWeek((o) => o + 1)}
-                    hitSlop={12}
-                    className="px-2"
+            {/* The week's total against a weekly target. The tick is the pace:
+                the fill reaching it means on track (for a limit, staying short
+                of it). A past week has no tick — its mark is the bar's end. */}
+            {!daily && (
+                <View
+                    accessible
+                    accessibilityLabel={`${weekPct}% of the weekly ${
+                        limit ? "limit" : "target"
+                    }, ${
+                        offset !== 0
+                            ? onPace
+                                ? "met"
+                                : "missed"
+                            : onPace
+                              ? "on pace"
+                              : limit
+                                ? "over pace"
+                                : "behind pace"
+                    }`}
                 >
-                    <Text className="text-base text-ink-3">‹</Text>
-                </Pressable>
-                <Mono className="text-[11px] text-ink-3">
-                    {offset === 0 ? "This week" : rangeLabel} /{" "}
-                    <Text className="font-bold text-ink">
-                        {daily
-                            ? `${daysHit}/${dueDays.length} days`
-                            : `${Math.round((total / Math.max(1, weeklyTarget)) * 100)}%`}
-                    </Text>
-                </Mono>
-                <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Next week"
-                    onPress={() => changeWeek((o) => Math.max(0, o - 1))}
-                    disabled={offset === 0}
-                    hitSlop={12}
-                    className={`px-2 ${offset === 0 ? "opacity-30" : ""}`}
-                >
-                    <Text className="text-base text-ink-3">›</Text>
-                </Pressable>
-            </View>
+                    <Bar
+                        pct={weekPct}
+                        color={goalFill(goal, scheme)}
+                        height={8}
+                    >
+                        {offset === 0 && (
+                            <PaceTick
+                                at={(pace / Math.max(1, weeklyTarget)) * 100}
+                                filled={total >= pace}
+                                onFillColor={goalOnFill(goal, scheme)}
+                            />
+                        )}
+                    </Bar>
+                </View>
+            )}
+
+            {/* What the figure above covers: a picked day on its own, since
+                the week's tally isn't about that day; otherwise the week, in
+                the same ink as its tally so the dim slash between them recedes. */}
+            <Mono className="text-center text-[11px] text-ink-3">
+                {dayLabel ? (
+                    <Text className="font-bold text-ink">{dayLabel}</Text>
+                ) : (
+                    <>
+                        <Text className="text-ink">
+                            {offset === 0 ? "This week" : rangeLabel}
+                        </Text>
+                        {" / "}
+                        <Text className="font-bold text-ink">
+                            {daily
+                                ? `${daysHit} of ${dueDays.length} days`
+                                : `${weekPct}%`}
+                        </Text>
+                    </>
+                )}
+            </Mono>
         </Card>
     )
 }

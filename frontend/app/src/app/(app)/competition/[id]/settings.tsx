@@ -1,10 +1,10 @@
 // Competition settings — pushed from the competition screen. The owner renames
 // it, shares or resets the join code, removes members or hands the competition
-// to one of them, and deletes it. Members see the same details read-only and
-// can leave.
+// to one of them (from a member's row), and deletes it. Members see the same
+// details read-only, can share the code, and can leave.
 
 import { useCallback, useEffect, useState } from "react"
-import { Alert, Share, Text, View } from "react-native"
+import { Pressable, Share, Text } from "react-native"
 import { router, useLocalSearchParams } from "expo-router"
 import { useAtomValue } from "jotai"
 import {
@@ -28,13 +28,8 @@ import { Screen } from "../../../../ui/Screen"
 import { Sheet, SheetField } from "../../../../ui/Sheet"
 import { Row, Section } from "../../../../ui/SettingsList"
 import { confirm } from "../../../../ui/confirm"
-import {
-    Card,
-    Dot,
-    ErrorList,
-    Input,
-    PageTitle
-} from "../../../../ui/primitives"
+import { showMenu } from "../../../../ui/menu"
+import { Card, Display, Dot, ErrorList, Input } from "../../../../ui/primitives"
 
 /** Longest name the server accepts. */
 const NAME_MAX_LENGTH = 64
@@ -185,10 +180,10 @@ export default function CompetitionSettings() {
     function manageMember(member: CompetitionMember) {
         if (!detail) return
         const competition = detail
-        Alert.alert(member.username, undefined, [
+        showMenu(member.username, [
             {
-                text: "Make owner",
-                onPress: async () => {
+                label: "Make owner",
+                run: async () => {
                     const ok = await confirm(
                         "Hand over competition?",
                         `${member.username} will own "${competition.name}" and be the only one who can change it. You'll stay a member.`,
@@ -203,9 +198,9 @@ export default function CompetitionSettings() {
                 }
             },
             {
-                text: "Remove from competition",
-                style: "destructive",
-                onPress: async () => {
+                label: "Remove from competition",
+                destructive: true,
+                run: async () => {
                     const ok = await confirm(
                         "Remove member?",
                         `${member.username} will be removed from "${competition.name}". They can rejoin with the join code unless you reset it.`,
@@ -221,8 +216,7 @@ export default function CompetitionSettings() {
                             )
                         )
                 }
-            },
-            { text: "Cancel", style: "cancel" }
+            }
         ])
     }
 
@@ -251,20 +245,23 @@ export default function CompetitionSettings() {
     }
 
     const owner = detail.members.find((m) => m.userID === detail.ownerID)
+    const created = `Created ${DATE_FMT.format(new Date(detail.createdAt))}.`
 
     return (
         <Screen edges={["top", "bottom"]}>
             <BackBar label={detail.name} />
-            <PageTitle>Settings</PageTitle>
+            <Display size={32}>Settings</Display>
 
             {error !== null && <ErrorList errors={[error]} />}
 
+            {/* The name and the way in, together; who can change them and
+                how old it is go underneath rather than in rows of their own. */}
             <Section
                 title="Competition"
                 footer={
                     isOwner
-                        ? undefined
-                        : `Only ${owner?.username ?? "the owner"} can change these.`
+                        ? created
+                        : `${created} Only ${owner?.username ?? "the owner"} can rename it or reset the code.`
                 }
             >
                 <Row
@@ -276,21 +273,13 @@ export default function CompetitionSettings() {
                     }
                 />
                 <Row
-                    label="Created"
-                    value={DATE_FMT.format(new Date(detail.createdAt))}
-                />
-            </Section>
-
-            <Section title="Join code">
-                <Row
-                    first
-                    label="Share code"
+                    label="Join code"
                     value={detail.joinCode}
                     onPress={shareJoinCode}
                 />
                 {isOwner && (
                     <Row
-                        label="Reset code"
+                        label="Reset join code"
                         onPress={busy ? undefined : resetCode}
                     />
                 )}
@@ -324,13 +313,18 @@ export default function CompetitionSettings() {
                 })}
             </Section>
 
+            {/* Centred and on its own, as Delete account is in Settings. */}
             <Section>
-                <Row
-                    first
-                    destructive
-                    label={isOwner ? "Delete competition" : "Leave competition"}
-                    onPress={busy ? undefined : leaveOrDelete}
-                />
+                <Pressable
+                    accessibilityRole="button"
+                    disabled={busy}
+                    onPress={leaveOrDelete}
+                    className="items-center py-3.5"
+                >
+                    <Text className="text-[15px] font-medium text-coral-ink">
+                        {isOwner ? "Delete competition" : "Leave competition"}
+                    </Text>
+                </Pressable>
             </Section>
 
             {renaming && (

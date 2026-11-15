@@ -161,9 +161,14 @@ const HabitsWidget = (
                             )
                         ]}
                     >
-                        {habit.doneToday
-                            ? `✓ ${habit.streak}d`
-                            : `${habit.streak}d`}
+                        {/* The streak only when there is one, as on the card. */}
+                        {habit.streak > 0
+                            ? habit.doneToday
+                                ? `✓ ${habit.streak}d`
+                                : `${habit.streak}d`
+                            : habit.doneToday
+                              ? "✓"
+                              : ""}
                     </Text>
                 </HStack>
                 {/* Cells are the largest squares the card has room for, so
@@ -291,7 +296,7 @@ const HabitsWidget = (
                         foregroundStyle(ink3)
                     ]}
                 >
-                    {`${props.doneToday}/${props.habitCount} today`}
+                    {`${props.doneToday} of ${props.habitCount} today`}
                 </Text>
             </HStack>
             {rows}

@@ -1,10 +1,12 @@
-// Settings — pushed from the gear on each tab. Two tabs: General (account,
-// security, feed, notifications, time zone, app info, sign out, delete) and Integrations (data sources).
+// Settings — pushed from the gear on each tab. Two tabs, on the same strip as a
+// competition's pages: General (account, security, feed, notifications, time
+// zone, app info, sign out, delete) and Integrations (data sources).
 
 import { type ReactNode, useEffect, useState } from "react"
 import { AppState, Linking, Pressable, Switch, Text, View } from "react-native"
 import { router, useLocalSearchParams } from "expo-router"
 import Constants from "expo-constants"
+import { useSharedValue, withTiming } from "react-native-reanimated"
 import { useAtom } from "jotai"
 import {
     browserTimezone,
@@ -43,8 +45,9 @@ import { BackBar } from "../../ui/BackBar"
 import { confirm } from "../../ui/confirm"
 import { CheckIcon } from "../../ui/icons"
 import { Screen } from "../../ui/Screen"
-import { Button, Card, ErrorList, PageTitle } from "../../ui/primitives"
+import { Button, Card, Display, ErrorList } from "../../ui/primitives"
 import { Row, Section } from "../../ui/SettingsList"
+import { TabStrip } from "../../ui/TabStrip"
 
 type Tab = "general" | "integrations"
 
@@ -58,46 +61,6 @@ const DATE_FMT = new Intl.DateTimeFormat(undefined, {
     month: "long",
     day: "numeric"
 })
-
-function Segmented({
-    value,
-    onChange
-}: {
-    value: Tab
-    onChange: (tab: Tab) => void
-}) {
-    return (
-        <View
-            accessibilityRole="tablist"
-            className="flex-row rounded-[12px] bg-bg-sunken p-1"
-        >
-            {TABS.map((t) => {
-                const selected = t.key === value
-                return (
-                    <Pressable
-                        key={t.key}
-                        accessibilityRole="tab"
-                        accessibilityState={{ selected }}
-                        onPress={() => onChange(t.key)}
-                        className={`flex-1 items-center rounded-[9px] py-2 ${
-                            selected ? "bg-bg-card" : ""
-                        }`}
-                    >
-                        <Text
-                            className={`text-[14px] ${
-                                selected
-                                    ? "font-semibold text-ink"
-                                    : "font-medium text-ink-3"
-                            }`}
-                        >
-                            {t.label}
-                        </Text>
-                    </Pressable>
-                )
-            })}
-        </View>
-    )
-}
 
 function SwitchRow({
     label,
@@ -350,8 +313,13 @@ function TimezoneSection() {
 
     return (
         <Section title="Time zone">
-            <Row first label="Account" value={user?.timezone ?? "—"} />
-            <Row label="This device" value={device} />
+            {/* One row while the account and the phone agree. */}
+            <Row
+                first
+                label={mismatch ? "Account" : "Time zone"}
+                value={user?.timezone ?? "—"}
+            />
+            {mismatch && <Row label="This device" value={device} />}
             {mismatch && (
                 <View className="gap-3 border-t border-line-2 py-3.5">
                     <ErrorList errors={errors} />
@@ -381,10 +349,13 @@ function AboutSection() {
                 value={build ? `${version} (${build})` : version}
             />
 
-            <Row
-                label="Server"
-                value={apiConfig.baseUrl.replace(/^https?:\/\//, "")}
-            />
+            {/* Which backend a development build is pointed at. */}
+            {__DEV__ && (
+                <Row
+                    label="Server"
+                    value={apiConfig.baseUrl.replace(/^https?:\/\//, "")}
+                />
+            )}
         </Section>
     )
 }
@@ -431,7 +402,9 @@ function GeneralTab() {
                         {user?.username ?? "—"}
                     </Text>
                     <Text numberOfLines={1} className="text-[14px] text-ink-3">
-                        {user?.email ?? "—"}
+                        {user
+                            ? `Member since ${DATE_FMT.format(new Date(user.createdAt))}`
+                            : "—"}
                     </Text>
                 </View>
                 <Button
@@ -442,23 +415,18 @@ function GeneralTab() {
                 />
             </Card>
 
+            {/* The card above already has the name and the joining date. */}
             <Section title="Account">
-                <Row first label="Username" value={user?.username ?? "—"} />
                 <Row
-                    label="Color"
-                    value={palette.label}
-                    onPress={() => setSheet("color")}
-                />
-                <Row
+                    first
                     label="Email"
                     value={user?.email ?? "—"}
                     onPress={() => setSheet("email")}
                 />
                 <Row
-                    label="Member since"
-                    value={
-                        user ? DATE_FMT.format(new Date(user.createdAt)) : "—"
-                    }
+                    label="Color"
+                    value={palette.label}
+                    onPress={() => setSheet("color")}
                 />
             </Section>
 
@@ -513,6 +481,9 @@ export default function Settings() {
         params.tab === "integrations" ? "integrations" : "general"
     )
     const { loading, reload } = useAppData()
+    const index = TABS.findIndex((t) => t.key === tab)
+    // There's no pager here, so the strip's underline just glides on a tap.
+    const position = useSharedValue(index)
 
     return (
         <Screen
@@ -521,14 +492,21 @@ export default function Settings() {
             onRefresh={tab === "integrations" ? reload : undefined}
         >
             <BackBar />
-            <PageTitle>Settings</PageTitle>
-            <Segmented
-                value={tab}
-                onChange={(t) => {
-                    setTab(t)
-                    router.setParams({ tab: t })
-                }}
-            />
+            <Display size={32}>Settings</Display>
+            {/* Pulled out through the screen's side padding, so its hairline
+                runs edge to edge. */}
+            <View className="-mx-5">
+                <TabStrip
+                    labels={TABS.map((t) => t.label)}
+                    active={index}
+                    position={position}
+                    onSelect={(i) => {
+                        position.set(withTiming(i, { duration: 200 }))
+                        setTab(TABS[i].key)
+                        router.setParams({ tab: TABS[i].key })
+                    }}
+                />
+            </View>
             {tab === "general" ? <GeneralTab /> : <IntegrationsPanel />}
         </Screen>
     )

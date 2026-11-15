@@ -3,15 +3,18 @@
 // HealthKit UUID, so a sync can always safely re-send an overlapping window.
 // Sleep is totalled per day on the device and posted as one figure per day,
 // which replaces that day's stored total — so it's just as safe to re-send.
-// Steps work the same way, with HealthKit doing the per-day totalling.
+// Steps and distance work the same way, with HealthKit doing the per-day
+// totalling.
 
 import { isRunningInExpoGo } from "expo"
 import {
     type ApiConfig,
+    type ImportedDistanceDay,
     type ImportedSleepDay,
     type ImportedStepsDay,
     type ImportedWorkout,
     type WorkoutType,
+    importDistance,
     importSleep,
     importSteps,
     importWorkouts
@@ -22,11 +25,14 @@ type HealthKit = typeof import("@kingstinct/react-native-healthkit")
 const WORKOUTS = "HKWorkoutTypeIdentifier" as const
 const SLEEP = "HKCategoryTypeIdentifierSleepAnalysis" as const
 const STEPS = "HKQuantityTypeIdentifierStepCount" as const
+/** Distance on foot: walking and running, not cycling or wheelchair. */
+const DISTANCE = "HKQuantityTypeIdentifierDistanceWalkingRunning" as const
 const READ_TYPES = [
     WORKOUTS,
     "HKQuantityTypeIdentifierActiveEnergyBurned",
     SLEEP,
-    STEPS
+    STEPS,
+    DISTANCE
 ] as const
 
 /** Most workouts the backend accepts per import call. */
@@ -37,6 +43,9 @@ const SLEEP_IMPORT_PAGE = 400
 
 /** The backend's per-day step cap; anything above is junk data. */
 const MAX_STEPS_PER_DAY = 250_000
+
+/** The backend's per-day distance cap, in metres. */
+const MAX_METERS_PER_DAY = 300_000
 
 const DAY_MS = 86_400_000
 
@@ -466,6 +475,55 @@ export async function syncAppleHealthSteps(
     let imported = 0
     for (let i = 0; i < days.length; i += SLEEP_IMPORT_PAGE) {
         const res = await importSteps(api, days.slice(i, i + SLEEP_IMPORT_PAGE))
+        imported += res.imported
+    }
+    return imported
+}
+
+/**
+ * Import per-day walking and running distance, in metres, for every day from
+ * [since] (ms epoch) on. Resolves to how many days were written. Like steps,
+ * HealthKit's cumulative sum dedupes what a watch and phone both measured.
+ * There's no change subscription of its own: distance moves with steps, so it
+ * syncs whenever they do.
+ */
+export async function syncAppleHealthDistance(
+    api: ApiConfig,
+    since: number
+): Promise<number> {
+    const hk = getHealthKit()
+    if (!hk) return 0
+
+    const firstDay = localDayStart(since)
+    const stats = await hk.queryStatisticsCollectionForQuantity(
+        DISTANCE,
+        ["cumulativeSum"],
+        new Date(firstDay),
+        { day: 1 },
+        { filter: { date: { startDate: new Date(firstDay) } }, unit: "m" }
+    )
+
+    const days: ImportedDistanceDay[] = []
+    for (const s of stats) {
+        if (!s.startDate) continue
+        const start = localDayStart(new Date(s.startDate).getTime())
+        if (start < firstDay) continue
+        days.push({
+            // Local noon, so a few hours' gap to the account's zone keeps the date.
+            day: start + DAY_MS / 2,
+            meters: Math.min(
+                MAX_METERS_PER_DAY,
+                Math.round(s.sumQuantity?.quantity ?? 0)
+            )
+        })
+    }
+
+    let imported = 0
+    for (let i = 0; i < days.length; i += SLEEP_IMPORT_PAGE) {
+        const res = await importDistance(
+            api,
+            days.slice(i, i + SLEEP_IMPORT_PAGE)
+        )
         imported += res.imported
     }
     return imported

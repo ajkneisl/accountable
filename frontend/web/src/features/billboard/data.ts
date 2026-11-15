@@ -3,9 +3,11 @@
 import {
     type ApiConfig,
     type CompetitionDetail,
+    type CompetitionLeaderboard,
     type CompetitionWeek,
     type Goal,
     getCompetition,
+    getCompetitionLeaderboard,
     getDashboard,
     getCompetitionWeek,
     listCompetitions
@@ -17,21 +19,27 @@ export async function loadGoals(api: ApiConfig): Promise<Goal[]> {
     return [...goals, ...competitionGoals]
 }
 
-/** A competition's members and shared goals, with the current week's progress. */
+/**
+ * A competition's members and shared goals, with the current week's progress
+ * and the all-time leaderboard — which is null if it couldn't be loaded, so
+ * the rest still shows.
+ */
 export interface CompetitionView {
     detail: CompetitionDetail
     week: CompetitionWeek
+    leaderboard: CompetitionLeaderboard | null
 }
 
 export async function loadCompetition(
     api: ApiConfig,
     id: string
 ): Promise<CompetitionView> {
-    const [detail, week] = await Promise.all([
+    const [detail, week, leaderboard] = await Promise.all([
         getCompetition(api, id),
-        getCompetitionWeek(api, id, 0)
+        getCompetitionWeek(api, id, 0),
+        getCompetitionLeaderboard(api, id).catch(() => null)
     ])
-    return { detail, week }
+    return { detail, week, leaderboard }
 }
 
 /** Every competition the user is in, each with its current week. */

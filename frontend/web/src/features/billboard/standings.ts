@@ -22,7 +22,7 @@ export const FALLBACK_BAR_COLOR = "var(--ink-3)"
 /** Text that reads on top of a member's fill, e.g. their rank number. */
 export function onMemberFill(fill: string): string {
     const entry = Object.values(HABIT_PALETTE).find((p) => p.fill === fill)
-    return entry?.dark ? "var(--bg)" : "var(--ink)"
+    return entry?.on ?? "var(--bg)"
 }
 
 /**

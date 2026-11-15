@@ -11,12 +11,15 @@ import features.competition.createCompetition
 import features.competition.joinCompetition
 import features.competition.leaveCompetition
 import features.competition.upsertCompetitionGoal
+import features.feed.ChessDetail
+import features.feed.DistanceDetail
 import features.feed.FeedCursor
 import features.feed.FeedLikes
 import features.feed.FeedPostGoals
 import features.feed.FeedPostView
 import features.feed.FeedPosts
 import features.feed.GitHubDetail
+import features.feed.LEGACY_FEED_SOURCES
 import features.feed.WorkoutDetail
 import features.feed.deleteWorkoutPost
 import features.feed.feedFor
@@ -26,10 +29,12 @@ import features.feed.unlikePost
 import features.goals.GoalPeriod
 import features.goals.Goals
 import features.goals.upsertGoal
+import integrations.AppleDistanceTable
 import integrations.AppleFitnessTable
 import integrations.AppleFitnessWorkouts
 import integrations.AppleHealthImports
 import integrations.AppleStepsTable
+import integrations.ChessComTable
 import integrations.GitHubTable
 import integrations.ImportedWorkout
 import integrations.ScreenTimeTable
@@ -109,7 +114,9 @@ class FeedTest {
                 CompetitionMembers,
                 CompetitionGoals,
                 GitHubTable,
+                ChessComTable,
                 AppleStepsTable,
+                AppleDistanceTable,
                 ScreenTimeTable,
                 AppleFitnessTable,
                 AppleFitnessWorkouts,
@@ -125,7 +132,9 @@ class FeedTest {
             AppleFitnessWorkouts.deleteAll()
             AppleFitnessTable.deleteAll()
             ScreenTimeTable.deleteAll()
+            AppleDistanceTable.deleteAll()
             AppleStepsTable.deleteAll()
+            ChessComTable.deleteAll()
             GitHubTable.deleteAll()
             CompetitionGoals.deleteAll()
             CompetitionMembers.deleteAll()
@@ -182,6 +191,16 @@ class FeedTest {
 
     private fun steps(userID: UUID, count: Long, date: Long = todayStart) =
         row(AppleStepsTable, userID, date) { it[AppleStepsTable.steps] = count }
+
+    private fun chess(userID: UUID, games: Long, wins: Long, draws: Long) =
+        row(ChessComTable, userID, todayStart) {
+            it[ChessComTable.games] = games
+            it[ChessComTable.wins] = wins
+            it[ChessComTable.draws] = draws
+        }
+
+    private fun distance(userID: UUID, meters: Long) =
+        row(AppleDistanceTable, userID, todayStart) { it[AppleDistanceTable.meters] = meters }
 
     private fun screenTime(userID: UUID, minutes: Long, date: Long) =
         row(ScreenTimeTable, userID, date) { it[ScreenTimeTable.minutes] = minutes }
@@ -279,6 +298,61 @@ class FeedTest {
         transaction { AppleStepsTable.update { it[AppleStepsTable.steps] = 10_500 } }
         syncFeedPosts(user, now)
         assertEquals(1, posts(user).size)
+    }
+
+    @Test
+    fun `chess posts whenever games were played, with how they went`() = runBlocking {
+        val user = newUser()
+        upsertGoal(user, "chess_com", "games", GoalPeriod.DAILY, 10)
+        chess(user, games = 0, wins = 0, draws = 0)
+        syncFeedPosts(user, now)
+        assertTrue(posts(user).isEmpty())
+
+        transaction {
+            ChessComTable.update {
+                it[ChessComTable.games] = 5
+                it[ChessComTable.wins] = 3
+                it[ChessComTable.draws] = 1
+            }
+        }
+        syncFeedPosts(user, now)
+        assertEquals(ChessDetail(games = 5, wins = 3, draws = 1, losses = 1), posts(user).single().detail)
+    }
+
+    @Test
+    fun `distance posts only once a goal is met, whichever unit it was set in`() = runBlocking {
+        val user = newUser()
+        // 3 miles, held in metres like every distance goal.
+        upsertGoal(user, "apple_distance", "mi", GoalPeriod.DAILY, 4_828)
+        distance(user, 4_000)
+        syncFeedPosts(user, now)
+        assertTrue(posts(user).isEmpty())
+
+        transaction { AppleDistanceTable.update { it[AppleDistanceTable.meters] = 5_000 } }
+        syncFeedPosts(user, now)
+        val detail = posts(user).single().detail
+        assertEquals(DistanceDetail(5_000), detail)
+        assertEquals("5.0 km (3.1 mi)", detail.summary())
+    }
+
+    @Test
+    fun `an app only gets cards for the sources it knows`() = runBlocking {
+        val user = newUser()
+        upsertGoal(user, "chess_com", "games", GoalPeriod.DAILY, 1)
+        upsertGoal(user, "github", "commits", GoalPeriod.WEEKLY, 5)
+        chess(user, games = 2, wins = 1, draws = 0)
+        commits(user, 3)
+        syncFeedPosts(user, now)
+
+        // An app from before chess existed doesn't say what it knows, and is spared the card.
+        assertEquals(
+            listOf("github"),
+            feedFor(user, null, 50, LEGACY_FEED_SOURCES).posts.map { it.integration },
+        )
+        assertEquals(
+            setOf("github", "chess_com"),
+            feedFor(user, null, 50, LEGACY_FEED_SOURCES + "chess_com").posts.map { it.integration }.toSet(),
+        )
     }
 
     @Test

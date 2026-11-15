@@ -11,7 +11,7 @@ import { Heatmap } from "./components/Heatmap"
 import { WidgetFrame } from "./components/WidgetFrame"
 import { CheckDot, Placeholder } from "./components/primitives"
 import { loadCompetition, loadGoals } from "./data"
-import { goalKey, streakLabel } from "./format"
+import { daysDone, goalKey, streakText } from "./format"
 import { HABIT_DAYS, HABIT_PALETTE } from "./grid"
 import { useElementSize, useLive } from "./hooks"
 
@@ -84,14 +84,14 @@ export function HabitsWidget() {
                                         <CheckDot
                                             done={habit.done.at(-1) ?? false}
                                             fill={palette.fill}
-                                            dark={palette.dark}
+                                            on={palette.on}
                                         />
                                         <div className="min-w-0">
                                             <div className="truncate text-[1.35em] font-semibold">
                                                 {habit.name}
                                             </div>
-                                            <div className="mono text-[0.9em] text-ink-3">
-                                                {streakLabel(habit)}
+                                            <div className="mono truncate text-[0.9em] text-ink-3">
+                                                {daysDone(habit.total)}
                                             </div>
                                         </div>
                                     </div>
@@ -102,6 +102,26 @@ export function HabitsWidget() {
                                             done={habit.done}
                                             fill={palette.fill}
                                         />
+                                    </div>
+                                    {/* The streak as a figure at the end of the
+                                        row, as on the app's card. The column is
+                                        kept without one, so every heatmap is
+                                        the same width. */}
+                                    <div
+                                        className="w-[5.5em] shrink-0 text-right portrait:hidden"
+                                        role="img"
+                                        aria-label={streakText(habit.streak)}
+                                    >
+                                        {habit.streak > 0 && (
+                                            <>
+                                                <div className="mono text-[2.2em] font-bold leading-none tracking-[-0.03em]">
+                                                    {habit.streak}
+                                                </div>
+                                                <div className="mt-[0.3em] text-[0.8em] text-ink-3">
+                                                    day streak
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             )
@@ -149,7 +169,7 @@ export function HabitWidget() {
                                 <CheckDot
                                     done={doneToday}
                                     fill={palette.fill}
-                                    dark={palette.dark}
+                                    on={palette.on}
                                     size="3.6em"
                                 />
                                 <div className="text-[1.3em] font-semibold">
@@ -159,13 +179,16 @@ export function HabitWidget() {
                                 </div>
                             </div>
                             <div className="ml-auto flex gap-[3em]">
+                                {/* Absent without a streak, as in the app. */}
+                                {habit.streak > 0 && (
+                                    <Stat
+                                        label="Day streak"
+                                        value={`${habit.streak}`}
+                                    />
+                                )}
                                 <Stat
-                                    label="Streak"
-                                    value={`${habit.streak}d`}
-                                />
-                                <Stat
-                                    label="Past year"
-                                    value={`${habit.total} days`}
+                                    label="Days done"
+                                    value={`${habit.total}`}
                                 />
                             </div>
                         </div>

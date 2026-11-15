@@ -18,6 +18,7 @@ import {
 } from "@shared/index"
 import { useAppData } from "../../../features/common/AppData"
 import {
+    formatDistance,
     formatRefreshed,
     INTEGRATION_VISUAL,
     integrationVisual
@@ -43,6 +44,7 @@ import {
 const APPLE_FITNESS = "apple_fitness"
 const APPLE_SLEEP = "apple_sleep"
 const APPLE_STEPS = "apple_steps"
+const APPLE_DISTANCE = "apple_distance"
 const SCREEN_TIME = "screen_time"
 
 const DAY_FMT = new Intl.DateTimeFormat(undefined, {
@@ -113,7 +115,8 @@ function ConfigCard({
             {name === APPLE_FITNESS ? (
                 <Text className="text-[13px] text-ink-3">
                     Workouts you log below are recorded here, along with
-                    workouts, sleep and steps imported from Apple Health.
+                    workouts, sleep, steps and distance imported from Apple
+                    Health.
                 </Text>
             ) : name === APPLE_SLEEP ? (
                 <Text className="text-[13px] text-ink-3">
@@ -125,6 +128,11 @@ function ConfigCard({
                 <Text className="text-[13px] text-ink-3">
                     Steps come from Apple Health, connect it on the Integrations
                     tab.
+                </Text>
+            ) : name === APPLE_DISTANCE ? (
+                <Text className="text-[13px] text-ink-3">
+                    Distance walked and run comes from Apple Health, connect it
+                    on the Integrations tab.
                 </Text>
             ) : name === SCREEN_TIME ? (
                 <Text className="text-[13px] text-ink-3">
@@ -196,8 +204,12 @@ function dayValue(day: IntegrationHistoryDay): number {
             return day.minutes
         case "apple_steps":
             return day.steps
+        case "apple_distance":
+            return day.meters
         case "screen_time":
             return day.minutes
+        case "chess_com":
+            return day.games
     }
 }
 
@@ -218,8 +230,14 @@ function dayLabel(day: IntegrationHistoryDay): string {
             return `${Math.floor(day.minutes / 60)}h ${day.minutes % 60}m asleep`
         case "apple_steps":
             return `${day.steps.toLocaleString()} steps`
+        case "apple_distance":
+            return formatDistance(day.meters)
         case "screen_time":
             return `${Math.floor(day.minutes / 60)}h ${day.minutes % 60}m on screen`
+        case "chess_com": {
+            const losses = day.games - day.wins - day.draws
+            return `${day.games} game${day.games === 1 ? "" : "s"} · ${day.wins}W ${day.draws}D ${losses}L`
+        }
     }
 }
 
@@ -284,8 +302,8 @@ export default function IntegrationScreen() {
     const known = name in INTEGRATION_VISUAL
     const [history, setHistory] = useState<IntegrationHistoryDay[]>([])
     const [historyLoading, setHistoryLoading] = useState(true)
-    // Apple Health's sleep and steps, shown alongside Fitness so all of it
-    // lives on one screen.
+    // Apple Health's sleep, steps and distance, shown alongside Fitness so all
+    // of it lives on one screen.
     const withSleep = name === APPLE_FITNESS
     const [sleepHistory, setSleepHistory] = useState<IntegrationHistoryDay[]>(
         []
@@ -293,6 +311,9 @@ export default function IntegrationScreen() {
     const [stepsHistory, setStepsHistory] = useState<IntegrationHistoryDay[]>(
         []
     )
+    const [distanceHistory, setDistanceHistory] = useState<
+        IntegrationHistoryDay[]
+    >([])
     const [refreshing, setRefreshing] = useState(false)
     const [addWorkoutOpen, setAddWorkoutOpen] = useState(false)
 
@@ -300,22 +321,27 @@ export default function IntegrationScreen() {
         if (!known) return
         setHistoryLoading(true)
         try {
-            const [main, sleep, steps] = await Promise.all([
+            const [main, sleep, steps, distance] = await Promise.all([
                 getIntegrationHistory(api, name),
                 withSleep
                     ? getIntegrationHistory(api, APPLE_SLEEP).catch(() => [])
                     : [],
                 withSleep
                     ? getIntegrationHistory(api, APPLE_STEPS).catch(() => [])
+                    : [],
+                withSleep
+                    ? getIntegrationHistory(api, APPLE_DISTANCE).catch(() => [])
                     : []
             ])
             setHistory(main)
             setSleepHistory(sleep)
             setStepsHistory(steps)
+            setDistanceHistory(distance)
         } catch {
             setHistory([])
             setSleepHistory([])
             setStepsHistory([])
+            setDistanceHistory([])
         } finally {
             setHistoryLoading(false)
         }
@@ -405,6 +431,14 @@ export default function IntegrationScreen() {
                 <HistoryCard
                     title="Recent steps"
                     history={stepsHistory}
+                    loading={historyLoading}
+                />
+            )}
+
+            {withSleep && (
+                <HistoryCard
+                    title="Recent distance"
+                    history={distanceHistory}
                     loading={historyLoading}
                 />
             )}

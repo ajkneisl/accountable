@@ -5,7 +5,7 @@
 import { requiredDaysLabel, requiredDaysOf } from "@shared/index"
 import type { Goal, GoalColor } from "@shared/index"
 import type { TileVariant } from "../../ui/primitives"
-import type { Scheme } from "../../theme"
+import { onFill, type Scheme } from "../../theme"
 import { HABIT_PALETTES } from "../habits/grid"
 
 /** Stable per-integration display badge. */
@@ -15,9 +15,11 @@ export const INTEGRATION_VISUAL: Record<
 > = {
     github: { glyph: "GH", tile: "ink", sourceLabel: "GitHub" },
     leetcode: { glyph: "LC", tile: "lime", sourceLabel: "LeetCode" },
+    chess_com: { glyph: "CH", tile: "ink", sourceLabel: "Chess.com" },
     apple_fitness: { glyph: "F", tile: "coral", sourceLabel: "Fitness" },
     apple_sleep: { glyph: "Z", tile: "ink", sourceLabel: "Sleep" },
     apple_steps: { glyph: "ST", tile: "lime", sourceLabel: "Steps" },
+    apple_distance: { glyph: "KM", tile: "lime", sourceLabel: "Distance" },
     screen_time: { glyph: "SC", tile: "coral", sourceLabel: "Screen Time" }
 }
 
@@ -51,10 +53,20 @@ export function goalFill(goal: Goal, scheme: Scheme = "light"): string {
     return HABIT_PALETTES[scheme][goalColor(goal)].fill
 }
 
+/** A color that reads on top of {@link goalFill}, e.g. for a mark drawn over a bar. */
+export function goalOnFill(goal: Goal, scheme: Scheme = "light"): string {
+    return HABIT_PALETTES[scheme][goalColor(goal)].dark
+        ? onFill.dark
+        : onFill.light
+}
+
 /** Pretty unit name for a (integration, metric) pair. */
 export function unitLabel(integration: string, metric: string): string {
     if (integration === "github" && metric === "commits") return "commits"
     if (integration === "leetcode") return `${metric} problems`
+    if (integration === "chess_com") return metric === "wins" ? "wins" : "games"
+    // A distance goal's metric is the unit it was set in.
+    if (integration === "apple_distance") return metric === "mi" ? "mi" : "km"
     if (integration === "apple_fitness" && metric === "workouts")
         return "workouts"
     if (integration === "apple_fitness" && metric === "calories")
@@ -65,12 +77,30 @@ export function unitLabel(integration: string, metric: string): string {
     return metric
 }
 
+/** The international mile. */
+export const METERS_PER_MILE = 1609.344
+
+/** The units a distance goal can be set in; it's also the goal's metric. */
+export type DistanceUnit = "km" | "mi"
+
+/**
+ * The unit to show a distance in when no goal says which: miles where the
+ * device's region measures roads in them, kilometres everywhere else.
+ */
+export function deviceDistanceUnit(): DistanceUnit {
+    const locale = Intl.DateTimeFormat().resolvedOptions().locale
+    return /[-_](US|GB|LR|MM)\b/i.test(locale) ? "mi" : "km"
+}
+
 /**
  * How many stored units make one displayed unit. Sleep and screen time are
- * stored and summed in minutes but set and shown in hours; everything else is
- * shown as stored.
+ * stored and summed in minutes but set and shown in hours, and distance is
+ * stored in metres but set and shown in kilometres or miles; everything else
+ * is shown as stored.
  */
 export function unitScale(integration: string, metric: string): number {
+    if (integration === "apple_distance")
+        return metric === "mi" ? METERS_PER_MILE : 1000
     return (integration === "apple_sleep" || integration === "screen_time") &&
         metric === "minutes"
         ? 60
@@ -108,6 +138,14 @@ export function formatAmount(
     const scale = unitScale(integration, metric)
     if (scale === 1) return String(Math.round(value))
     return String(Math.round((value / scale) * 10) / 10)
+}
+
+/** "5.2 mi": a stored distance in [unit], the device's own by default. */
+export function formatDistance(
+    meters: number,
+    unit: DistanceUnit = deviceDistanceUnit()
+): string {
+    return `${formatAmount("apple_distance", unit, meters)} ${unit}`
 }
 
 /**
@@ -170,9 +208,26 @@ export function formatWeekRange(weekStart: number): string {
     return `${startStr} – ${endStr}`
 }
 
+/** "12-day streak", or "No streak" for none: one wording wherever a streak is a caption. */
+export function streakLabel(days: number): string {
+    return days > 0 ? `${days}-day streak` : "No streak"
+}
+
 /** Weekday (0 = Monday … 6 = Sunday) of [now] in the device's time zone. */
 export function localWeekday(now = Date.now()): number {
     return (new Date(now).getDay() + 6) % 7
+}
+
+/**
+ * Monday 00:00 (ms epoch, device time zone) of the week [weeksAgo] weeks before
+ * the one containing [now]. Stepped by calendar days, so a DST change in
+ * between can't land it an hour off.
+ */
+export function localWeekStart(weeksAgo = 0, now = Date.now()): number {
+    const date = new Date(now)
+    date.setHours(0, 0, 0, 0)
+    date.setDate(date.getDate() - localWeekday(now) - 7 * weeksAgo)
+    return date.getTime()
 }
 
 /** Whether [goal] has nothing due on the day of [now]. */

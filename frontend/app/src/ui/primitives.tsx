@@ -539,6 +539,47 @@ function StepsIcon({ size = 24 }: { size?: number }) {
     )
 }
 
+/** A pawn, for chess. */
+function ChessIcon({ size = 24 }: { size?: number }) {
+    const colors = useColors()
+    const props = {
+        stroke: colors.ink,
+        strokeWidth: 2,
+        strokeLinecap: "round" as const,
+        strokeLinejoin: "round" as const,
+        fill: "none"
+    }
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+            <Path d="M12 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z" {...props} />
+            <Path
+                d="M10.2 9.4c0 3-1.4 5-3.2 7.6h10c-1.8-2.6-3.2-4.6-3.2-7.6"
+                {...props}
+            />
+            <Path d="M6 20.5h12" {...props} />
+        </Svg>
+    )
+}
+
+/** A winding route between two points, for distance. */
+function DistanceIcon({ size = 24 }: { size?: number }) {
+    const colors = useColors()
+    const props = {
+        stroke: colors.ink,
+        strokeWidth: 2,
+        strokeLinecap: "round" as const,
+        strokeLinejoin: "round" as const,
+        fill: "none"
+    }
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+            <Path d="M5.5 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" {...props} />
+            <Path d="M18.5 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" {...props} />
+            <Path d="M7.5 17h7a3 3 0 0 0 0-6h-5a2 2 0 0 1 0-4h7" {...props} />
+        </Svg>
+    )
+}
+
 function ScreenTimeIcon({ size = 24 }: { size?: number }) {
     const colors = useColors()
     const props = {
@@ -573,12 +614,16 @@ export function IntegrationIcon({
             return <GitHubIcon size={size} />
         case "leetcode":
             return <LeetCodeIcon size={size} />
+        case "chess_com":
+            return <ChessIcon size={size} />
         case "apple_fitness":
             return <WorkoutIcon size={size} />
         case "apple_sleep":
             return <SleepIcon size={size} />
         case "apple_steps":
             return <StepsIcon size={size} />
+        case "apple_distance":
+            return <DistanceIcon size={size} />
         case "screen_time":
             return <ScreenTimeIcon size={size} />
         default:
@@ -690,6 +735,41 @@ export function Bar({
     )
 }
 
+/**
+ * The mark inside a {@link Bar} for where its fill should have reached by now.
+ * It's drawn in whichever color reads against what's under it — [onFillColor]
+ * where the fill has reached it, ink over the bare track — so it shows on any fill,
+ * including one that's the ink color itself.
+ */
+export function PaceTick({
+    at,
+    filled,
+    onFillColor
+}: {
+    /** Position along the bar, 0–100. */
+    at: number
+    /** Whether the bar's fill has reached the tick. */
+    filled: boolean
+    /** A color that reads on top of the bar's fill. */
+    onFillColor: string
+}) {
+    const colors = useColors()
+    return (
+        <View
+            pointerEvents="none"
+            style={{
+                position: "absolute",
+                top: 0,
+                bottom: 0,
+                left: `${Math.min(100, Math.max(0, at))}%`,
+                width: 2,
+                marginLeft: -1,
+                backgroundColor: filled ? onFillColor : colors.ink
+            }}
+        />
+    )
+}
+
 /** Circular progress ring with a centred percentage. Mirrors RingChart on web. */
 export function RingChart({
     pct,
@@ -749,7 +829,9 @@ export function RingChart({
                     </Mono>
                     <Text
                         className="text-ink-3"
-                        style={{ fontSize: Math.max(10, Math.round(14 * scale)) }}
+                        style={{
+                            fontSize: Math.max(10, Math.round(14 * scale))
+                        }}
                     >
                         %
                     </Text>

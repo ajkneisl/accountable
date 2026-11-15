@@ -171,11 +171,14 @@ const CompetitionsWidget = (
                 <VStack alignment="leading" spacing={2}>
                     {comp.goalCount > 0 ? (
                         <Text modifiers={[mono(12), foregroundStyle(ink)]}>
-                            {`${me?.goalsHit ?? 0}/${comp.goalCount} on pace`}
+                            {`${me?.goalsHit ?? 0} of ${comp.goalCount} on pace`}
                         </Text>
                     ) : null}
                     <Text modifiers={[mono(12), foregroundStyle(ink3)]}>
-                        {`${me?.streak ?? 0}d streak`}
+                        {/* The app's wording for a streak, and for none. */}
+                        {(me?.streak ?? 0) > 0
+                            ? `${me?.streak}-day streak`
+                            : "No streak"}
                     </Text>
                 </VStack>
             </VStack>

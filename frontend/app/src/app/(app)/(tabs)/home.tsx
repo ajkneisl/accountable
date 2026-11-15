@@ -4,6 +4,7 @@
 
 import { useEffect, useRef } from "react"
 import { Text, View } from "react-native"
+import { Host, Image } from "@expo/ui/swift-ui"
 import { router } from "expo-router"
 import { useAtomValue } from "jotai"
 import { userAtom } from "../../../auth"
@@ -17,7 +18,6 @@ import { useFeed } from "../../../features/feed/useFeed"
 import { useHabits } from "../../../features/habits/HabitsData"
 import { EmptyState } from "../../../ui/EmptyState"
 import { CircleButton } from "../../../ui/CircleButton"
-import { PlusIcon } from "../../../ui/icons"
 import { Screen } from "../../../ui/Screen"
 import { SettingsButton } from "../../../ui/SettingsButton"
 import {
@@ -25,7 +25,8 @@ import {
     Card,
     Display,
     Eyebrow,
-    PageTitle
+    PageTitle,
+    Spinner
 } from "../../../ui/primitives"
 import { useColors } from "../../../theme"
 
@@ -43,13 +44,16 @@ function HomeActions() {
         <View className="flex-row gap-2.5">
             {tracksWorkouts && (
                 <CircleButton label="Log a workout" onPress={openLogWorkout}>
-                    {(glass) =>
-                        glass ? (
-                            <PlusIcon color={colors.ink} size={21} />
-                        ) : (
-                            <PlusIcon color={colors.ink2} size={20} />
-                        )
-                    }
+                    {(glass) => (
+                        // A runner, not a plus: plus means "new item" elsewhere.
+                        <Host matchContents>
+                            <Image
+                                systemName="figure.run"
+                                size={18}
+                                color={glass ? colors.ink : colors.ink2}
+                            />
+                        </Host>
+                    )}
                 </CircleButton>
             )}
             <SyncAllButton />
@@ -127,6 +131,12 @@ export default function Home() {
             refreshing={loading}
             onRefresh={refresh}
             topRight={<HomeActions />}
+            // More of the feed loads as the end comes up, without being asked.
+            onEndReached={
+                feed.hasMore && !feed.loadingMore
+                    ? () => void feed.loadMore()
+                    : undefined
+            }
         >
             <PageTitle>Beacc</PageTitle>
 
@@ -144,7 +154,7 @@ export default function Home() {
             {(posts.length > 0 ||
                 feed.error ||
                 (feed.posts !== null && competing)) && (
-                <Display size={22}>Recent Activity</Display>
+                <Display size={22}>Recent activity</Display>
             )}
 
             {feed.error && posts.length === 0 && (
@@ -176,15 +186,10 @@ export default function Home() {
                 />
             ))}
 
-            {feed.hasMore && (
-                <Button
-                    label="Show more"
-                    variant="line"
-                    size="sm"
-                    busy={feed.loadingMore}
-                    className="self-center"
-                    onPress={() => void feed.loadMore()}
-                />
+            {feed.loadingMore && (
+                <View className="items-center py-2">
+                    <Spinner size={20} />
+                </View>
             )}
         </Screen>
     )

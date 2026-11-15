@@ -1,5 +1,6 @@
-// GitHub-style, read-only heatmap for one habit: week columns, Mon→Sun rows,
-// with Mon / Wed / Fri labelled down the left edge.
+// GitHub-style, read-only heatmap for one habit: week columns, Sun→Sat rows,
+// with Mon / Wed / Fri labelled down the left edge. Starting on Sunday puts
+// those three on the second, fourth and sixth rows, evenly spaced top to bottom.
 //
 // Two sizing modes:
 // - fixed [cell]: px-sized cells, as many whole weeks as fit the width (cards)
@@ -26,7 +27,7 @@ const FONT_RATIO = 0.8
 const DAY_RATIO = 1.8
 
 /** Rows that get a weekday label: Mon, Wed, Fri. */
-const DAY_ROWS = [0, 2, 4]
+const DAY_ROWS = [1, 3, 5]
 
 export function Heatmap({
     start,

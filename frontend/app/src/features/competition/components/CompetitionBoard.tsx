@@ -1,8 +1,8 @@
 // The heart of a competition, as two of the competition screen's pages: the
 // standings, answering "who's hitting their goals?", and the shared goals, one
 // card each, showing every member's progress toward it. Both show one
-// Monday-anchored week, shared through useCompetitionWeek, with the prev/next
-// week control at the top of the page. The owner edits and adds shared goals
+// Monday-anchored week, shared through useCompetitionWeek, named in a heading
+// at the top of the page with the prev/next week control. The owner edits and adds shared goals
 // from the goals page's edit mode, as on the Goals tab.
 //
 // Ported from the web board. The scoring is identical; the layout is restacked for
@@ -21,8 +21,8 @@ import {
     removeCompetitionGoal,
     useApi
 } from "@shared/index"
-import { useColors } from "../../../theme"
-import { BackChevronIcon, ChevronIcon } from "../../../ui/icons"
+import { useColors, useScheme } from "../../../theme"
+import { WeekHeading } from "../../../ui/WeekHeading"
 import {
     AddCard,
     Bar,
@@ -30,6 +30,7 @@ import {
     Card,
     IntegrationIcon,
     Mono,
+    PaceTick,
     SourceTile
 } from "../../../ui/primitives"
 import { EditGoalSheet } from "../../dashboard/components/EditGoalSheet"
@@ -38,9 +39,11 @@ import {
     formatWeekRange,
     integrationVisual,
     localWeekday,
+    localWeekStart,
+    streakLabel,
     unitLabel
 } from "../../dashboard/types"
-import { FALLBACK_BAR_COLOR } from "../colors"
+import { FALLBACK_BAR_COLOR, onMemberFill } from "../colors"
 import {
     computeStandings,
     displayValue,
@@ -88,14 +91,18 @@ const DAY_FMT = new Intl.DateTimeFormat(undefined, {
 /**
  * M T W T F S S chips that pick one day of the week for every shared goal at
  * once; tapping the picked day again returns to the whole week. Days still to
- * come can't be picked.
+ * come can't be picked, nor can days from before the competition started.
  */
 function DayPicker({
     selected,
+    from,
     selectable,
     onSelect
 }: {
     selected: number | null
+    /** The first day that can be picked (0 = Monday). */
+    from: number
+    /** How many days, counted from Monday, have started. */
     selectable: number
     onSelect: (day: number | null) => void
 }) {
@@ -103,7 +110,7 @@ function DayPicker({
         <View className="flex-row gap-1.5">
             {WEEKDAY.map((d, i) => {
                 const picked = selected === i
-                const future = i >= selectable
+                const future = i >= selectable || i < from
                 return (
                     <Pressable
                         key={i}
@@ -160,7 +167,7 @@ function GoalProgress({
     /** Opens the edit sheet. Passed only while the page is in edit mode. */
     onEdit?: () => void
 }) {
-    const colors = useColors()
+    const scheme = useScheme()
     const visual = integrationVisual(board.integration)
     const wt = weeklyTarget(board)
     const pace = paceTarget(board, currentWeek)
@@ -243,17 +250,13 @@ function GoalProgress({
                             {/* Progress toward the target; weekly goals add a pace marker. */}
                             <Bar pct={pct} color={color} height={10}>
                                 {!daily && day === null && (
-                                    <View
-                                        pointerEvents="none"
-                                        style={{
-                                            position: "absolute",
-                                            top: 0,
-                                            bottom: 0,
-                                            left: `${pacePct}%`,
-                                            width: 1,
-                                            backgroundColor: colors.ink3,
-                                            opacity: 0.5
-                                        }}
+                                    <PaceTick
+                                        at={pacePct}
+                                        filled={pct >= pacePct}
+                                        onFillColor={onMemberFill(
+                                            color,
+                                            scheme
+                                        )}
                                     />
                                 )}
                             </Bar>
@@ -266,8 +269,8 @@ function GoalProgress({
 }
 
 /**
- * The ‹ week › control along the top of a page. Anything else that picks what
- * the page shows — the goals' day picker — goes under it as [children].
+ * The pages' week heading. Anything else that picks what a page shows — the
+ * goals' day picker — goes under it as [children].
  */
 function WeekBar({
     view,
@@ -276,58 +279,51 @@ function WeekBar({
     view: CompetitionWeekView
     children?: ReactNode
 }) {
-    const colors = useColors()
-    const { week, offset, currentWeek } = view
-    // The loaded week trails the one picked while it's being fetched.
-    const range =
-        week && week.offset === offset ? formatWeekRange(week.weekStart) : null
+    const { week, offset } = view
     return (
-        <Card className="p-1.5">
-            <View className="flex-row items-center justify-between">
-                <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Previous week"
-                    onPress={view.back}
-                    hitSlop={8}
-                    className="h-9 w-9 items-center justify-center rounded-full"
-                >
-                    <BackChevronIcon color={colors.ink2} size={18} />
-                </Pressable>
-                <Text className="text-[14px] font-semibold text-ink">
-                    {currentWeek ? "This week" : (range ?? "—")}
-                    {currentWeek && range !== null && (
-                        <Text className="font-normal text-ink-3">
-                            {`  ${range}`}
-                        </Text>
-                    )}
-                </Text>
-                <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Next week"
-                    onPress={view.forward}
-                    disabled={currentWeek}
-                    hitSlop={8}
-                    className={`h-9 w-9 items-center justify-center rounded-full ${
-                        currentWeek ? "opacity-25" : ""
-                    }`}
-                >
-                    <ChevronIcon color={colors.ink2} size={18} />
-                </Pressable>
-            </View>
-            {children ? (
-                <View className="px-1.5 pb-1.5 pt-2">{children}</View>
-            ) : null}
-        </Card>
+        <WeekHeading
+            current={view.currentWeek}
+            // The loaded week trails the one picked while it's being fetched.
+            range={
+                week && week.offset === offset
+                    ? formatWeekRange(week.weekStart)
+                    : null
+            }
+            canGoBack={view.canGoBack}
+            onBack={view.back}
+            onForward={view.forward}
+        >
+            {children}
+        </WeekHeading>
+    )
+}
+
+/** Whole weeks from the one containing [since] to the current one. */
+function weeksSince(since: number, now = Date.now()): number {
+    // Rounded, since a week with a DST change isn't exactly seven days long.
+    return Math.max(
+        0,
+        Math.round(
+            (localWeekStart(0, now) - localWeekStart(0, since)) / (7 * DAY_MS)
+        )
     )
 }
 
 /**
  * The week a competition's pages show, and the controls that change it. Held by
  * the screen so the standings and the shared goals stay on the same week.
+ *
+ * [startedAt] is when the competition was created: the week it falls in is as
+ * far back as the pages go. Until it's known, only the current week is shown.
  */
-export function useCompetitionWeek(competitionId: string, refreshKey = 0) {
+export function useCompetitionWeek(
+    competitionId: string,
+    refreshKey = 0,
+    startedAt?: number
+) {
     const api = useApi()
     const [offset, setOffset] = useState(0)
+    const earliest = startedAt === undefined ? 0 : weeksSince(startedAt)
     const [week, setWeek] = useState<CompetitionWeek | null>(null)
     const [loading, setLoading] = useState(true)
 
@@ -356,7 +352,9 @@ export function useCompetitionWeek(competitionId: string, refreshKey = 0) {
         week,
         loading,
         currentWeek: offset === 0,
-        back: () => setOffset((o) => o + 1),
+        /** False on the week the competition started in. */
+        canGoBack: offset < earliest,
+        back: () => setOffset((o) => Math.min(earliest, o + 1)),
         forward: () => setOffset((o) => Math.max(0, o - 1))
     }
 }
@@ -410,9 +408,7 @@ export function StandingsPage({
                         >
                             <View className="flex-row items-center justify-between">
                                 <Text className="text-[12px] text-ink-3">
-                                    {s.streak > 0
-                                        ? `${s.streak}-day streak`
-                                        : "No streak"}
+                                    {streakLabel(s.streak)}
                                 </Text>
                                 {/* One segment per shared goal, in the
                                         Goals page's order. */}
@@ -513,6 +509,12 @@ export function GoalsPage({
     }
 
     const hasGoals = week !== null && week.goals.length > 0
+    // The day the competition started, if this is the week it started in.
+    const startedAt = competition.createdAt
+    const firstDay =
+        week && startedAt >= week.weekStart && startedAt < week.weekEnd
+            ? Math.min(6, Math.floor((startedAt - week.weekStart) / DAY_MS))
+            : 0
 
     return (
         <>
@@ -521,6 +523,7 @@ export function GoalsPage({
                     {hasGoals && (
                         <DayPicker
                             selected={day}
+                            from={firstDay}
                             selectable={currentWeek ? localWeekday() + 1 : 7}
                             onSelect={(d) =>
                                 setPicked(

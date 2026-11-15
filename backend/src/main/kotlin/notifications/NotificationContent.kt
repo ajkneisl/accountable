@@ -5,6 +5,7 @@ import features.competition.competitionDetailView
 import features.competition.competitionsFor
 import features.competition.goalsForCompetition
 import features.competition.membersOf
+import features.goals.METERS_PER_MILE
 import features.goals.GoalDefinition
 import features.goals.GoalDirection
 import features.goals.GoalPeriod
@@ -342,21 +343,38 @@ private fun left(goal: GoalDefinition, remaining: Long, today: Boolean): String 
     return if (today) "$amount more $unit" else "$amount $unit this week"
 }
 
-/** [value] in the metric's display units: hours to a tenth for minute metrics, else a count. */
+/**
+ * [value] in the metric's display units: to a tenth for the ones shown in a larger unit than
+ * they're stored in (hours for minutes, kilometres or miles for metres), else a count.
+ */
 private fun amount(goal: GoalDefinition, value: Long): String {
-    if (!inMinutes(goal)) return String.format(Locale.US, "%,d", value)
-    val tenths = (value / 6.0).roundToLong()
+    val scale = displayScale(goal)
+    if (scale == 1.0) return String.format(Locale.US, "%,d", value)
+    val tenths = (value * 10 / scale).roundToLong()
     return if (tenths % 10 == 0L) (tenths / 10).toString() else "${tenths / 10}.${tenths % 10}"
 }
 
 private fun inMinutes(goal: GoalDefinition) =
     goal.metric == "minutes" && (goal.integration == "apple_sleep" || goal.integration == "screen_time")
 
+/** How many stored units make one displayed unit. Mirrors the app's unitScale. */
+private fun displayScale(goal: GoalDefinition): Double =
+    when {
+        inMinutes(goal) -> 60.0
+        goal.integration == "apple_distance" && goal.metric == "mi" -> METERS_PER_MILE
+        goal.integration == "apple_distance" -> 1000.0
+        else -> 1.0
+    }
+
 /** Mirrors the app's unitLabel, singular for exactly one. */
 private fun unit(goal: GoalDefinition, value: Long): String {
-    val one = !inMinutes(goal) && value == 1L
+    val one = displayScale(goal) == 1.0 && value == 1L
     return when {
         goal.integration == "github" -> if (one) "commit" else "commits"
+        goal.integration == "chess_com" && goal.metric == "wins" -> if (one) "win" else "wins"
+        goal.integration == "chess_com" -> if (one) "game" else "games"
+        // The metric is the unit the goal was set in: "km" or "mi".
+        goal.integration == "apple_distance" -> goal.metric
         goal.integration == "leetcode" -> if (one) "${goal.metric} problem" else "${goal.metric} problems"
         goal.metric == "workouts" -> if (one) "workout" else "workouts"
         goal.metric == "calories" -> "calories"
@@ -372,6 +390,8 @@ private fun label(goal: GoalDefinition): String =
     when (goal.integration) {
         "screen_time" -> "screen time"
         "apple_sleep" -> "sleep"
+        "apple_distance" -> "distance"
+        "chess_com" -> "chess ${unit(goal, 2)}"
         else -> unit(goal, 2)
     }
 

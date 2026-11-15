@@ -1,20 +1,22 @@
 // The billboard overview: a read-only look at the signed-in user's goals, habits
-// and competitions, with a link to open each as a full-screen widget.
+// and competitions, with a link to open each as a full-screen widget. As in the
+// app, a competition's goals sit under a heading naming it, after the user's own.
 
 import type { ReactNode } from "react"
 import { useAtomValue } from "jotai"
 import { Link } from "react-router-dom"
-import { listHabits, useApi } from "@shared/index"
+import { type Goal, listHabits, useApi } from "@shared/index"
 import { isDisplaySession, useSignOut, userAtom } from "../../auth"
 import { LogoLink } from "../common/primitives"
 import { CompetitionBoard } from "./components/CompetitionBoard"
 import { CopyLinkButton } from "./components/CopyLinkButton"
 import { GoalCard } from "./components/GoalCard"
 import { HabitCard } from "./components/HabitCard"
+import { ThemeButton } from "./components/ThemeButton"
 import { loadCompetitions, loadGoals } from "./data"
 import { goalKey } from "./format"
 import { HABIT_DAYS } from "./grid"
-import { type Live, useLive } from "./hooks"
+import { type Live, useBillboardTheme, useLive } from "./hooks"
 
 function FullScreenLink({ to }: { to: string }) {
     return (
@@ -22,6 +24,29 @@ function FullScreenLink({ to }: { to: string }) {
             Full screen ↗
         </Link>
     )
+}
+
+const GOAL_GRID = "grid grid-cols-1 gap-[1.1em] sm:grid-cols-2 xl:grid-cols-3"
+
+/** Competition goals gathered by competition, in the order they arrive. */
+function byCompetition(
+    goals: Goal[]
+): { id: string; name: string; goals: Goal[] }[] {
+    const groups = new Map<
+        string,
+        { id: string; name: string; goals: Goal[] }
+    >()
+    for (const goal of goals) {
+        if (!goal.competition) continue
+        const group = groups.get(goal.competition.id)
+        if (group) group.goals.push(goal)
+        else
+            groups.set(goal.competition.id, {
+                ...goal.competition,
+                goals: [goal]
+            })
+    }
+    return [...groups.values()]
 }
 
 /** A titled billboard section that handles its own loading, error and empty states. */
@@ -71,6 +96,7 @@ export default function Billboard() {
     const api = useApi()
     const user = useAtomValue(userAtom)
     const signOut = useSignOut()
+    const theme = useBillboardTheme()
 
     const goals = useLive("goals", () => loadGoals(api))
     const habits = useLive("habits", () => listHabits(api, HABIT_DAYS))
@@ -83,6 +109,7 @@ export default function Billboard() {
                 <div className="flex items-center gap-3 text-[13px]">
                     <span className="text-ink-3">{user?.username}</span>
                     <CopyLinkButton />
+                    <ThemeButton theme={theme} />
                     {!isDisplaySession && (
                         <button
                             type="button"
@@ -100,7 +127,8 @@ export default function Billboard() {
                     Everything you&apos;re working on, at a glance.
                 </h1>
                 <p className="mb-0 mt-4 max-w-[620px] text-[16px] leading-[1.5] text-ink-2">
-                    View-only, tracking any goals or habits must be done within the app.
+                    View-only, tracking any goals or habits must be done within
+                    the app.
                 </p>
             </div>
 
@@ -111,13 +139,46 @@ export default function Billboard() {
                 empty="No goals yet."
                 action={<FullScreenLink to="/billboard/goals" />}
             >
-                {(data) => (
-                    <div className="grid grid-cols-1 gap-[1.1em] sm:grid-cols-2 xl:grid-cols-3">
-                        {data.map((goal) => (
-                            <GoalCard key={goalKey(goal)} goal={goal} />
-                        ))}
-                    </div>
-                )}
+                {(data) => {
+                    const own = data.filter((goal) => !goal.competition)
+                    return (
+                        <div className="flex flex-col gap-8">
+                            {own.length > 0 && (
+                                <div className={GOAL_GRID}>
+                                    {own.map((goal) => (
+                                        <GoalCard
+                                            key={goalKey(goal)}
+                                            goal={goal}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                            {byCompetition(data).map((group) => (
+                                <div key={group.id}>
+                                    <div className="mb-3 flex items-center gap-3">
+                                        <h3 className="m-0 text-[18px] font-semibold tracking-[-0.01em]">
+                                            {group.name}
+                                        </h3>
+                                        <div className="ml-auto">
+                                            <FullScreenLink
+                                                to={`/billboard/competitions/${group.id}`}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className={GOAL_GRID}>
+                                        {group.goals.map((goal) => (
+                                            <GoalCard
+                                                key={goalKey(goal)}
+                                                goal={goal}
+                                                grouped
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )
+                }}
             </Section>
 
             <Section

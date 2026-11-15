@@ -36,6 +36,7 @@ import {
     onHealthChange,
     requestAppleHealthAccess,
     type HealthChange,
+    syncAppleHealthDistance,
     syncAppleHealthSleep,
     syncAppleHealthSteps,
     syncAppleHealthWorkouts
@@ -61,6 +62,8 @@ const LAST_SYNC_KEY = "accountable_apple_health_synced_v2"
 const SLEEP_SYNC_KEY = "accountable_apple_health_sleep_synced_v2"
 /** Steps' own last sync, for the same reason as sleep's. */
 const STEPS_SYNC_KEY = "accountable_apple_health_steps_synced"
+/** Distance's own last sync, likewise: links made before it was read get it backfilled. */
+const DISTANCE_SYNC_KEY = "accountable_apple_health_distance_synced"
 
 /** How far back the first sync (of workouts, and separately of sleep and steps) reaches. */
 const BACKFILL_MS = 30 * 86_400_000
@@ -126,14 +129,15 @@ export async function forgetAppleHealth(): Promise<void> {
         writeKey(CONNECTED_KEY, "0"),
         writeKey(LAST_SYNC_KEY, null),
         writeKey(SLEEP_SYNC_KEY, null),
-        writeKey(STEPS_SYNC_KEY, null)
+        writeKey(STEPS_SYNC_KEY, null),
+        writeKey(DISTANCE_SYNC_KEY, null)
     ])
 }
 
 /**
  * Import workouts since [from] (the last sync, or null for a first sync), and
- * sleep and steps since their own last syncs, then record [now] as the last
- * sync of all three. Resolves to whether anything changed.
+ * sleep, steps and distance since their own last syncs, then record [now] as
+ * the last sync of all four. Resolves to whether anything changed.
  */
 async function importSince(
     api: ApiConfig,
@@ -142,20 +146,35 @@ async function importSince(
 ): Promise<boolean> {
     const since = from === null ? now - BACKFILL_MS : from - OVERLAP_MS
     const imported = await syncAppleHealthWorkouts(api, since)
-    const [sleepSynced, stepsSynced] = await Promise.all([
+    const [sleepSynced, stepsSynced, distanceSynced] = await Promise.all([
         readKey(SLEEP_SYNC_KEY),
-        readKey(STEPS_SYNC_KEY)
+        readKey(STEPS_SYNC_KEY),
+        readKey(DISTANCE_SYNC_KEY)
     ])
     const sinceLast = (synced: string | null) =>
         synced === null ? now - BACKFILL_MS : Number(synced) - OVERLAP_MS
     const sleepChanged = await syncAppleHealthSleep(api, sinceLast(sleepSynced))
     const stepsChanged = await syncAppleHealthSteps(api, sinceLast(stepsSynced))
+    // Distance is the newest thing read, and a server that doesn't take it yet
+    // mustn't fail the rest. It's left unmarked so it's sent again next time.
+    const distanceChanged = await syncAppleHealthDistance(
+        api,
+        sinceLast(distanceSynced)
+    ).catch(() => null)
     await Promise.all([
         writeKey(LAST_SYNC_KEY, String(now)),
         writeKey(SLEEP_SYNC_KEY, String(now)),
-        writeKey(STEPS_SYNC_KEY, String(now))
+        writeKey(STEPS_SYNC_KEY, String(now)),
+        ...(distanceChanged !== null
+            ? [writeKey(DISTANCE_SYNC_KEY, String(now))]
+            : [])
     ])
-    return imported > 0 || sleepChanged > 0 || stepsChanged > 0
+    return (
+        imported > 0 ||
+        sleepChanged > 0 ||
+        stepsChanged > 0 ||
+        (distanceChanged ?? 0) > 0
+    )
 }
 
 /** The import now running: where it reads from, and when it started. */
@@ -290,7 +309,7 @@ export function AppleHealthProvider({ children }: { children: ReactNode }) {
             if (isConnected) {
                 setConnected(true)
                 if (flag !== "1") await writeKey(CONNECTED_KEY, "1")
-                // Links made before sleep or steps were read haven't been asked for them;
+                // Links made before sleep, steps or distance were read haven't been asked for them;
                 // iOS only shows the sheet for types it hasn't asked about yet.
                 // Skipped on a background wake, where no sheet can show.
                 if (AppState.currentState === "active")

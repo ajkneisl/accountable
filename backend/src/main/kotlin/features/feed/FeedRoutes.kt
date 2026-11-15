@@ -26,13 +26,21 @@ private val log = KtorSimpleLogger("FeedRoutes")
 private const val DEFAULT_PAGE_SIZE = 30
 private const val MAX_PAGE_SIZE = 50
 
-/** GET /api/feed?before={cursor}&limit={n} — the viewer's feed, newest activity first. */
+/**
+ * GET /api/feed?before={cursor}&limit={n}&sources={a,b} — the viewer's feed, newest activity first.
+ *
+ * `sources` names the sources the app can draw a card for; cards from any other are left out. An
+ * app that doesn't send it predates the parameter and gets [LEGACY_FEED_SOURCES].
+ */
 private val FEED_ROUTE: suspend RoutingContext.() -> Unit = {
     val params = call.request.queryParameters
     val before =
         params["before"]?.let { FeedCursor.parse(it) ?: Error.text("invalid cursor") }
     val limit = (params["limit"]?.toIntOrNull() ?: DEFAULT_PAGE_SIZE).coerceIn(1, MAX_PAGE_SIZE)
-    call.respond(feedFor(call.userID(), before, limit))
+    val sources =
+        params["sources"]?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }?.toSet()
+            ?: LEGACY_FEED_SOURCES
+    call.respond(feedFor(call.userID(), before, limit, sources))
 }
 
 /** PUT /api/feed/{id}/like — heart a card. Idempotent. */

@@ -1,11 +1,15 @@
 package integrations.api
 
+import integrations.AppleDistance
+import integrations.AppleDistanceTable
 import integrations.AppleFitness
 import integrations.AppleFitnessTable
 import integrations.AppleSleep
 import integrations.AppleSleepTable
 import integrations.AppleSteps
 import integrations.AppleStepsTable
+import integrations.ChessCom
+import integrations.ChessComTable
 import integrations.GitHub
 import integrations.GitHubTable
 import integrations.LeetCode
@@ -58,11 +62,23 @@ object IntegrationTables {
             AppleSleepTable,
             AppleStepsTable,
             ScreenTimeTable,
+            ChessComTable,
+            AppleDistanceTable,
         )
 }
 
 /** Registry of every [Integration] instance, indexed by [Integration.name]. */
 object Integrations {
-    val all: List<Integration<*>> = listOf(GitHub, LeetCode, AppleFitness, AppleSleep, AppleSteps, ScreenTime)
+    val all: List<Integration<*>> =
+        listOf(
+            GitHub,
+            LeetCode,
+            ChessCom,
+            AppleFitness,
+            AppleSleep,
+            AppleSteps,
+            AppleDistance,
+            ScreenTime,
+        )
     val byName: Map<String, Integration<*>> = all.associateBy { it.name }
 }

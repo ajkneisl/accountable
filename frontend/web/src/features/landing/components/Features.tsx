@@ -39,12 +39,14 @@ const SOURCES = [
         label: "LeetCode",
         goal: "Solve 3 medium problems a week"
     },
+    { name: "chess_com", label: "Chess.com", goal: "Play 3 games a day" },
     {
         name: "apple_fitness",
         label: "Workouts",
         goal: "Work out 4 times a week"
     },
     { name: "apple_steps", label: "Steps", goal: "Walk 10,000 steps a day" },
+    { name: "apple_distance", label: "Distance", goal: "Walk 3 miles a day" },
     { name: "apple_sleep", label: "Sleep", goal: "Sleep 7 hours a night" },
     {
         name: "screen_time",

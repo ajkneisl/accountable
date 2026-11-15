@@ -2,7 +2,7 @@
 // goal reads (and paces) the same on the billboard as it does in the app.
 
 import { requiredDaysLabel, requiredDaysOf } from "@shared/index"
-import type { Goal, GoalColor, Habit } from "@shared/index"
+import type { Goal, GoalColor } from "@shared/index"
 import type { TileVariant } from "../common/primitives"
 import { HABIT_PALETTE } from "./grid"
 
@@ -21,11 +21,21 @@ export function goalFill(goal: Goal): string {
     return HABIT_PALETTE[color].fill
 }
 
-/** "12d streak · 40 days" summary line for a habit. */
-export function streakLabel(habit: Habit): string {
-    const streak =
-        habit.streak === 0 ? "no streak yet" : `${habit.streak}d streak`
-    return `${streak} · ${habit.total} days`
+/** A color that reads on top of {@link goalFill}, e.g. a mark drawn over a bar. */
+export function goalOnFill(goal: Goal): string {
+    const color =
+        goal.color ?? TILE_COLOR[integrationVisual(goal.integration).tile]
+    return HABIT_PALETTE[color].on
+}
+
+/** "12-day streak", or "No streak" for none: the app's wording. */
+export function streakText(days: number): string {
+    return days > 0 ? `${days}-day streak` : "No streak"
+}
+
+/** "40 days done": how many days of the past year a habit was done. */
+export function daysDone(total: number): string {
+    return `${total} ${total === 1 ? "day" : "days"} done`
 }
 
 /** Stable per-integration display badge. */
@@ -35,9 +45,11 @@ const INTEGRATION_VISUAL: Record<
 > = {
     github: { glyph: "GH", tile: "ink", sourceLabel: "GitHub" },
     leetcode: { glyph: "LC", tile: "lime", sourceLabel: "LeetCode" },
+    chess_com: { glyph: "CH", tile: "ink", sourceLabel: "Chess.com" },
     apple_fitness: { glyph: "F", tile: "coral", sourceLabel: "Fitness" },
     apple_sleep: { glyph: "Z", tile: "ink", sourceLabel: "Sleep" },
     apple_steps: { glyph: "ST", tile: "lime", sourceLabel: "Steps" },
+    apple_distance: { glyph: "KM", tile: "lime", sourceLabel: "Distance" },
     screen_time: { glyph: "SC", tile: "coral", sourceLabel: "Screen Time" }
 }
 
@@ -55,6 +67,9 @@ export function integrationVisual(integration: string) {
 export function unitLabel(integration: string, metric: string): string {
     if (integration === "github" && metric === "commits") return "commits"
     if (integration === "leetcode") return `${metric} problems`
+    if (integration === "chess_com") return metric === "wins" ? "wins" : "games"
+    // A distance goal's metric is the unit it was set in.
+    if (integration === "apple_distance") return metric === "mi" ? "mi" : "km"
     if (integration === "apple_fitness" && metric === "workouts")
         return "workouts"
     if (integration === "apple_fitness" && metric === "calories")
@@ -65,12 +80,18 @@ export function unitLabel(integration: string, metric: string): string {
     return metric
 }
 
+/** The international mile. */
+const METERS_PER_MILE = 1609.344
+
 /**
  * How many stored units make one displayed unit. Sleep and screen time are
- * stored and summed in minutes but set and shown in hours; everything else is
- * shown as stored.
+ * stored and summed in minutes but set and shown in hours, and distance is
+ * stored in metres but set and shown in kilometres or miles; everything else
+ * is shown as stored.
  */
 function unitScale(integration: string, metric: string): number {
+    if (integration === "apple_distance")
+        return metric === "mi" ? METERS_PER_MILE : 1000
     return (integration === "apple_sleep" || integration === "screen_time") &&
         metric === "minutes"
         ? 60

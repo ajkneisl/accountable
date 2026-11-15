@@ -5,6 +5,7 @@ import api.Error
 import features.feed.publishFeed
 import integrations.IntegrationData
 import integrations.appleFitnessRoutes
+import integrations.appleDistanceRoutes
 import integrations.appleSleepRoutes
 import integrations.appleStepsRoutes
 import integrations.screenTimeRoutes
@@ -251,6 +252,7 @@ fun Route.integrationRoutes() {
             appleFitnessRoutes()
             appleSleepRoutes()
             appleStepsRoutes()
+            appleDistanceRoutes()
             screenTimeRoutes()
             get("/{name}/history", INTEGRATION_HISTORY_ROUTE)
             post("/{name}", INTEGRATION_ENABLE_ROUTE)

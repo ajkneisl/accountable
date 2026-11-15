@@ -24,11 +24,13 @@ Pick something you want to do more of (or less of), set a target, and Beacc keep
 | Source | Goals you can set |
 | --- | --- |
 | **Steps** (Apple Health) | Walk 10,000 steps a day |
+| **Distance** (Apple Health) | Walk or run 3 miles a day, in miles or kilometres |
 | **Sleep** (Apple Health) | Sleep 7 hours a night |
 | **Workouts** (Apple Fitness) | Work out 4 times a week, or burn a set number of calories |
 | **Screen Time** | Stay under 3 hours a day. |
 | **GitHub** | Make 5 commits a week |
 | **LeetCode** | Solve easy, medium or hard problems |
+| **Chess.com** | Play a set number of games, or win them |
 
 Goals can be **daily** (every day, or just the days you pick, like weekdays or Mon/Wed/Fri) or **weekly** (hit it by Sunday). Each one shows this week's progress day by day, whether you're on pace, and lets you look back at earlier weeks. Give each goal its own color, and change its target whenever you like.
 

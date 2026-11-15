@@ -1,10 +1,12 @@
-// Competition detail — one competition, split over three pages with their own
-// bottom bar: this week's standings, the all-time leaderboard (weeks finished
-// first), and the shared goals. Swipe or tap the bar to move between them. Its
-// name, members and join code are managed on the settings screen pushed from here.
+// Competition detail — one competition, split over three pages picked from a
+// strip of tabs under its name: Weekly (a week's standings), All time (the
+// leaderboard of weeks finished first), and Goals (the shared goals). Swipe or tap a tab
+// to move between them. Its name, members and join code are managed on
+// the settings screen pushed from here.
 //
 // The top right shares the join code, except for the owner on the goals page,
 // where a pencil takes its place: edit mode, for changing and adding shared goals.
+// Opened with `edit=1` — the Goals tab's "Edit in Competition" — it starts there.
 //
 // The web reads the active competition from a ?c= query param and falls back to
 // the first one in the sidebar; here the id is a real route segment, so the
@@ -52,7 +54,9 @@ export default function Competition() {
     const api = useApi()
     const theme = useColors()
     const scheme = useScheme()
-    const { id } = useLocalSearchParams<{ id: string }>()
+    const { id, edit } = useLocalSearchParams<{ id: string; edit?: string }>()
+    // Arriving to edit: straight to the goals page, in edit mode.
+    const initialPage = edit === "1" ? GOALS_PAGE : 0
     const user = useAtomValue(userAtom)
 
     const [detail, setDetail] = useState<CompetitionDetail | null>(null)
@@ -60,8 +64,8 @@ export default function Competition() {
     const [tick, setTick] = useState(0)
     const [adding, setAdding] = useState(false)
     const [error, setError] = useState<string | null>(null)
-    const [page, setPage] = useState(0)
-    const [editing, setEditing] = useState(false)
+    const [page, setPage] = useState(initialPage)
+    const [editing, setEditing] = useState(edit === "1")
 
     // Refetch on coming back from settings, which may have renamed it or
     // changed its members. The first focus is the initial load below.
@@ -92,8 +96,9 @@ export default function Competition() {
         }
     }, [api, id, tick])
 
-    // The week the standings and the shared goals both show.
-    const week = useCompetitionWeek(id, tick)
+    // The week the standings and the shared goals both show; it goes back no
+    // further than the week the competition was created in.
+    const week = useCompetitionWeek(id, tick, detail?.createdAt)
 
     const isOwner = detail?.ownerID === user?.userID
     // The pencil only shows where there's something for it to edit.
@@ -115,7 +120,7 @@ export default function Competition() {
         <SafeAreaView edges={["top"]} className="flex-1 bg-bg">
             {/* Stays put above the pages, so the competition keeps its name
                 and controls while they slide underneath. */}
-            <View className="gap-5 px-5 pt-4">
+            <View className="gap-5 px-5 pb-1 pt-4">
                 <BackBar label="Competitions" />
 
                 {error !== null && <ErrorList errors={[error]} />}
@@ -174,6 +179,7 @@ export default function Competition() {
 
             {detail ? (
                 <SwipePages
+                    initialPage={initialPage}
                     onPageChange={(next) => {
                         setPage(next)
                         // Edit mode ends on leaving the goals page.
@@ -181,8 +187,7 @@ export default function Competition() {
                     }}
                     pages={[
                         {
-                            label: "Standings",
-                            sf: "list.number",
+                            label: "Weekly",
                             content: (
                                 <StandingsPage
                                     competition={detail}
@@ -194,8 +199,7 @@ export default function Competition() {
                             )
                         },
                         {
-                            label: "Leaderboard",
-                            sf: "crown.fill",
+                            label: "All time",
                             content: (
                                 <LeaderboardPage
                                     competitionId={detail.id}
@@ -207,7 +211,6 @@ export default function Competition() {
                         },
                         {
                             label: "Goals",
-                            sf: "target",
                             content: (
                                 <GoalsPage
                                     competition={detail}

@@ -9,7 +9,14 @@ import { useColors, useScheme } from "../../theme"
 import { ChevronIcon, HeartIcon } from "../../ui/icons"
 import { Card, Chip, IntegrationIcon, Mono } from "../../ui/primitives"
 import { memberFill, onMemberFill } from "../competition/colors"
-import { formatAmount, isLimit, unitLabel } from "../dashboard/types"
+import {
+    type DistanceUnit,
+    deviceDistanceUnit,
+    formatAmount,
+    formatDistance,
+    isLimit,
+    unitLabel
+} from "../dashboard/types"
 import { workoutLabel } from "../integration/components/WorkoutCard"
 
 const DATE_FMT = new Intl.DateTimeFormat(undefined, {
@@ -43,8 +50,14 @@ function duration(minutes: number): string {
     return hours > 0 ? `${hours}h ${minutes % 60}m` : `${minutes}m`
 }
 
-/** The card's headline and the lines under it. */
-function describe(detail: FeedDetail): { title: string; lines: string[] } {
+/**
+ * The card's headline and the lines under it. A distance is given in
+ * [distanceUnit]: the one its goal was set in, where the card has one.
+ */
+function describe(
+    detail: FeedDetail,
+    distanceUnit: DistanceUnit
+): { title: string; lines: string[] } {
     switch (detail.type) {
         case "github": {
             const lines = detail.repos.map((r) => `${r.commits} in ${r.repo}`)
@@ -82,8 +95,25 @@ function describe(detail: FeedDetail): { title: string; lines: string[] } {
                 ]
             }
         }
+        case "chess_com": {
+            // Only the outcomes that happened: "3 won, 1 lost".
+            const outcomes = [
+                detail.wins > 0 && `${detail.wins} won`,
+                detail.draws > 0 && `${detail.draws} drawn`,
+                detail.losses > 0 && `${detail.losses} lost`
+            ].filter((s): s is string => Boolean(s))
+            return {
+                title: `${plural(detail.games, "game")} of chess`,
+                lines: outcomes.length > 0 ? [outcomes.join(", ")] : []
+            }
+        }
         case "apple_steps":
             return { title: plural(detail.steps, "step"), lines: [] }
+        case "apple_distance":
+            return {
+                title: formatDistance(detail.meters, distanceUnit),
+                lines: []
+            }
         case "apple_sleep":
             return { title: `${duration(detail.minutes)} of sleep`, lines: [] }
         case "screen_time":
@@ -91,6 +121,10 @@ function describe(detail: FeedDetail): { title: string; lines: string[] } {
                 title: `${duration(detail.minutes)} of screen time`,
                 lines: []
             }
+        default:
+            // A source newer than this build. The server only sends the ones
+            // this build lists, so this is just a floor under that.
+            return { title: "Activity", lines: [] }
     }
 }
 
@@ -137,7 +171,14 @@ export function FeedCard({
     const colors = useColors()
     const scheme = useScheme()
     const fill = memberFill(post.actor.color, scheme)
-    const { title, lines } = describe(post.detail)
+    // A distance reads in the unit its goal was set in — the goal's metric.
+    const goalUnit = post.goals
+        .map((g) => g.metric)
+        .find((m): m is DistanceUnit => m === "km" || m === "mi")
+    const { title, lines } = describe(
+        post.detail,
+        goalUnit ?? deviceDistanceUnit()
+    )
     const goals = sortGoals(post.goals).filter((g) => hasResult(post, g))
     const headline = goals[0]
     const competitions = [

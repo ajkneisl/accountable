@@ -1,6 +1,8 @@
-// One habit: name, streak, today's check-off, and its heatmap. The whole header
-// row toggles today; while the Habits tab is in edit mode an Edit button opens the
-// edit sheet (rename, recolor, delete).
+// One habit, laid out like a goal card: today's check-off and the name, the
+// streak as the figure top right (nothing there without one), the heatmap, and
+// the days done as a line under it. The check-off and name toggle today; while
+// the Habits tab is in edit mode an Edit button takes the figure's place and
+// opens the edit sheet (rename, recolor, delete).
 
 import { Pressable, Text, View } from "react-native"
 import type { Habit } from "@shared/index"
@@ -59,28 +61,43 @@ export function HabitCard({
                             <CheckIcon color={checkColor} size={20} />
                         )}
                     </View>
-                    <View className="flex-1">
-                        <Text
-                            numberOfLines={1}
-                            className="text-[16px] font-semibold text-ink"
-                        >
-                            {habit.name}
-                        </Text>
-                        <Mono className="mt-0.5 text-[12px] text-ink-3">
-                            {habit.streak === 0
-                                ? "no streak yet"
-                                : `${habit.streak}d streak`}
-                            {` · ${habit.total} days`}
-                        </Mono>
-                    </View>
+                    <Text
+                        numberOfLines={2}
+                        className="flex-1 text-base font-semibold tracking-tight text-ink"
+                    >
+                        {habit.name}
+                    </Text>
                 </Pressable>
-                {onEdit && (
+                {onEdit ? (
                     <Button
                         label="Edit"
                         variant="line"
                         size="sm"
                         onPress={onEdit}
                     />
+                ) : (
+                    // No streak, no figure: a bare 0 would only fill the corner.
+                    habit.streak > 0 && (
+                        <View
+                            accessible
+                            accessibilityLabel={`${habit.streak}-day streak`}
+                            className="items-end"
+                        >
+                            <Mono
+                                style={{
+                                    fontSize: 28,
+                                    lineHeight: 30,
+                                    letterSpacing: -0.8
+                                }}
+                                className="font-bold text-ink"
+                            >
+                                {habit.streak}
+                            </Mono>
+                            <Text className="text-[11px] text-ink-3">
+                                day streak
+                            </Text>
+                        </View>
+                    )
                 )}
             </View>
 
@@ -91,6 +108,13 @@ export function HabitCard({
                 fill={palette.fill}
                 onToggle={onToggle}
             />
+
+            <Mono className="text-center text-[11px] text-ink-3">
+                <Text className="font-bold text-ink">{habit.total}</Text>
+                <Text className="text-ink">
+                    {habit.total === 1 ? " day done" : " days done"}
+                </Text>
+            </Mono>
         </Card>
     )
 }

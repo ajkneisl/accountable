@@ -54,3 +54,11 @@ export async function syncAppleHealthSteps(
 ): Promise<number> {
     return 0
 }
+
+/** Import per-day distance totals since [since] (ms epoch). Resolves to how many days were written. */
+export async function syncAppleHealthDistance(
+    _api: ApiConfig,
+    _since: number
+): Promise<number> {
+    return 0
+}

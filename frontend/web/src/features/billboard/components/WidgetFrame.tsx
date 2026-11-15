@@ -9,6 +9,7 @@ import { Link } from "react-router-dom"
 import { formatTime } from "../format"
 import {
     type Live,
+    useBillboardTheme,
     useFullscreen,
     useHiddenChrome,
     useIdle,
@@ -16,6 +17,7 @@ import {
     useWakeLock
 } from "../hooks"
 import { CopyLinkButton } from "./CopyLinkButton"
+import { ThemeButton } from "./ThemeButton"
 import { Placeholder } from "./primitives"
 
 export function WidgetFrame<T>({
@@ -32,6 +34,7 @@ export function WidgetFrame<T>({
     const now = useNow()
     const [fullscreen, toggleFullscreen] = useFullscreen()
     const [hidden, toggleHidden] = useHiddenChrome()
+    const theme = useBillboardTheme()
     const showHeader = !hidden.has("header")
     const showTime = !hidden.has("time")
     // With both hidden there's no top row at all: the controls float instead.
@@ -55,6 +58,7 @@ export function WidgetFrame<T>({
                 ← Billboard
             </Link>
             <CopyLinkButton />
+            <ThemeButton theme={theme} />
             <button
                 type="button"
                 onClick={() => toggleHidden("header")}

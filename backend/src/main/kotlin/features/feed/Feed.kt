@@ -8,13 +8,16 @@ import features.competition.competitionsFor
 import features.competition.goalsForCompetition
 import features.competition.membersOf
 import features.goals.GoalPeriod
+import features.goals.METERS_PER_MILE
 import features.habits.HabitColor
 import integrations.AppleFitness
+import integrations.ChessCom
 import integrations.GitHub
 import integrations.LeetCode
 import integrations.LeetCodeSolve
 import integrations.RepoCommits
 import integrations.WorkoutType
+import java.util.Locale
 import java.util.UUID
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -43,7 +46,16 @@ import user.displayColor
  * Sources that post whenever there's activity. The rest (steps, sleep, screen time) accumulate or
  * arrive as one daily total, so they only post when a goal is met.
  */
-internal val ACTIVITY_SOURCES = setOf(GitHub.name, LeetCode.name, AppleFitness.name)
+/**
+ * The sources every released app can draw a card for. An app that doesn't say which it knows gets
+ * only these, since a card for a source it has never heard of would break its feed; newer apps
+ * list theirs, so a source added after this just needs adding there.
+ */
+internal val LEGACY_FEED_SOURCES =
+    setOf("github", "leetcode", "apple_fitness", "apple_steps", "apple_sleep", "screen_time")
+
+internal val ACTIVITY_SOURCES =
+    setOf(GitHub.name, LeetCode.name, ChessCom.name, AppleFitness.name)
 
 /** One card: a person's day on a source, or a single workout. */
 object FeedPosts : Table("feed_posts") {
@@ -150,6 +162,14 @@ data class LeetCodeDetail(
     override fun summary() = "${plural(solved, "problem")} solved"
 }
 
+/** A day's games. [losses] is what's left of [games] after [wins] and [draws]. */
+@Serializable
+@SerialName("chess_com")
+data class ChessDetail(val games: Long, val wins: Long, val draws: Long, val losses: Long) :
+    FeedDetail() {
+    override fun summary() = "${plural(games, "game")} of chess"
+}
+
 /**
  * The first three are null when the actor has turned details off: the card just says they worked
  * out. [manual] stays either way. It counts the same, but it's how competitors can tell the
@@ -172,6 +192,17 @@ data class WorkoutDetail(
 @SerialName("apple_steps")
 data class StepsDetail(val steps: Long) : FeedDetail() {
     override fun summary() = plural(steps, "step")
+}
+
+/**
+ * A day's distance on foot. The server doesn't know which unit the reader thinks in, so its own
+ * wording gives both; the app shows the one the goal was set in.
+ */
+@Serializable
+@SerialName("apple_distance")
+data class DistanceDetail(val meters: Long) : FeedDetail() {
+    override fun summary() =
+        "%.1f km (%.1f mi)".format(Locale.US, meters / 1000.0, meters / METERS_PER_MILE)
 }
 
 @Serializable
@@ -286,10 +317,17 @@ private fun visibleTo(viewer: UUID, competitions: List<SharedCompetition>): Op<B
 }
 
 /** One page of [viewer]'s feed, newest activity first. */
-suspend fun feedFor(viewer: UUID, before: FeedCursor?, limit: Int): FeedResponse {
+suspend fun feedFor(
+    viewer: UUID,
+    before: FeedCursor?,
+    limit: Int,
+    sources: Set<String>? = null,
+): FeedResponse {
     val competitions = sharedCompetitions(viewer)
     return suspendTransaction {
         var condition = visibleTo(viewer, competitions)
+        // Only the sources the asking app can draw a card for; null is all of them.
+        if (sources != null) condition = condition and (FeedPosts.integration inList sources)
         if (before != null) {
             condition =
                 condition and

@@ -1,11 +1,11 @@
-// Goals card — a small progress ring, how many goals are on track and the goal
-// streak. Tapping it opens the Goals tab. Renders nothing until there's a goal.
+// Goals card — a small ring of the share of goals on track, the same count in
+// words, and the goal streak. Tapping it opens the Goals tab. Renders nothing until there's a goal.
 
 import { Pressable, Text, View } from "react-native"
 import { router } from "expo-router"
 import type { Goal } from "@shared/index"
 import { Card, RingChart } from "../../../ui/primitives"
-import { goalPace, onTrackFraction } from "../types"
+import { goalPace } from "../types"
 import { StreakFigure } from "./StreaksCard"
 
 export function TodayCard({
@@ -24,9 +24,8 @@ export function TodayCard({
     const onTrack = paces.filter((p) => p === "onTrack").length
     const behind = paces.filter((p) => p === "behind").length
     const slipping = total - onTrack
-    const avg =
-        goals.reduce((sum, g) => sum + onTrackFraction(g), 0) / goals.length
-    const pct = Math.round(avg * 100)
+    // The ring is the headline's count, not a separate measure of progress.
+    const pct = Math.round((onTrack / total) * 100)
     const tone = behind === 0 ? "lime" : pct >= 50 ? "lime" : "coral"
 
     return (

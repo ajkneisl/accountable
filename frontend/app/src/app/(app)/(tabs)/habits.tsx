@@ -1,7 +1,7 @@
 // Habits — custom daily habits with a heatmap each. State lives in
 // HabitsProvider (mounted above the tabs) so the widget stays fresh. The pencil
-// in the top right toggles edit mode, which gives each habit an Edit button and
-// shows the New habit card.
+// in the top right toggles edit mode, which gives each habit an Edit button. The
+// New habit card is always at the end of the list.
 
 import { useState } from "react"
 import { Text, View } from "react-native"
@@ -81,7 +81,8 @@ export default function Habits() {
                     />
                 ))}
 
-            {data !== null && editMode && (
+            {/* An empty list has its own New habit button. */}
+            {data !== null && habits.length > 0 && (
                 <AddCard label="New habit" onPress={openNewHabit} />
             )}
         </Screen>

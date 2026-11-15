@@ -47,6 +47,14 @@ export function IntegrationIcon({ name }: { name: string }): ReactNode {
                     <line x1={14} y1={4} x2={10} y2={20} />
                 </Mark>
             )
+        case "chess_com":
+            return (
+                <Mark {...stroke}>
+                    <path d="M12 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z" />
+                    <path d="M10.2 9.4c0 3-1.4 5-3.2 7.6h10c-1.8-2.6-3.2-4.6-3.2-7.6" />
+                    <path d="M6 20.5h12" />
+                </Mark>
+            )
         case "apple_fitness":
             return (
                 <Mark {...stroke}>
@@ -70,6 +78,14 @@ export function IntegrationIcon({ name }: { name: string }): ReactNode {
                     <path d="M5 16.5h4V19a2 2 0 0 1-4 0v-2.5Z" />
                     <path d="M17 7c1.7 0 2.5 1.8 2.5 4.5S18.8 17 17 17s-2.5-2.8-2.5-5.5S15.3 7 17 7Z" />
                     <path d="M15 20h4v.5a2 2 0 0 1-4 0V20Z" />
+                </Mark>
+            )
+        case "apple_distance":
+            return (
+                <Mark {...stroke}>
+                    <path d="M5.5 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
+                    <path d="M18.5 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
+                    <path d="M7.5 17h7a3 3 0 0 0 0-6h-5a2 2 0 0 1 0-4h7" />
                 </Mark>
             )
         case "screen_time":

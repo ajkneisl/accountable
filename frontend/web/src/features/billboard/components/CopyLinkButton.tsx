@@ -5,6 +5,7 @@ import { useState } from "react"
 import { useLocation } from "react-router-dom"
 import { getDisplayToken, useApi } from "@shared/index"
 import { displayLink, isDisplaySession } from "../../../auth"
+import { withTheme } from "../hooks"
 
 type Status = "idle" | "copied" | "failed"
 
@@ -15,7 +16,8 @@ type Status = "idle" | "copied" | "failed"
  */
 export function CopyLinkButton() {
     const api = useApi()
-    // The query rides along so a display opens with the same chrome hidden.
+    // The query rides along so a display opens with the same chrome hidden,
+    // and the theme chosen here goes with it: a display has only its link.
     const { pathname, search } = useLocation()
     const [status, setStatus] = useState<Status>("idle")
 
@@ -25,7 +27,7 @@ export function CopyLinkButton() {
         let next: Status = "failed"
         try {
             const { token } = await getDisplayToken(api)
-            const link = displayLink(pathname + search, token)
+            const link = displayLink(pathname + withTheme(search), token)
             try {
                 await navigator.clipboard.writeText(link)
             } catch {

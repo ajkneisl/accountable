@@ -1,6 +1,8 @@
 // GitHub-style heatmap for one habit: week columns, Sun→Sat rows, sized to
 // however many whole weeks fit the available width, with month names along the
-// top and Mon / Wed / Fri down the side. Tapping a past day toggles it.
+// top and Mon / Wed / Fri down the side. Today toggles with a tap; a past day
+// takes a long press, since the squares are small and easy to brush while
+// scrolling, and a changed day in the past would go unnoticed.
 
 import { useState } from "react"
 import { Pressable, Text, View } from "react-native"
@@ -138,11 +140,26 @@ export function Heatmap({
                                     <Pressable
                                         key={cell.date}
                                         disabled={cell.index < 0}
-                                        onPress={() => onToggle(cell.date, !on)}
+                                        onPress={
+                                            isToday
+                                                ? () => onToggle(cell.date, !on)
+                                                : undefined
+                                        }
+                                        onLongPress={
+                                            isToday
+                                                ? undefined
+                                                : () => onToggle(cell.date, !on)
+                                        }
+                                        delayLongPress={350}
                                         hitSlop={1}
                                         accessibilityRole="checkbox"
                                         accessibilityState={{ checked: on }}
                                         accessibilityLabel={cell.date}
+                                        accessibilityHint={
+                                            isToday
+                                                ? undefined
+                                                : "Long press to change"
+                                        }
                                         style={{
                                             width: CELL,
                                             height: CELL,

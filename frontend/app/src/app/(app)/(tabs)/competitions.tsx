@@ -1,7 +1,8 @@
-// Competitions tab — every competition the user belongs to, plus create/join.
+// Competitions tab — every competition the user belongs to, each with where
+// they stand in it this week, plus create/join.
 // Merges the web's sidebar competition list with its AllCompetitions page.
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import { Pressable, Text, View } from "react-native"
 import { router } from "expo-router"
 import { useAtom, useAtomValue } from "jotai"
@@ -10,32 +11,33 @@ import { userAtom } from "../../../auth"
 import { EmptyState } from "../../../ui/EmptyState"
 import { Screen } from "../../../ui/Screen"
 import { SettingsButton } from "../../../ui/SettingsButton"
-import {
-    AddCard,
-    Button,
-    Card,
-    Chip,
-    PageTitle,
-    Mono
-} from "../../../ui/primitives"
+import { AddCard, Card, Chip, PageTitle, Mono } from "../../../ui/primitives"
 import { useAppData } from "../../../features/common/AppData"
 import { CompetitionSheet } from "../../../features/competition/components/CompetitionSheet"
 import { pendingJoinCodeAtom } from "../../../features/competition/pendingJoin"
+import {
+    type CompetitionRank,
+    useCompetitionRanks
+} from "../../../features/competition/useCompetitionRanks"
 
-type Filter = "all" | "owned" | "joined"
+/** "1st", "2nd", "3rd", "11th". */
+function ordinal(n: number): string {
+    const tens = n % 100
+    if (tens >= 11 && tens <= 13) return `${n}th`
+    return `${n}${["th", "st", "nd", "rd"][n % 10] ?? "th"}`
+}
 
-const FILTERS: { value: Filter; label: string }[] = [
-    { value: "all", label: "All" },
-    { value: "owned", label: "Created" },
-    { value: "joined", label: "Joined" }
-]
+/** "2nd of 5" once someone's ranked, otherwise how many are in it. */
+function standing({ rank, members }: CompetitionRank): string {
+    if (rank !== null) return `${ordinal(rank)} of ${members}`
+    return `${members} ${members === 1 ? "member" : "members"}`
+}
 
 export default function Competitions() {
     const { data, loading, reload } = useAppData()
     const user = useAtomValue(userAtom)
     const [sheetOpen, setSheetOpen] = useState(false)
     const [joinCode, setJoinCode] = useState<string | null>(null)
-    const [filter, setFilter] = useState<Filter>("all")
     const [pendingCode, setPendingCode] = useAtom(pendingJoinCodeAtom)
 
     // A join link opens the sheet on the Join tab with its code filled in.
@@ -51,21 +53,10 @@ export default function Competitions() {
         setJoinCode(null)
     }
 
+    // In the server's order: most recently joined first.
     const competitions = data.competitions
     const meID = user?.userID
-
-    // In the server's order: most recently joined first.
-    const visible = useMemo(
-        () =>
-            competitions.filter((c) => {
-                if (filter === "owned") return c.ownerID === meID
-                if (filter === "joined") return c.ownerID !== meID
-                return true
-            }),
-        [competitions, filter, meID]
-    )
-
-    const narrowed = filter !== "all"
+    const ranks = useCompetitionRanks(competitions, meID)
 
     return (
         <Screen
@@ -74,16 +65,6 @@ export default function Competitions() {
             topRight={<SettingsButton />}
         >
             <PageTitle>Competitions</PageTitle>
-
-            {competitions.length > 0 && (
-                <View className="flex-row">
-                    <Segmented
-                        options={FILTERS}
-                        value={filter}
-                        onChange={setFilter}
-                    />
-                </View>
-            )}
 
             {competitions.length === 0 ? (
                 loading ? (
@@ -100,30 +81,14 @@ export default function Competitions() {
                         }}
                     />
                 )
-            ) : visible.length === 0 ? (
-                <Card className="gap-3 p-5">
-                    <Text className="text-[13px] text-ink-3">
-                        No competitions match this filter.
-                    </Text>
-                    <Button
-                        label="Clear filter"
-                        variant="line"
-                        size="sm"
-                        onPress={() => setFilter("all")}
-                    />
-                </Card>
             ) : (
                 <View className="gap-3">
-                    {narrowed && (
-                        <Mono className="text-xs uppercase text-ink-3">
-                            Showing {visible.length} of {competitions.length}
-                        </Mono>
-                    )}
-                    {visible.map((c) => (
+                    {competitions.map((c) => (
                         <CompetitionRow
                             key={c.id}
                             competition={c}
                             owned={c.ownerID === meID}
+                            rank={ranks[c.id]}
                         />
                     ))}
                 </View>
@@ -158,10 +123,13 @@ export default function Competitions() {
 
 function CompetitionRow({
     competition: c,
-    owned
+    owned,
+    rank
 }: {
     competition: CompetitionSummary
     owned: boolean
+    /** Where the user stands in it; absent until it has loaded. */
+    rank?: CompetitionRank
 }) {
     return (
         <Pressable
@@ -179,61 +147,30 @@ function CompetitionRow({
                         {(c.name[0] ?? "?").toUpperCase()}
                     </Mono>
                 </View>
-                <View className="flex-1 flex-row items-center gap-2">
-                    <Text
-                        numberOfLines={1}
-                        className="shrink text-[16px] font-semibold tracking-tight text-ink"
-                    >
-                        {c.name}
-                    </Text>
-                    {owned && (
-                        <Chip>
-                            <Text className="text-[11px] font-semibold text-ink-2">
-                                Owner
-                            </Text>
-                        </Chip>
+                <View className="flex-1">
+                    <View className="flex-row items-center gap-2">
+                        <Text
+                            numberOfLines={1}
+                            className="shrink text-[16px] font-semibold tracking-tight text-ink"
+                        >
+                            {c.name}
+                        </Text>
+                        {owned && (
+                            <Chip>
+                                <Text className="text-[11px] font-semibold text-ink-2">
+                                    Owner
+                                </Text>
+                            </Chip>
+                        )}
+                    </View>
+                    {rank && (
+                        <Text className="text-[13px] text-ink-3">
+                            {standing(rank)}
+                        </Text>
                     )}
                 </View>
                 <Text className="text-base text-ink-3">›</Text>
             </Card>
         </Pressable>
-    )
-}
-
-/** Compact pill toggle for the filter row. */
-function Segmented<T extends string>({
-    options,
-    value,
-    onChange
-}: {
-    options: { value: T; label: string }[]
-    value: T
-    onChange: (v: T) => void
-}) {
-    return (
-        <View className="flex-row rounded-full bg-bg-sunken p-0.5">
-            {options.map((o) => {
-                const selected = o.value === value
-                return (
-                    <Pressable
-                        key={o.value}
-                        onPress={() => onChange(o.value)}
-                        accessibilityRole="button"
-                        accessibilityState={{ selected }}
-                        className={`rounded-full px-3 py-1.5 ${
-                            selected ? "bg-bg-card" : ""
-                        }`}
-                    >
-                        <Text
-                            className={`text-[12px] font-semibold ${
-                                selected ? "text-ink" : "text-ink-3"
-                            }`}
-                        >
-                            {o.label}
-                        </Text>
-                    </Pressable>
-                )
-            })}
-        </View>
     )
 }

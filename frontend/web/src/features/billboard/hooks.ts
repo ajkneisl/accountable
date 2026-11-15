@@ -1,8 +1,10 @@
 // Small hooks for always-on displays: polling, element size, idle detection,
-// a ticking clock, keeping the screen awake, and which chrome a link hides.
+// a ticking clock, keeping the screen awake, which chrome a link hides, and
+// the light or dark theme.
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
+import { isDisplaySession } from "../../auth"
 
 /** How often billboard data is refetched. */
 const REFRESH_MS = 5 * 60_000
@@ -181,6 +183,112 @@ export function useHiddenChrome() {
 
     return [hidden, toggle] as const
 }
+
+/** How the billboard picks its theme: always one, or by the time of day. */
+export type ThemeMode = "light" | "dark" | "auto"
+
+export const THEME_MODES: ThemeMode[] = ["light", "dark", "auto"]
+
+/** URL parameter naming the theme: `?theme=dark`. */
+const THEME_PARAM = "theme"
+
+/** Where a signed-in browser remembers its choice between pages. */
+const THEME_STORAGE_KEY = "beacc_billboard_theme"
+
+/**
+ * In `auto`, the local hours (24h) the billboard is light: from 7 in the
+ * morning up to 7 in the evening. Outside them it's dark.
+ */
+export const AUTO_LIGHT_FROM = 7
+export const AUTO_LIGHT_UNTIL = 19
+
+function parseTheme(value: string | null): ThemeMode | null {
+    return THEME_MODES.find((mode) => mode === value) ?? null
+}
+
+/** The browser's remembered theme, or null: never set, or storage is off. */
+function storedTheme(): ThemeMode | null {
+    try {
+        return parseTheme(localStorage.getItem(THEME_STORAGE_KEY))
+    } catch {
+        return null
+    }
+}
+
+/**
+ * [search] with this browser's theme added, unless it already names one or the
+ * theme is the default. For a copied display link: a kiosk has no storage to
+ * remember a choice in, only its URL.
+ */
+export function withTheme(search: string): string {
+    const params = new URLSearchParams(search)
+    const stored = storedTheme()
+    if (!params.has(THEME_PARAM) && stored !== null && stored !== "light")
+        params.set(THEME_PARAM, stored)
+    const query = params.toString()
+    return query ? `?${query}` : ""
+}
+
+/**
+ * The billboard's theme, applied to the page while the caller is mounted.
+ *
+ * The mode comes from the URL (`?theme=`), which is all a display has; failing
+ * that, from what this browser last chose; failing that, light. `auto` is dark
+ * outside {@link AUTO_LIGHT_FROM}–{@link AUTO_LIGHT_UNTIL} and is rechecked
+ * every minute, so a display left up turns over by itself.
+ */
+export function useBillboardTheme() {
+    const location = useLocation()
+    const navigate = useNavigate()
+    const [stored, setStored] = useState(storedTheme)
+    const fromUrl = parseTheme(
+        new URLSearchParams(location.search).get(THEME_PARAM)
+    )
+    const mode: ThemeMode = fromUrl ?? stored ?? "light"
+
+    const hour = new Date(useNow(60_000)).getHours()
+    const dark =
+        mode === "dark" ||
+        (mode === "auto" &&
+            (hour < AUTO_LIGHT_FROM || hour >= AUTO_LIGHT_UNTIL))
+
+    // Before paint, so a dark billboard never flashes light first. The theme
+    // is the page's, set on <html>; leaving the billboard hands it back.
+    useLayoutEffect(() => {
+        const root = document.documentElement
+        if (dark) root.dataset.theme = "dark"
+        else delete root.dataset.theme
+        return () => {
+            delete root.dataset.theme
+        }
+    }, [dark])
+
+    const setMode = (next: ThemeMode) => {
+        // A display runs off its link alone, without storage.
+        if (!isDisplaySession) {
+            try {
+                localStorage.setItem(THEME_STORAGE_KEY, next)
+            } catch {
+                // No storage: the choice lasts until the page is left.
+            }
+        }
+        setStored(next)
+        // The URL wins over storage, so one that names a theme has to follow.
+        if (fromUrl !== null || isDisplaySession) {
+            const params = new URLSearchParams(location.search)
+            params.set(THEME_PARAM, next)
+            // Keep the fragment: on a display it carries the link's token.
+            navigate(
+                { search: params.toString(), hash: location.hash },
+                { replace: true }
+            )
+        }
+    }
+
+    return { mode, dark, setMode }
+}
+
+export type BillboardTheme = ReturnType<typeof useBillboardTheme>
 
 /** Whether the document is in fullscreen, plus a toggle. */
 export function useFullscreen() {

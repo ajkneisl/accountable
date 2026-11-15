@@ -41,7 +41,16 @@ export type IntegrationHistoryDay =
       }
     | { type: "apple_sleep"; date: number; minutes: number }
     | { type: "apple_steps"; date: number; steps: number }
+    | { type: "apple_distance"; date: number; meters: number }
     | { type: "screen_time"; date: number; minutes: number }
+    | {
+          type: "chess_com"
+          date: number
+          /** Games finished that day; the ones neither won nor drawn were lost. */
+          games: number
+          wins: number
+          draws: number
+      }
 
 /**
  * GET /api/integrations/{name}/history?days={n} — stored per-day data for the last {days}
@@ -291,6 +300,34 @@ export function importSteps(
         config,
         "POST",
         "/integrations/apple_steps/import",
+        { days },
+        { auth: true }
+    )
+}
+
+/**
+ * One day's Apple Health walking and running distance, in metres. `day` is any
+ * ms epoch inside that day (the app sends local noon) and decides which local
+ * day the total counts toward.
+ */
+export interface ImportedDistanceDay {
+    day: number
+    meters: number
+}
+
+/**
+ * POST /api/integrations/apple_distance/import — store per-day distance totals
+ * (at most 400 per call). Each day replaces what was stored for it, so this is
+ * safe to repeat. Resolves to how many days were written.
+ */
+export function importDistance(
+    config: ApiConfig,
+    days: ImportedDistanceDay[]
+): Promise<{ imported: number }> {
+    return request(
+        config,
+        "POST",
+        "/integrations/apple_distance/import",
         { days },
         { auth: true }
     )

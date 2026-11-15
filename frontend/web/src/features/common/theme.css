@@ -23,10 +23,54 @@
 
     --indigo: oklch(0.42 0.16 270);
 
+    /* The habit and member accents beyond the core palette. */
+    --amber: #f5b82e;
+    --teal: #14a39a;
+    --sky: #4aa8f0;
+    --plum: #8e3fa8;
+
+    /* What reads on top of a fill (a check mark, a rank number). These two
+       don't change with the theme, because most fills don't. */
+    --on-light-fill: #16100c;
+    --on-dark-fill: #f8f5ef;
+    /* The fills that do change take their mark with them. */
+    --on-ink: var(--on-dark-fill);
+    --on-indigo: var(--on-dark-fill);
+
     --radius-sm: 6px;
     --radius: 10px;
     --radius-lg: 16px;
     --radius-xl: 24px;
+}
+
+/* Dark theme, mirroring the app's dark palette. Only the billboard turns it on,
+   by setting data-theme on <html> while it's showing; every component reads the
+   same tokens, so nothing else needs to know. */
+:root[data-theme="dark"] {
+    color-scheme: dark;
+
+    --bg: #16100c;
+    --bg-card: #211a15;
+    --bg-sunken: #2b2520;
+    --ink: #f8f5ef;
+    --ink-2: #d3cbc3;
+    --ink-3: #958c84;
+    --line: #3d3530;
+    --line-2: #2f2924;
+
+    --lime-ink: #c9f592;
+    --lime-soft: #2c3b14;
+
+    --coral-soft: #3f2015;
+    --coral-ink: #ffb49a;
+
+    /* The light indigo and plum all but vanish on the dark background. */
+    --indigo: #8e9cf0;
+    --plum: #b267cc;
+
+    /* Ink is now near-white and indigo pale, so a dark mark reads on them. */
+    --on-ink: var(--on-light-fill);
+    --on-indigo: var(--on-light-fill);
 }
 
 @theme {
@@ -49,9 +93,12 @@
 
     --color-indigo: var(--indigo);
 
-    --shadow-sm: 0 1px 2px rgba(20, 16, 8, 0.04), 0 1px 1px rgba(20, 16, 8, 0.02);
-    --shadow-md: 0 4px 16px rgba(20, 16, 8, 0.06), 0 1px 3px rgba(20, 16, 8, 0.04);
-    --shadow-lg: 0 20px 60px -10px rgba(20, 16, 8, 0.12),
+    --shadow-sm:
+        0 1px 2px rgba(20, 16, 8, 0.04), 0 1px 1px rgba(20, 16, 8, 0.02);
+    --shadow-md:
+        0 4px 16px rgba(20, 16, 8, 0.06), 0 1px 3px rgba(20, 16, 8, 0.04);
+    --shadow-lg:
+        0 20px 60px -10px rgba(20, 16, 8, 0.12),
         0 8px 24px -8px rgba(20, 16, 8, 0.08);
 }
 
@@ -65,7 +112,11 @@ body {
 }
 
 .acc {
-    font-family: "Geist", -apple-system, BlinkMacSystemFont, system-ui,
+    font-family:
+        "Geist",
+        -apple-system,
+        BlinkMacSystemFont,
+        system-ui,
         sans-serif;
     color: var(--ink);
     background: var(--bg);
@@ -99,7 +150,9 @@ body {
         height: 14px;
         border-radius: 50%;
         background: var(--lime);
-        box-shadow: 0 0 0 3px var(--bg-card), 0 0 0 4px var(--ink);
+        box-shadow:
+            0 0 0 3px var(--bg-card),
+            0 0 0 4px var(--ink);
         position: relative;
     }
     .acc-logo .dot::after {
@@ -124,7 +177,10 @@ body {
         font-weight: 500;
         font-size: 15px;
         line-height: 1;
-        transition: transform 0.12s, background 0.12s, color 0.12s,
+        transition:
+            transform 0.12s,
+            background 0.12s,
+            color 0.12s,
             box-shadow 0.12s;
         white-space: nowrap;
         text-decoration: none;
@@ -162,6 +218,13 @@ body {
     .btn-sm {
         padding: 8px 12px;
         font-size: 13px;
+    }
+    /* The two hovers written as fixed darks need a light counterpart. */
+    :root[data-theme="dark"] .btn-primary:hover {
+        background: var(--ink-2);
+    }
+    :root[data-theme="dark"] .btn-ghost:hover {
+        background: rgba(255, 255, 255, 0.08);
     }
     .btn-lg {
         padding: 16px 26px;

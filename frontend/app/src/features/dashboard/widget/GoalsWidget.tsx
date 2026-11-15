@@ -311,7 +311,7 @@ const GoalsWidget = (
                 </Text>
                 <Spacer />
                 <Text modifiers={[mono(12), foregroundStyle(ink3)]}>
-                    {`${props.onPace}/${props.goals.length} on pace`}
+                    {`${props.onPace} of ${props.goals.length} on pace`}
                 </Text>
             </HStack>
             {rows}

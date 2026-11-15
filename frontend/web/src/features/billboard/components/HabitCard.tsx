@@ -1,9 +1,11 @@
-// One habit on the billboard overview: name, streak, today's state, and its
-// heatmap. Read-only — check-ins happen in the app.
+// One habit on the billboard overview, laid out as in the app: today's state
+// and the name, the streak as the figure on the right (nothing there without
+// one), the heatmap, and the days done as a line under it. Read-only —
+// check-ins happen in the app.
 
 import { Link } from "react-router-dom"
 import type { Habit } from "@shared/index"
-import { streakLabel } from "../format"
+import { daysDone } from "../format"
 import { HABIT_PALETTE } from "../grid"
 import { Heatmap } from "./Heatmap"
 import { CheckDot } from "./primitives"
@@ -26,16 +28,26 @@ export function HabitCard({
                 <CheckDot
                     done={doneToday}
                     fill={palette.fill}
-                    dark={palette.dark}
+                    on={palette.on}
                 />
-                <div className="min-w-0 flex-1">
-                    <div className="truncate text-[1.15em] font-semibold">
-                        {habit.name}
-                    </div>
-                    <div className="mono text-[0.85em] text-ink-3">
-                        {streakLabel(habit)}
-                    </div>
+                <div className="min-w-0 flex-1 truncate text-[1.15em] font-semibold tracking-[-0.01em]">
+                    {habit.name}
                 </div>
+                {/* No streak, no figure: a bare 0 would only fill the corner. */}
+                {habit.streak > 0 && (
+                    <div
+                        className="text-right"
+                        role="img"
+                        aria-label={`${habit.streak}-day streak`}
+                    >
+                        <div className="mono text-[2em] font-bold leading-none tracking-[-0.03em]">
+                            {habit.streak}
+                        </div>
+                        <div className="text-[0.8em] text-ink-3">
+                            day streak
+                        </div>
+                    </div>
+                )}
                 <Link
                     to={`/billboard/habits/${habit.id}`}
                     className="btn btn-line btn-sm"
@@ -51,6 +63,10 @@ export function HabitCard({
                 fill={palette.fill}
                 cell={13}
             />
+
+            <div className="mono text-center text-[0.85em]">
+                {daysDone(habit.total)}
+            </div>
         </div>
     )
 }

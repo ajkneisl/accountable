@@ -53,12 +53,13 @@ export function Dot({
 export function CheckDot({
     done,
     fill,
-    dark,
+    on,
     size = "2.7em"
 }: {
     done: boolean
     fill: string
-    dark: boolean
+    /** The color the check is drawn in, over [fill]. */
+    on: string
     size?: string
 }) {
     return (
@@ -78,7 +79,7 @@ export function CheckDot({
                     <path
                         d="M5 12.5l4.5 4.5L19 7.5"
                         fill="none"
-                        stroke={dark ? "var(--bg)" : "var(--ink)"}
+                        stroke={on}
                         strokeWidth={3}
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -86,6 +87,35 @@ export function CheckDot({
                 </svg>
             )}
         </div>
+    )
+}
+
+/**
+ * The mark inside a `.bar` for where its fill should have reached by now. It's
+ * drawn in whichever color reads against what's under it — [on] where the fill
+ * has reached it, ink over the bare track — so it shows on any fill, in either
+ * theme.
+ */
+export function PaceTick({
+    at,
+    filled,
+    on
+}: {
+    /** Position along the bar, 0–100. */
+    at: number
+    /** Whether the bar's fill has reached the tick. */
+    filled: boolean
+    /** A color that reads on top of the bar's fill. */
+    on: string
+}) {
+    return (
+        <div
+            className="absolute inset-y-0 w-[max(2px,0.14em)] -translate-x-1/2"
+            style={{
+                left: `${Math.min(100, Math.max(0, at))}%`,
+                background: filled ? on : "var(--ink)"
+            }}
+        />
     )
 }
 
