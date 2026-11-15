@@ -1,7 +1,8 @@
 // Small hooks for always-on displays: polling, element size, idle detection,
-// a ticking clock, and keeping the screen awake.
+// a ticking clock, keeping the screen awake, and which chrome a link hides.
 
 import { useEffect, useRef, useState } from "react"
+import { useLocation, useNavigate } from "react-router-dom"
 
 /** How often billboard data is refetched. */
 const REFRESH_MS = 5 * 60_000
@@ -142,6 +143,43 @@ export function useWakeLock() {
             void lock?.release()
         }
     }, [])
+}
+
+/** A part of a widget's chrome that can be hidden: the title row, or the clock. */
+export type Chrome = "header" | "time"
+
+/** URL parameter listing hidden chrome: `?hide=header&hide=time`. */
+const HIDE_PARAM = "hide"
+
+/**
+ * Which chrome the URL hides, plus a toggle. It lives in the query string, not
+ * storage, so it travels with a copied display link — the only state a kiosk has.
+ */
+export function useHiddenChrome() {
+    const location = useLocation()
+    const navigate = useNavigate()
+
+    // Comma lists are accepted too, for links typed by hand: `?hide=header,time`.
+    const hidden = new Set(
+        new URLSearchParams(location.search)
+            .getAll(HIDE_PARAM)
+            .flatMap((value) => value.split(","))
+    )
+
+    const toggle = (part: Chrome) => {
+        const next = new Set(hidden)
+        if (!next.delete(part)) next.add(part)
+        const params = new URLSearchParams(location.search)
+        params.delete(HIDE_PARAM)
+        next.forEach((value) => params.append(HIDE_PARAM, value))
+        // Keep the fragment: on a display it carries the link's token.
+        navigate(
+            { search: params.toString(), hash: location.hash },
+            { replace: true }
+        )
+    }
+
+    return [hidden, toggle] as const
 }
 
 /** Whether the document is in fullscreen, plus a toggle. */

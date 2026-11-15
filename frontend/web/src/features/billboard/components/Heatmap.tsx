@@ -1,4 +1,5 @@
-// GitHub-style, read-only heatmap for one habit: week columns, Mon→Sun rows.
+// GitHub-style, read-only heatmap for one habit: week columns, Mon→Sun rows,
+// with Mon / Wed / Fri labelled down the left edge.
 //
 // Two sizing modes:
 // - fixed [cell]: px-sized cells, as many whole weeks as fit the width (cards)
@@ -7,7 +8,7 @@
 
 import type { CSSProperties } from "react"
 import { useElementSize } from "../hooks"
-import { HABIT_WEEKS, buildGrid, monthLabel } from "../grid"
+import { HABIT_WEEKS, buildGrid, monthLabel, weekdayLabel } from "../grid"
 
 /** Gap between fixed-size cells, in px. */
 const GAP = 3
@@ -17,6 +18,15 @@ const GAP_RATIO = 0.2
 
 /** Fit mode: month label row height, in cells. */
 const LABEL_RATIO = 1.4
+
+/** Label text size, in cells. */
+const FONT_RATIO = 0.8
+
+/** Weekday label column width, in cells: three mono characters and a little air. */
+const DAY_RATIO = 1.8
+
+/** Rows that get a weekday label: Mon, Wed, Fri. */
+const DAY_ROWS = [0, 2, 4]
 
 export function Heatmap({
     start,
@@ -43,7 +53,7 @@ export function Heatmap({
     if (fit) {
         cols = weeks
         const raw = Math.min(
-            width / (cols + (cols - 1) * GAP_RATIO),
+            width / (DAY_RATIO + cols + cols * GAP_RATIO),
             height / (LABEL_RATIO + 7 + 7 * GAP_RATIO)
         )
         size = Math.floor(raw)
@@ -53,9 +63,13 @@ export function Heatmap({
         gap = GAP
         cols = Math.min(
             weeks,
-            Math.max(1, Math.floor((width + gap) / (size + gap)))
+            Math.max(
+                1,
+                Math.floor((width - Math.ceil(size * DAY_RATIO)) / (size + gap))
+            )
         )
     }
+    const dayWidth = Math.ceil(size * DAY_RATIO)
     const labelHeight = Math.floor(size * LABEL_RATIO)
     const radius = Math.max(2, Math.round(size * 0.22))
     const ring = Math.max(1.5, size * 0.12)
@@ -73,6 +87,29 @@ export function Heatmap({
             style={fit ? undefined : { height: 7 * size + 6 * gap }}
         >
             <div className="flex" style={{ gap }}>
+                {grid.length > 0 && (
+                    <div
+                        className="mono flex shrink-0 flex-col whitespace-nowrap leading-none text-ink-3"
+                        style={{
+                            gap,
+                            width: dayWidth,
+                            fontSize: size * FONT_RATIO
+                        }}
+                    >
+                        {fit && <div style={{ height: labelHeight }} />}
+                        {Array.from({ length: 7 }, (_, row) => (
+                            <div
+                                key={row}
+                                className="flex items-center"
+                                style={{ height: size }}
+                            >
+                                {DAY_ROWS.includes(row)
+                                    ? weekdayLabel(row)
+                                    : null}
+                            </div>
+                        ))}
+                    </div>
+                )}
                 {grid.map((week, c) => {
                     const month = week[0].date.slice(0, 7)
                     const newMonth =
@@ -89,7 +126,7 @@ export function Heatmap({
                                     style={{
                                         height: labelHeight,
                                         width: size,
-                                        fontSize: size * 0.8
+                                        fontSize: size * FONT_RATIO
                                     }}
                                 >
                                     {newMonth ? monthLabel(week[0].date) : null}

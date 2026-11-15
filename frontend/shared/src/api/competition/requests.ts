@@ -71,6 +71,22 @@ export interface CompetitionWeek {
     goals: CompetitionGoalBoard[]
 }
 
+/** One member's tally on a competition's leaderboard. */
+export interface CompetitionLeader {
+    userID: string
+    username: string
+    /** Completed weeks they finished first in the standings; a tie at the top counts for each. */
+    weeksWon: number
+}
+
+/** How often each member has finished a week first in the standings. */
+export interface CompetitionLeaderboard {
+    /** Completed weeks counted, since the competition began. */
+    weeks: number
+    /** Every member, most weeks won first. */
+    members: CompetitionLeader[]
+}
+
 export interface CreateCompetitionRequest {
     name: string
 }
@@ -115,6 +131,20 @@ export function getCompetitionWeek(
         config,
         "GET",
         `/competitions/${id}/week?offset=${offset}`,
+        undefined,
+        { auth: true }
+    )
+}
+
+/** GET /api/competitions/{id}/leaderboard — weeks each member has finished first. */
+export function getCompetitionLeaderboard(
+    config: ApiConfig,
+    id: string
+): Promise<CompetitionLeaderboard> {
+    return request(
+        config,
+        "GET",
+        `/competitions/${id}/leaderboard`,
         undefined,
         { auth: true }
     )

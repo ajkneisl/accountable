@@ -36,7 +36,7 @@ function RequireAuth() {
     const user = useAtomValue(userAtom)
     const location = useLocation()
     if (!user) {
-        const next = encodeURIComponent(location.pathname)
+        const next = encodeURIComponent(location.pathname + location.search)
         return <Navigate to={`/login?next=${next}`} replace />
     }
     return <Outlet />

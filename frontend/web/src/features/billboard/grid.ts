@@ -67,6 +67,15 @@ export function monthLabel(date: string): string {
     })
 }
 
+/** Short weekday name ("Mon") for a grid row, 0 = Monday … 6 = Sunday. */
+export function weekdayLabel(row: number): string {
+    // 2024-01-01 was a Monday.
+    return new Date(Date.UTC(2024, 0, 1 + row)).toLocaleDateString(undefined, {
+        weekday: "short",
+        timeZone: "UTC"
+    })
+}
+
 /** Fill and ink for a habit's accent. `dark` fills need a light check mark. */
 export const HABIT_PALETTE: Record<
     HabitColor,

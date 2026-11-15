@@ -133,6 +133,19 @@ data class CompetitionWeekResponse(
     val goals: List<CompetitionGoalBoard>,
 )
 
+/** One member's tally on the leaderboard: the completed weeks they finished first. */
+@Serializable
+data class CompetitionLeaderView(val userID: String, val username: String, val weeksWon: Int)
+
+/** Leaderboard returned by [COMPETITION_LEADERBOARD_ROUTE]. */
+@Serializable
+data class CompetitionLeaderboardResponse(
+    /** Completed weeks counted, since the competition began. */
+    val weeks: Int,
+    /** Every member, most weeks won first. */
+    val members: List<CompetitionLeaderView>,
+)
+
 /** Longest name the `competitions.name` column holds. */
 private const val NAME_MAX_LENGTH = 64
 
@@ -284,6 +297,36 @@ private val COMPETITION_WEEK_ROUTE: suspend RoutingContext.() -> Unit = {
             )
         }
 
+    call.respond(response)
+}
+
+/**
+ * GET /api/competitions/{id}/leaderboard
+ *
+ * How many completed weeks each member has finished first in the standings; see [leaderboardFor].
+ * The same for every member, so it's cached per competition.
+ */
+private val COMPETITION_LEADERBOARD_ROUTE: suspend RoutingContext.() -> Unit = {
+    val competition = call.competitionForMember(call.userID())
+    val response =
+        Cache.cachedForCompetition(
+            competition.id,
+            "leaderboard",
+            CompetitionLeaderboardResponse.serializer(),
+        ) {
+            val board = leaderboardFor(competition, System.currentTimeMillis())
+            CompetitionLeaderboardResponse(
+                weeks = board.weeks,
+                members =
+                    board.entries.map {
+                        CompetitionLeaderView(
+                            userID = it.userID.toString(),
+                            username = findUserByID(it.userID)?.username ?: it.userID.toString(),
+                            weeksWon = it.weeksWon,
+                        )
+                    },
+            )
+        }
     call.respond(response)
 }
 
@@ -469,6 +512,7 @@ fun Route.competitionRoutes() {
             get("", COMPETITION_LIST_ROUTE)
             post("/join", COMPETITION_JOIN_ROUTE)
             get("/{id}/week", COMPETITION_WEEK_ROUTE)
+            get("/{id}/leaderboard", COMPETITION_LEADERBOARD_ROUTE)
             get("/{id}", COMPETITION_DETAIL_ROUTE)
             patch("/{id}", COMPETITION_UPDATE_ROUTE)
             delete("/{id}", COMPETITION_DELETE_ROUTE)

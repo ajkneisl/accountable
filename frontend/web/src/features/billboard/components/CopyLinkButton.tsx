@@ -15,7 +15,8 @@ type Status = "idle" | "copied" | "failed"
  */
 export function CopyLinkButton() {
     const api = useApi()
-    const { pathname } = useLocation()
+    // The query rides along so a display opens with the same chrome hidden.
+    const { pathname, search } = useLocation()
     const [status, setStatus] = useState<Status>("idle")
 
     if (isDisplaySession) return null
@@ -24,7 +25,7 @@ export function CopyLinkButton() {
         let next: Status = "failed"
         try {
             const { token } = await getDisplayToken(api)
-            const link = displayLink(pathname, token)
+            const link = displayLink(pathname + search, token)
             try {
                 await navigator.clipboard.writeText(link)
             } catch {
