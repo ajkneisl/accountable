@@ -134,7 +134,82 @@ function Standings({
     )
 }
 
-/** Weeks each member has finished first, with their share of the weeks counted. */
+type LeaderboardEntry = CompetitionLeaderboard["members"][number]
+
+/** How many members can stand on the podium. */
+const PODIUM_PLACES = 3
+
+/**
+ * A podium block's height by rank rather than by position, so members level on
+ * weeks stand level.
+ */
+const BLOCK_HEIGHT: Record<number, string> = {
+    1: "5.6em",
+    2: "4em",
+    3: "2.8em"
+}
+
+/** One member on the podium: their name and weeks over a block in their color. */
+function PodiumPlace({
+    entry,
+    rank,
+    color,
+    isMe
+}: {
+    entry: LeaderboardEntry
+    rank: number
+    color: string
+    isMe: boolean
+}) {
+    const first = rank === 1
+    return (
+        <div className="flex min-w-0 max-w-[11em] flex-1 flex-col items-center">
+            <span
+                className={`max-w-full truncate font-semibold ${
+                    first ? "text-[1.25em]" : "text-[1.05em]"
+                }`}
+            >
+                {entry.username}
+            </span>
+            <span className="mono text-[0.85em] text-ink-3">
+                <b
+                    className={`text-ink ${
+                        first ? "text-[2em]" : "text-[1.5em]"
+                    }`}
+                >
+                    {entry.weeksWon}
+                </b>
+                {entry.weeksWon === 1 ? " wk" : " wks"}
+            </span>
+            <div
+                className="mt-[0.5em] flex w-full flex-col items-center rounded-t-[0.7em] pt-[0.45em] leading-none"
+                style={{
+                    height: BLOCK_HEIGHT[rank] ?? BLOCK_HEIGHT[3],
+                    background: color,
+                    color: onMemberFill(color)
+                }}
+            >
+                <span
+                    className={`font-bold ${
+                        first ? "text-[1.7em]" : "text-[1.35em]"
+                    }`}
+                >
+                    {rank}
+                </span>
+                {isMe && (
+                    <span className="mt-[0.35em] text-[0.75em] opacity-70">
+                        you
+                    </span>
+                )}
+            </div>
+        </div>
+    )
+}
+
+/**
+ * Weeks each member has finished first: the top three on a podium, then
+ * everyone else with their share of the weeks counted.
+ */
 function Leaderboard({
     board,
     colorMap,
@@ -144,24 +219,48 @@ function Leaderboard({
     colorMap: Record<string, string>
     meID?: string
 }) {
+    // Members level on weeks share a rank.
+    const rankOf = (m: LeaderboardEntry) =>
+        1 + board.members.filter((o) => o.weeksWon > m.weeksWon).length
+    // Only members who've won a week stand on the podium, so nobody's up there
+    // on nothing. The list arrives sorted by weeks won.
+    const podium = board.members
+        .filter((m) => m.weeksWon > 0)
+        .slice(0, PODIUM_PLACES)
+    const rest = board.members.slice(podium.length)
+    // First in the middle once all three places are taken.
+    const placed =
+        podium.length === PODIUM_PLACES
+            ? [podium[1], podium[0], podium[2]]
+            : podium
+
     return (
         <>
-            {board.members.map((m, i) => {
+            {placed.length > 0 && (
+                <div className="flex shrink-0 items-end justify-center gap-[0.9em] px-[1.4em] pt-[0.8em]">
+                    {placed.map((m) => (
+                        <PodiumPlace
+                            key={m.userID}
+                            entry={m}
+                            rank={rankOf(m)}
+                            color={colorMap[m.userID] ?? FALLBACK_BAR_COLOR}
+                            isMe={m.userID === meID}
+                        />
+                    ))}
+                </div>
+            )}
+            {rest.map((m, i) => {
                 const color = colorMap[m.userID] ?? FALLBACK_BAR_COLOR
                 const isMe = m.userID === meID
                 return (
                     <MemberRow
                         key={m.userID}
-                        // Members level on weeks share a rank.
-                        rank={
-                            1 +
-                            board.members.filter((o) => o.weeksWon > m.weeksWon)
-                                .length
-                        }
+                        rank={rankOf(m)}
                         color={color}
                         username={m.username}
                         isMe={isMe}
-                        divided={i > 0}
+                        // The first row is ruled off from the podium above it.
+                        divided={i > 0 || placed.length > 0}
                         value={
                             <>
                                 <b className="text-ink">{m.weeksWon}</b>

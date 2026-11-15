@@ -1,18 +1,94 @@
 // A competition's all-time leaderboard page: how many completed weeks each
 // member has finished first in the standings. The server does the counting,
-// since it spans every week since the competition began.
+// since it spans every week since the competition began. The top three stand
+// on a podium; everyone else is listed underneath.
 
 import { useEffect, useState } from "react"
-import { Text } from "react-native"
+import { Text, View } from "react-native"
 import {
     type CompetitionLeaderboard,
     getCompetitionLeaderboard,
     useApi
 } from "@shared/index"
-import { useColors } from "../../../theme"
+import { useColors, useScheme } from "../../../theme"
 import { Bar, Card, Mono } from "../../../ui/primitives"
-import { FALLBACK_BAR_COLOR } from "../colors"
+import { FALLBACK_BAR_COLOR, onMemberFill } from "../colors"
 import { MemberRow } from "./MemberRow"
+
+type Entry = CompetitionLeaderboard["members"][number]
+
+/** How many members can stand on the podium. */
+const PODIUM_PLACES = 3
+
+/**
+ * A podium block's height by rank rather than by position, so members level on
+ * weeks stand level.
+ */
+const BLOCK_HEIGHT: Record<number, number> = { 1: 108, 2: 76, 3: 52 }
+
+/** One member on the podium: their name and weeks over a block in their color. */
+function PodiumPlace({
+    entry,
+    rank,
+    color,
+    isMe
+}: {
+    entry: Entry
+    rank: number
+    color: string
+    isMe: boolean
+}) {
+    const scheme = useScheme()
+    const first = rank === 1
+    return (
+        <View className="flex-1 items-center" style={{ maxWidth: 124 }}>
+            <Text
+                numberOfLines={1}
+                className={`font-semibold text-ink ${
+                    first ? "text-[17px]" : "text-[15px]"
+                }`}
+            >
+                {entry.username}
+            </Text>
+            <Mono className="mt-0.5 text-[12px] text-ink-3">
+                <Text
+                    className={`font-bold text-ink ${
+                        first ? "text-[26px]" : "text-[19px]"
+                    }`}
+                >
+                    {entry.weeksWon}
+                </Text>
+                {entry.weeksWon === 1 ? " wk" : " wks"}
+            </Mono>
+            <View
+                style={{
+                    height: BLOCK_HEIGHT[rank] ?? BLOCK_HEIGHT[3],
+                    backgroundColor: color,
+                    borderTopLeftRadius: 10,
+                    borderTopRightRadius: 10
+                }}
+                className="mt-2.5 w-full items-center pt-2.5"
+            >
+                <Text
+                    style={{ color: onMemberFill(color, scheme) }}
+                    className={`font-bold ${
+                        first ? "text-[24px]" : "text-[19px]"
+                    }`}
+                >
+                    {rank}
+                </Text>
+                {isMe && (
+                    <Text
+                        style={{ color: onMemberFill(color, scheme) }}
+                        className="text-[11px] opacity-70"
+                    >
+                        you
+                    </Text>
+                )}
+            </View>
+        </View>
+    )
+}
 
 export function LeaderboardPage({
     competitionId,
@@ -58,23 +134,48 @@ export function LeaderboardPage({
             </Card>
         )
 
+    // Members level on weeks share a rank.
+    const rankOf = (m: Entry) =>
+        1 + board.members.filter((o) => o.weeksWon > m.weeksWon).length
+    const colorOf = (m: Entry) => colorMap[m.userID] ?? FALLBACK_BAR_COLOR
+    // Only members who've won a week stand on the podium, so nobody's up there
+    // on nothing. The list arrives sorted by weeks won.
+    const podium = board.members
+        .filter((m) => m.weeksWon > 0)
+        .slice(0, PODIUM_PLACES)
+    const rest = board.members.slice(podium.length)
+    // First in the middle once all three places are taken.
+    const placed =
+        podium.length === PODIUM_PLACES
+            ? [podium[1], podium[0], podium[2]]
+            : podium
+
     return (
         <Card className="overflow-hidden">
-            {board.members.map((m, i) => {
+            {placed.length > 0 && (
+                <View className="flex-row items-end justify-center gap-3 px-5 pt-6">
+                    {placed.map((m) => (
+                        <PodiumPlace
+                            key={m.userID}
+                            entry={m}
+                            rank={rankOf(m)}
+                            color={colorOf(m)}
+                            isMe={m.userID === meID}
+                        />
+                    ))}
+                </View>
+            )}
+            {rest.map((m, i) => {
                 const isMe = m.userID === meID
                 return (
                     <MemberRow
                         key={m.userID}
-                        // Members level on weeks share a rank.
-                        rank={
-                            1 +
-                            board.members.filter((o) => o.weeksWon > m.weeksWon)
-                                .length
-                        }
-                        color={colorMap[m.userID] ?? FALLBACK_BAR_COLOR}
+                        rank={rankOf(m)}
+                        color={colorOf(m)}
                         username={m.username}
                         isMe={isMe}
-                        divided={i > 0}
+                        // The first row is ruled off from the podium above it.
+                        divided={i > 0 || placed.length > 0}
                         value={
                             <Mono className="text-[14px] text-ink-3">
                                 <Text className="font-bold text-ink">
@@ -91,7 +192,7 @@ export function LeaderboardPage({
                                     ? (m.weeksWon / board.weeks) * 100
                                     : 0
                             }
-                            color={colorMap[m.userID] ?? FALLBACK_BAR_COLOR}
+                            color={colorOf(m)}
                             // The highlighted row is already the track color.
                             track={isMe ? colors.line : undefined}
                             height={8}
