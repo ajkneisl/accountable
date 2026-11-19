@@ -25,6 +25,8 @@ export interface Habit {
     streak: number
     /** Days done within the window. */
     total: number
+    /** Weekdays the habit is due, 0 = Monday. Other days don't affect its streak. */
+    requiredDays?: number[]
 }
 
 /** Every habit over a shared window, so all heatmaps line up column for column. */
@@ -39,12 +41,15 @@ export interface HabitsResponse {
 export interface CreateHabitRequest {
     name: string
     color: HabitColor
+    /** Weekdays the habit is due, 0 = Monday. Omit for every day. */
+    requiredDays?: number[]
 }
 
 /** Fields to change on a habit; omitted ones are left as they are. */
 export interface UpdateHabitRequest {
     name?: string
     color?: HabitColor
+    requiredDays?: number[]
 }
 
 const windowQuery = (days?: number) => (days ? `?days=${days}` : "")
@@ -70,7 +75,7 @@ export function createHabit(
     })
 }
 
-/** PATCH /api/habits/{id} — rename and/or recolor a habit; resolves to the refreshed list. */
+/** PATCH /api/habits/{id} — rename, recolor and/or reschedule a habit; resolves to the refreshed list. */
 export function updateHabit(
     config: ApiConfig,
     id: string,

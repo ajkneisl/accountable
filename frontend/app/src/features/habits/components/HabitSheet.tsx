@@ -1,13 +1,19 @@
-// Habit sheet: a name and an accent color, for a new habit or an existing one.
-// Habits are simple daily check-offs, so there's no cadence or target to
-// choose. Editing also carries the habit's delete button — it lives here
+// Habit sheet: a name, an accent color and the weekdays it's due, for a new
+// habit or an existing one. Habits are simple check-offs, so there's no target
+// to choose. Editing also carries the habit's delete button — it lives here
 // rather than on the card so it can't be hit by accident.
 
 import { useState } from "react"
-import { ApiError, type Habit, type HabitColor } from "@shared/index"
+import {
+    ApiError,
+    EVERY_DAY,
+    type Habit,
+    type HabitColor
+} from "@shared/index"
 import { confirm } from "../../../ui/confirm"
 import { Sheet, SheetField } from "../../../ui/Sheet"
 import { Button, ErrorList, Input } from "../../../ui/primitives"
+import { RequiredDaysField } from "../../dashboard/components/RequiredDaysField"
 import { ColorPicker } from "./ColorPicker"
 
 /** Mirrors HABIT_NAME_MAX on the backend. */
@@ -28,11 +34,18 @@ export function HabitSheet({
     /** The habit being edited; omitted when creating one. */
     habit?: Habit
     onClose: () => void
-    onSave: (name: string, color: HabitColor) => Promise<void>
+    onSave: (
+        name: string,
+        color: HabitColor,
+        requiredDays: number[]
+    ) => Promise<void>
     onDelete?: () => Promise<void>
 }) {
     const [name, setName] = useState(habit?.name ?? "")
     const [color, setColor] = useState<HabitColor>(habit?.color ?? "LIME")
+    const [requiredDays, setRequiredDays] = useState(
+        habit?.requiredDays ?? EVERY_DAY
+    )
     const [submitting, setSubmitting] = useState(false)
     const [deleting, setDeleting] = useState(false)
     const [errors, setErrors] = useState<string[]>([])
@@ -46,7 +59,7 @@ export function HabitSheet({
         setErrors([])
         setSubmitting(true)
         try {
-            await onSave(trimmed, color)
+            await onSave(trimmed, color, requiredDays)
             onClose()
         } catch (err) {
             setErrors(messages(err))
@@ -81,8 +94,8 @@ export function HabitSheet({
             title={habit ? "Edit habit" : "New habit"}
             description={
                 habit
-                    ? "Rename it or change its color."
-                    : "Something you want to do every day."
+                    ? "Rename it, change its color or its days."
+                    : "Something you want to do regularly."
             }
             onClose={onClose}
             action={{
@@ -121,6 +134,11 @@ export function HabitSheet({
                     onSubmitEditing={submit}
                 />
             </SheetField>
+
+            <RequiredDaysField
+                value={requiredDays}
+                onChange={setRequiredDays}
+            />
 
             <SheetField label="Color">
                 <ColorPicker value={color} onChange={setColor} />

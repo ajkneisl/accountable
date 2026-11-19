@@ -5,7 +5,7 @@
 // opens the edit sheet (rename, recolor, delete).
 
 import { Pressable, Text, View } from "react-native"
-import type { Habit } from "@shared/index"
+import { type Habit, requiredDaysLabel } from "@shared/index"
 import { onFill } from "../../../theme"
 import { CheckIcon } from "../../../ui/icons"
 import { Button, Card, Mono } from "../../../ui/primitives"
@@ -32,6 +32,8 @@ export function HabitCard({
     const doneToday = habit.done[habit.done.length - 1] ?? false
     // Dark fills need a light check to stay visible.
     const checkColor = palette.dark ? onFill.dark : onFill.light
+    const days = habit.requiredDays
+    const schedule = days && days.length < 7 ? requiredDaysLabel(days) : null
 
     return (
         <Card className="gap-4 p-5">
@@ -61,12 +63,19 @@ export function HabitCard({
                             <CheckIcon color={checkColor} size={20} />
                         )}
                     </View>
-                    <Text
-                        numberOfLines={2}
-                        className="flex-1 text-base font-semibold tracking-tight text-ink"
-                    >
-                        {habit.name}
-                    </Text>
+                    <View className="flex-1">
+                        <Text
+                            numberOfLines={2}
+                            className="text-base font-semibold tracking-tight text-ink"
+                        >
+                            {habit.name}
+                        </Text>
+                        {schedule && (
+                            <Text className="text-[12px] text-ink-3">
+                                {schedule}
+                            </Text>
+                        )}
+                    </View>
                 </Pressable>
                 {onEdit ? (
                     <Button
@@ -106,6 +115,7 @@ export function HabitCard({
                 today={today}
                 done={habit.done}
                 fill={palette.fill}
+                requiredDays={habit.requiredDays}
                 onToggle={onToggle}
             />
 

@@ -3,6 +3,8 @@ package features.habits
 import api.MappedTable
 import api.suspendTransaction
 import api.toEntity
+import features.goals.EVERY_DAY
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.util.UUID
 import kotlinx.serialization.Serializable
@@ -45,6 +47,9 @@ object Habits : Table("habits") {
     val color = enumerationByName("color", 16, HabitColor::class)
     val createdAt = long("created_at").clientDefault { System.currentTimeMillis() }
 
+    /** See [Habit.requiredDays]. */
+    val requiredDays = integer("required_days").default(EVERY_DAY)
+
     override val primaryKey = PrimaryKey(id)
 }
 
@@ -71,6 +76,9 @@ object HabitCheckins : Table("habit_checkins") {
  * @param name Display name, 1–[HABIT_NAME_MAX] characters.
  * @param color Heatmap accent.
  * @param createdAt Ms epoch when the habit was created.
+ * @param requiredDays The weekdays the habit is due, one bit per day with Monday lowest (as
+ *   [features.goals.GoalDefinition.requiredDays]). On other days nothing is due: they neither break
+ *   its streak nor add to it.
  */
 @MappedTable(Habits::class)
 data class Habit(
@@ -79,17 +87,28 @@ data class Habit(
     val name: String,
     val color: HabitColor,
     val createdAt: Long,
+    val requiredDays: Int = EVERY_DAY,
 )
 
-/** Create a habit for [userID]. */
-suspend fun createHabit(userID: UUID, name: String, color: HabitColor): Habit = suspendTransaction {
-    val habit = Habit(UUID.randomUUID(), userID, name, color, System.currentTimeMillis())
+/** Whether [mask] (a [Habit.requiredDays]) has [day] due. */
+fun isDueOn(mask: Int, day: DayOfWeek): Boolean = mask and (1 shl (day.value - 1)) != 0
+
+/** Create a habit for [userID], due on the weekdays in [requiredDays]. */
+suspend fun createHabit(
+    userID: UUID,
+    name: String,
+    color: HabitColor,
+    requiredDays: Int = EVERY_DAY,
+): Habit = suspendTransaction {
+    val habit =
+        Habit(UUID.randomUUID(), userID, name, color, System.currentTimeMillis(), requiredDays)
     Habits.insert {
         it[Habits.id] = habit.id
         it[Habits.userID] = userID
         it[Habits.name] = name
         it[Habits.color] = color
         it[Habits.createdAt] = habit.createdAt
+        it[Habits.requiredDays] = requiredDays
     }
     habit
 }
@@ -112,16 +131,22 @@ suspend fun habitFor(userID: UUID, habitID: UUID): Habit? = suspendTransaction {
 }
 
 /**
- * Rename and/or recolor a habit; null fields are left as they are. Returns true if [userID] owns
- * [habitID].
+ * Rename, recolor and/or reschedule a habit; null fields are left as they are. Returns true if
+ * [userID] owns [habitID].
  */
-suspend fun updateHabit(userID: UUID, habitID: UUID, name: String?, color: HabitColor?): Boolean =
-    suspendTransaction {
-        Habits.update({ (Habits.id eq habitID) and (Habits.userID eq userID) }) {
-            if (name != null) it[Habits.name] = name
-            if (color != null) it[Habits.color] = color
-        } > 0
-    }
+suspend fun updateHabit(
+    userID: UUID,
+    habitID: UUID,
+    name: String?,
+    color: HabitColor?,
+    requiredDays: Int? = null,
+): Boolean = suspendTransaction {
+    Habits.update({ (Habits.id eq habitID) and (Habits.userID eq userID) }) {
+        if (name != null) it[Habits.name] = name
+        if (color != null) it[Habits.color] = color
+        if (requiredDays != null) it[Habits.requiredDays] = requiredDays
+    } > 0
+}
 
 /** Delete a habit and (via cascade) its check-ins. Returns true if a row was removed. */
 suspend fun deleteHabit(userID: UUID, habitID: UUID): Boolean = suspendTransaction {
@@ -158,16 +183,23 @@ suspend fun checkinsFor(userID: UUID, from: LocalDate, to: LocalDate): Map<UUID,
     }
 
 /**
- * Consecutive days ending at [today] that the habit was done.
+ * Consecutive due days ending at [today] that the habit was done. Days outside [requiredDays] are
+ * skipped: missing one doesn't break the streak, and doing the habit on one doesn't add to it.
  *
  * An unchecked today doesn't break the streak — the day isn't over — so the count then starts from
  * yesterday instead.
  */
-fun habitStreak(done: Set<LocalDate>, today: LocalDate): Int {
+fun habitStreak(done: Set<LocalDate>, today: LocalDate, requiredDays: Int = EVERY_DAY): Int {
+    // A mask with no days would never find a missed day to stop at.
+    if (requiredDays and EVERY_DAY == 0) return 0
+    val earliest = done.minOrNull() ?: return 0
     var day = if (today in done) today else today.minusDays(1)
     var streak = 0
-    while (day in done) {
-        streak++
+    while (!day.isBefore(earliest)) {
+        if (isDueOn(requiredDays, day.dayOfWeek)) {
+            if (day !in done) break
+            streak++
+        }
         day = day.minusDays(1)
     }
     return streak

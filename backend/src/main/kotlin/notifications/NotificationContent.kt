@@ -20,6 +20,7 @@ import features.goals.weekWindow
 import features.habits.Habit
 import features.habits.checkinsFor
 import features.habits.habitStreak
+import features.habits.isDueOn
 import features.habits.habitsFor
 import features.streak.streakFor
 import integrations.ImportedWorkout
@@ -395,7 +396,7 @@ private fun label(goal: GoalDefinition): String =
         else -> unit(goal, 2)
     }
 
-/** Each habit not checked off today, with its streak through yesterday. */
+/** Each habit due today and not checked off yet, with its streak through yesterday. */
 private suspend fun habitsLeftToday(
     userID: UUID,
     habits: List<Habit>,
@@ -406,8 +407,9 @@ private suspend fun habitsLeftToday(
     val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
     val done = checkinsFor(userID, today.minusDays(366), today)
     return habits.mapNotNull { habit ->
+        if (!isDueOn(habit.requiredDays, today.dayOfWeek)) return@mapNotNull null
         val days = done[habit.id].orEmpty()
-        if (today in days) null else habit.name to habitStreak(days, today)
+        if (today in days) null else habit.name to habitStreak(days, today, habit.requiredDays)
     }
 }
 

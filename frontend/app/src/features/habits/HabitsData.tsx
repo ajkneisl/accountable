@@ -36,8 +36,17 @@ interface HabitsData {
     reload: () => void
     /** Mark [habitID] done or not on [date] (`yyyy-MM-dd`). Applied optimistically. */
     toggle: (habitID: string, date: string, done: boolean) => void
-    create: (name: string, color: HabitColor) => Promise<void>
-    update: (habitID: string, name: string, color: HabitColor) => Promise<void>
+    create: (
+        name: string,
+        color: HabitColor,
+        requiredDays: number[]
+    ) => Promise<void>
+    update: (
+        habitID: string,
+        name: string,
+        color: HabitColor,
+        requiredDays: number[]
+    ) => Promise<void>
     remove: (habitID: string) => Promise<void>
     openNewHabit: () => void
     /** Open the edit sheet (rename, recolor, delete) for [habitID]. */
@@ -139,16 +148,32 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
     )
 
     const create = useCallback(
-        async (name: string, color: HabitColor) => {
-            setData(await createHabit(api, { name, color }, HABIT_DAYS))
+        async (name: string, color: HabitColor, requiredDays: number[]) => {
+            setData(
+                await createHabit(
+                    api,
+                    { name, color, requiredDays },
+                    HABIT_DAYS
+                )
+            )
         },
         [api]
     )
 
     const update = useCallback(
-        async (habitID: string, name: string, color: HabitColor) => {
+        async (
+            habitID: string,
+            name: string,
+            color: HabitColor,
+            requiredDays: number[]
+        ) => {
             setData(
-                await updateHabit(api, habitID, { name, color }, HABIT_DAYS)
+                await updateHabit(
+                    api,
+                    habitID,
+                    { name, color, requiredDays },
+                    HABIT_DAYS
+                )
             )
         },
         [api]
@@ -217,7 +242,9 @@ export function HabitsProvider({ children }: { children: ReactNode }) {
                     key={editing.id}
                     habit={editing}
                     onClose={closeSheet}
-                    onSave={(name, color) => update(editing.id, name, color)}
+                    onSave={(name, color, requiredDays) =>
+                        update(editing.id, name, color, requiredDays)
+                    }
                     onDelete={() => remove(editing.id)}
                 />
             )}

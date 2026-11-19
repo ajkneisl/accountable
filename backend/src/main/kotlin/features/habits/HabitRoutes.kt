@@ -2,6 +2,9 @@ package features.habits
 
 import api.Cache
 import api.Error
+import features.goals.EVERY_DAY
+import features.goals.dayMask
+import features.goals.daysIn
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.auth.authenticate
@@ -38,18 +41,28 @@ private const val STREAK_LOOKBACK_DAYS = 366
  *
  * @param name Display name; trimmed, 1–[HABIT_NAME_MAX] characters.
  * @param color Heatmap accent.
+ * @param requiredDays The weekdays the habit is due (0 = Monday … 6 = Sunday). Omit for every day.
  */
 @Serializable
-data class CreateHabitRequest(val name: String, val color: HabitColor = HabitColor.LIME)
+data class CreateHabitRequest(
+    val name: String,
+    val color: HabitColor = HabitColor.LIME,
+    val requiredDays: List<Int>? = null,
+)
 
 /**
  * Request body for editing a habit. Omitted fields are left unchanged.
  *
  * @param name New display name; trimmed, 1–[HABIT_NAME_MAX] characters.
  * @param color New heatmap accent.
+ * @param requiredDays New weekdays the habit is due (0 = Monday … 6 = Sunday).
  */
 @Serializable
-data class UpdateHabitRequest(val name: String? = null, val color: HabitColor? = null)
+data class UpdateHabitRequest(
+    val name: String? = null,
+    val color: HabitColor? = null,
+    val requiredDays: List<Int>? = null,
+)
 
 /**
  * One habit with its heatmap window.
@@ -62,6 +75,7 @@ data class UpdateHabitRequest(val name: String? = null, val color: HabitColor? =
  *   is today. Aligned with [HabitsResponse.start].
  * @param streak Consecutive days done, ending today (or yesterday, if today isn't checked yet).
  * @param total Days done within the window.
+ * @param requiredDays The weekdays the habit is due, 0 = Monday. All seven unless narrowed.
  */
 @Serializable
 data class HabitResponse(
@@ -72,6 +86,7 @@ data class HabitResponse(
     val done: List<Boolean>,
     val streak: Int,
     val total: Int,
+    val requiredDays: List<Int> = daysIn(EVERY_DAY),
 )
 
 /**
@@ -94,20 +109,35 @@ private val HABIT_CREATE_ROUTE: suspend RoutingContext.() -> Unit = {
     val userID = call.userID()
     val req = call.receive<CreateHabitRequest>()
     val name = habitName(req.name)
+    validateRequiredDays(req.requiredDays)
     if (habitsFor(userID).size >= MAX_HABITS) Error.text("you can track at most $MAX_HABITS habits")
 
-    createHabit(userID, name, req.color)
+    createHabit(userID, name, req.color, req.requiredDays?.let(::dayMask) ?: EVERY_DAY)
     Cache.invalidateUser(userID)
     call.respond(HttpStatusCode.Created, habitsView(userID, call.days()))
 }
 
-/** PATCH /api/habits/{id}?days=N — rename and/or recolor a habit; responds with the refreshed list. */
+/**
+ * PATCH /api/habits/{id}?days=N — rename, recolor and/or reschedule a habit; responds with the
+ * refreshed list.
+ */
 private val HABIT_UPDATE_ROUTE: suspend RoutingContext.() -> Unit = {
     val userID = call.userID()
     val req = call.receive<UpdateHabitRequest>()
-    if (req.name == null && req.color == null) Error.text("nothing to update")
+    if (req.name == null && req.color == null && req.requiredDays == null) {
+        Error.text("nothing to update")
+    }
+    validateRequiredDays(req.requiredDays)
 
-    if (!updateHabit(userID, call.habitID(), req.name?.let(::habitName), req.color)) {
+    val updated =
+        updateHabit(
+            userID,
+            call.habitID(),
+            req.name?.let(::habitName),
+            req.color,
+            req.requiredDays?.let(::dayMask),
+        )
+    if (!updated) {
         Error.notFound("habit")
     }
     Cache.invalidateUser(userID)
@@ -164,8 +194,9 @@ suspend fun habitsView(userID: UUID, days: Int): HabitsResponse =
                         color = habit.color,
                         createdAt = habit.createdAt,
                         done = window,
-                        streak = habitStreak(done, today),
+                        streak = habitStreak(done, today, habit.requiredDays),
                         total = window.count { it },
+                        requiredDays = daysIn(habit.requiredDays),
                     )
                 },
         )
@@ -177,6 +208,13 @@ private fun habitName(raw: String): String {
     if (name.isEmpty()) Error.text("name must not be blank")
     if (name.length > HABIT_NAME_MAX) Error.text("name must be at most $HABIT_NAME_MAX characters")
     return name
+}
+
+/** 400 unless [days] is absent, or a non-empty set of weekdays. */
+private fun validateRequiredDays(days: List<Int>?) {
+    if (days == null) return
+    if (days.isEmpty()) Error.text("pick at least one day")
+    if (days.any { it !in 0..6 }) Error.text("days must be between 0 (Monday) and 6 (Sunday)")
 }
 
 /** Today's date in [userID]'s timezone. */

@@ -1,5 +1,6 @@
 package com.accountable.features
 
+import features.goals.dayMask
 import features.habits.HabitCheckins
 import features.habits.HabitColor
 import features.habits.Habits
@@ -72,6 +73,36 @@ class HabitTest {
         val day = LocalDate.of(2026, 10, 12)
         assertEquals(2, habitStreak(setOf(day.minusDays(1), day.minusDays(2)), day))
         assertEquals(0, habitStreak(setOf(day.minusDays(2)), day))
+    }
+
+    @Test
+    fun `weekday habit streak skips the weekend`() {
+        // 2026-10-12 is a Monday.
+        val monday = LocalDate.of(2026, 10, 12)
+        val weekdays = dayMask(listOf(0, 1, 2, 3, 4))
+        val done = setOf(monday, monday.minusDays(3), monday.minusDays(4))
+        assertEquals(3, habitStreak(done, monday, weekdays))
+        assertEquals(1, habitStreak(done, monday))
+    }
+
+    @Test
+    fun `rest days neither break nor add to a streak`() {
+        val saturday = LocalDate.of(2026, 10, 17)
+        val weekdays = dayMask(listOf(0, 1, 2, 3, 4))
+        // Done Thu, Fri and Saturday itself: Saturday doesn't count, Thu + Fri do.
+        val done = setOf(saturday, saturday.minusDays(1), saturday.minusDays(2))
+        assertEquals(2, habitStreak(done, saturday, weekdays))
+        // Unchecked on a rest day: the streak through Friday stands.
+        assertEquals(2, habitStreak(done - saturday, saturday, weekdays))
+    }
+
+    @Test
+    fun `habit schedule round-trips through the view`() = runBlocking {
+        val habit = createHabit(testUserID, "Gym", HabitColor.TEAL, dayMask(listOf(0, 2, 4)))
+        assertEquals(listOf(0, 2, 4), habitsView(testUserID, 7).habits.single().requiredDays)
+
+        assertTrue(updateHabit(testUserID, habit.id, null, null, dayMask(listOf(5, 6))))
+        assertEquals(listOf(5, 6), habitsView(testUserID, 7).habits.single().requiredDays)
     }
 
     @Test

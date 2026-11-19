@@ -54,12 +54,15 @@ export function Heatmap({
     today,
     done,
     fill,
+    requiredDays,
     onToggle
 }: {
     start: string
     today: string
     done: boolean[]
     fill: string
+    /** Weekdays the habit is due, 0 = Monday; other days are drawn faded. */
+    requiredDays?: number[]
     onToggle: (date: string, done: boolean) => void
 }) {
     const colors = useColors()
@@ -122,7 +125,7 @@ export function Heatmap({
                             key={week[0].date}
                             style={{ gap: GAP, marginLeft: c === 0 ? 0 : GAP }}
                         >
-                            {week.map((cell) => {
+                            {week.map((cell, row) => {
                                 if (cell.future) {
                                     return (
                                         <View
@@ -136,6 +139,10 @@ export function Heatmap({
                                 }
                                 const on = cell.index >= 0 && done[cell.index]
                                 const isToday = cell.date === today
+                                // Rows run Sun→Sat; requiredDays is Monday-first.
+                                const resting =
+                                    requiredDays != null &&
+                                    !requiredDays.includes((row + 6) % 7)
                                 return (
                                     <Pressable
                                         key={cell.date}
@@ -168,7 +175,8 @@ export function Heatmap({
                                                 ? fill
                                                 : colors.line2,
                                             borderWidth: isToday ? 1.5 : 0,
-                                            borderColor: colors.ink
+                                            borderColor: colors.ink,
+                                            opacity: resting && !on ? 0.4 : 1
                                         }}
                                     />
                                 )
