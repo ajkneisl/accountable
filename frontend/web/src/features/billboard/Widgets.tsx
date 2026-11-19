@@ -3,7 +3,7 @@
 
 import { useAtomValue } from "jotai"
 import { useParams } from "react-router-dom"
-import { type Goal, listHabits, useApi } from "@shared/index"
+import { type Goal, type Habit, listHabits, useApi } from "@shared/index"
 import { userAtom } from "../../auth"
 import { CompetitionBoard } from "./components/CompetitionBoard"
 import { GoalCard } from "./components/GoalCard"
@@ -61,7 +61,138 @@ export function GoalsWidget() {
     )
 }
 
-/** Every habit's year-long heatmap, stacked to fill the screen. */
+/** Grid gap and card padding / header height, in em. */
+const HABIT_GAP = 1.4
+const HABIT_PAD = 1.6
+const HABIT_HEAD = 4.2
+
+/**
+ * Columns for [n] habit cards in a [width] × [height] box, chosen so the
+ * heatmap cells come out as large as they can: one column of wide rows when
+ * there's height to spare, side-by-side blocks when there isn't.
+ */
+function habitCols(n: number, width: number, height: number, em: number) {
+    let best = 1
+    let bestCell = 0
+    for (let cols = 1; cols <= n; cols++) {
+        const rows = Math.ceil(n / cols)
+        const w =
+            (width - (cols - 1) * HABIT_GAP * em) / cols - 2 * HABIT_PAD * em
+        const h =
+            (height - (rows - 1) * HABIT_GAP * em) / rows -
+            2 * HABIT_PAD * em -
+            HABIT_HEAD * em
+        // The heatmap's fit-mode proportions: 53 weeks + labels by 7 days + labels.
+        const cell = Math.min(w / 65.4, h / 9.8)
+        if (cell > bestCell * 1.02) {
+            best = cols
+            bestCell = cell
+        }
+    }
+    return best
+}
+
+/** One habit as a large card: name and stats on top, heatmap filling the rest. */
+function HabitTile({
+    habit,
+    start,
+    today
+}: {
+    habit: Habit
+    start: string
+    today: string
+}) {
+    const palette = HABIT_PALETTE[habit.color]
+    return (
+        <div
+            className="card flex min-h-0 min-w-0 flex-col gap-[1em]"
+            style={{ padding: `${HABIT_PAD}em` }}
+        >
+            <div className="flex shrink-0 items-center gap-[1em]">
+                <CheckDot
+                    done={habit.done.at(-1) ?? false}
+                    fill={palette.fill}
+                    on={palette.on}
+                    size="2.6em"
+                />
+                <div className="min-w-0 flex-1">
+                    <div className="truncate text-[1.6em] font-semibold leading-tight tracking-[-0.01em]">
+                        {habit.name}
+                    </div>
+                    <div className="mono truncate text-[0.95em] text-ink-3">
+                        {daysDone(habit.total)}
+                    </div>
+                </div>
+                {/* No streak, no figure: a bare 0 would only fill the corner. */}
+                {habit.streak > 0 && (
+                    <div
+                        className="shrink-0 text-right"
+                        role="img"
+                        aria-label={streakText(habit.streak)}
+                    >
+                        <div className="mono text-[2.4em] font-bold leading-none tracking-[-0.03em]">
+                            {habit.streak}
+                        </div>
+                        <div className="mt-[0.25em] text-[0.8em] text-ink-3">
+                            day streak
+                        </div>
+                    </div>
+                )}
+            </div>
+            <div className="min-h-0 flex-1">
+                <Heatmap
+                    start={start}
+                    today={today}
+                    done={habit.done}
+                    fill={palette.fill}
+                />
+            </div>
+        </div>
+    )
+}
+
+/** Habit cards tiled to fill their box, in whatever column count makes them largest. */
+function HabitsGrid({
+    habits,
+    start,
+    today
+}: {
+    habits: Habit[]
+    start: string
+    today: string
+}) {
+    const [ref, { width, height }] = useElementSize<HTMLDivElement>()
+    // WidgetFrame's base size, clamp(12px, 1.75vmin, 56px). The grid fills the
+    // frame, so a window resize re-renders this through the size observer.
+    const em = Math.min(
+        56,
+        Math.max(12, 0.0175 * Math.min(window.innerWidth, window.innerHeight))
+    )
+    const cols = habitCols(habits.length, width, height, em)
+    const rows = Math.ceil(habits.length / cols)
+    return (
+        <div
+            ref={ref}
+            className="grid h-full"
+            style={{
+                gap: `${HABIT_GAP}em`,
+                gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+                gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`
+            }}
+        >
+            {habits.map((habit) => (
+                <HabitTile
+                    key={habit.id}
+                    habit={habit}
+                    start={start}
+                    today={today}
+                />
+            ))}
+        </div>
+    )
+}
+
+/** Every habit's year-long heatmap as a card, tiled to fill the screen. */
 export function HabitsWidget() {
     const api = useApi()
     const live = useLive("habits", () => listHabits(api, HABIT_DAYS))
@@ -72,61 +203,11 @@ export function HabitsWidget() {
                 data.habits.length === 0 ? (
                     <Placeholder>No habits yet.</Placeholder>
                 ) : (
-                    <div className="flex h-full flex-col gap-[1em]">
-                        {data.habits.map((habit) => {
-                            const palette = HABIT_PALETTE[habit.color]
-                            return (
-                                <div
-                                    key={habit.id}
-                                    className="card flex min-h-0 flex-1 items-center gap-[1.6em] px-[1.6em] py-[0.9em] portrait:flex-col portrait:items-stretch portrait:gap-[0.6em]"
-                                >
-                                    <div className="flex w-[15em] shrink-0 items-center gap-[0.9em] portrait:w-auto">
-                                        <CheckDot
-                                            done={habit.done.at(-1) ?? false}
-                                            fill={palette.fill}
-                                            on={palette.on}
-                                        />
-                                        <div className="min-w-0">
-                                            <div className="truncate text-[1.35em] font-semibold">
-                                                {habit.name}
-                                            </div>
-                                            <div className="mono truncate text-[0.9em] text-ink-3">
-                                                {daysDone(habit.total)}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="h-full min-h-0 min-w-0 flex-1">
-                                        <Heatmap
-                                            start={data.start}
-                                            today={data.today}
-                                            done={habit.done}
-                                            fill={palette.fill}
-                                        />
-                                    </div>
-                                    {/* The streak as a figure at the end of the
-                                        row, as on the app's card. The column is
-                                        kept without one, so every heatmap is
-                                        the same width. */}
-                                    <div
-                                        className="w-[5.5em] shrink-0 text-right portrait:hidden"
-                                        role="img"
-                                        aria-label={streakText(habit.streak)}
-                                    >
-                                        {habit.streak > 0 && (
-                                            <>
-                                                <div className="mono text-[2.2em] font-bold leading-none tracking-[-0.03em]">
-                                                    {habit.streak}
-                                                </div>
-                                                <div className="mt-[0.3em] text-[0.8em] text-ink-3">
-                                                    day streak
-                                                </div>
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
-                            )
-                        })}
-                    </div>
+                    <HabitsGrid
+                        habits={data.habits}
+                        start={data.start}
+                        today={data.today}
+                    />
                 )
             }
         </WidgetFrame>
