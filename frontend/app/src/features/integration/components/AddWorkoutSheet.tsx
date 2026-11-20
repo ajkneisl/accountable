@@ -3,7 +3,16 @@
 
 import { useState } from "react"
 import { Text, View } from "react-native"
+import { Host, Picker, Text as SwiftText } from "@expo/ui/swift-ui"
+import {
+    frame,
+    labelsHidden,
+    pickerStyle,
+    tag,
+    tint
+} from "@expo/ui/swift-ui/modifiers"
 import { ApiError, logWorkout, useApi, type WorkoutType } from "@shared/index"
+import { useColors } from "../../../theme"
 import { Sheet, SheetField } from "../../../ui/Sheet"
 import { ChoiceButton, ErrorList, Input } from "../../../ui/primitives"
 import { WORKOUT_LABEL } from "./WorkoutCard"
@@ -61,6 +70,7 @@ export function AddWorkoutSheet({
     onCreated: () => void
 }) {
     const api = useApi()
+    const colors = useColors()
     const [type, setType] = useState<WorkoutType>("RUN")
     const [ago, setAgo] = useState(0)
     // Left blank rather than guessed: these feed into goals and what others see.
@@ -108,7 +118,6 @@ export function AddWorkoutSheet({
     return (
         <Sheet
             title="Log a workout"
-            description="Counts toward your goals like any other workout, and shows as logged manually."
             onClose={onClose}
             action={{
                 label: submitting ? "Saving…" : "Log workout",
@@ -117,15 +126,32 @@ export function AddWorkoutSheet({
             }}
         >
             <SheetField label="Type">
-                <View className="flex-row flex-wrap gap-2">
-                    {TYPES.map((t) => (
-                        <Choice
-                            key={t.value}
-                            label={t.label}
-                            selected={type === t.value}
-                            onPress={() => setType(t.value)}
-                        />
-                    ))}
+                <View className="h-[52px] justify-center rounded-[14px] border border-line bg-bg-card px-2">
+                    <Host matchContents={{ vertical: true }}>
+                        <Picker
+                            label="Type"
+                            selection={type}
+                            onSelectionChange={(t) => setType(t as WorkoutType)}
+                            modifiers={[
+                                pickerStyle("menu"),
+                                labelsHidden(),
+                                tint(colors.ink),
+                                frame({
+                                    maxWidth: Infinity,
+                                    alignment: "leading"
+                                })
+                            ]}
+                        >
+                            {TYPES.map((t) => (
+                                <SwiftText
+                                    key={t.value}
+                                    modifiers={[tag(t.value)]}
+                                >
+                                    {t.label}
+                                </SwiftText>
+                            ))}
+                        </Picker>
+                    </Host>
                 </View>
             </SheetField>
 

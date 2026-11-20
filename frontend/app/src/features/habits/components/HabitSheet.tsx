@@ -92,11 +92,6 @@ export function HabitSheet({
     return (
         <Sheet
             title={habit ? "Edit habit" : "New habit"}
-            description={
-                habit
-                    ? "Rename it, change its color or its days."
-                    : "Something you want to do regularly."
-            }
             onClose={onClose}
             action={{
                 label: habit

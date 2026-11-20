@@ -47,6 +47,15 @@ const APPLE_STEPS = "apple_steps"
 const APPLE_DISTANCE = "apple_distance"
 const SCREEN_TIME = "screen_time"
 
+/** Sources fed from the phone itself, with nothing to connect or disconnect here. */
+const DEVICE_SOURCES = new Set([
+    APPLE_FITNESS,
+    APPLE_SLEEP,
+    APPLE_STEPS,
+    APPLE_DISTANCE,
+    SCREEN_TIME
+])
+
 const DAY_FMT = new Intl.DateTimeFormat(undefined, {
     weekday: "short",
     month: "short",
@@ -60,7 +69,7 @@ function messageFor(err: unknown): string {
     return "Something went wrong"
 }
 
-/** Connect / disconnect controls. Apple Fitness is auto-managed and read-only. */
+/** Connect / disconnect controls for sources linked by username. */
 function ConfigCard({
     name,
     status,
@@ -112,35 +121,7 @@ function ConfigCard({
         <Card className="p-5">
             <Eyebrow className="mb-3.5">Configuration</Eyebrow>
 
-            {name === APPLE_FITNESS ? (
-                <Text className="text-[13px] text-ink-3">
-                    Workouts you log below are recorded here, along with
-                    workouts, sleep, steps and distance imported from Apple
-                    Health.
-                </Text>
-            ) : name === APPLE_SLEEP ? (
-                <Text className="text-[13px] text-ink-3">
-                    Sleep comes from Apple Health, connect it on the
-                    Integrations tab. Each night counts toward the day you wake
-                    up.
-                </Text>
-            ) : name === APPLE_STEPS ? (
-                <Text className="text-[13px] text-ink-3">
-                    Steps come from Apple Health, connect it on the Integrations
-                    tab.
-                </Text>
-            ) : name === APPLE_DISTANCE ? (
-                <Text className="text-[13px] text-ink-3">
-                    Distance walked and run comes from Apple Health, connect it
-                    on the Integrations tab.
-                </Text>
-            ) : name === SCREEN_TIME ? (
-                <Text className="text-[13px] text-ink-3">
-                    Screen time is recorded on your iPhone, connect it on the
-                    Integrations tab. Totals are rounded down to the last 15
-                    minutes and sync whenever you open Beacc.
-                </Text>
-            ) : status?.enabled ? (
+            {status?.enabled ? (
                 <View className="flex-row items-center justify-between gap-3">
                     <View className="flex-1">
                         <Text className="text-[13px] text-ink-3">
@@ -407,11 +388,13 @@ export default function IntegrationScreen() {
                 </View>
             )}
 
-            <ConfigCard
-                name={name}
-                status={status}
-                onChanged={afterConfigChange}
-            />
+            {!DEVICE_SOURCES.has(name) && (
+                <ConfigCard
+                    name={name}
+                    status={status}
+                    onChanged={afterConfigChange}
+                />
+            )}
 
             <HistoryCard
                 title={withSleep ? "Recent workouts" : undefined}

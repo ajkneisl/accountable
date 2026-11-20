@@ -137,11 +137,6 @@ export function EditGoalSheet({
     return (
         <Sheet
             title={shared ? "Edit shared goal" : "Edit goal"}
-            description={
-                shared
-                    ? "Change what every member is measured against."
-                    : `Change its ${editable} or color.`
-            }
             onClose={onClose}
             action={{
                 label: submitting ? "Saving…" : "Save",

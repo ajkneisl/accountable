@@ -167,8 +167,7 @@ function FeedSection() {
                 onChange={(on) => void toggle(on)}
             />
             <Text className="pb-3 text-[13px] leading-[18px] text-ink-3">
-                Repo names, LeetCode problems and workout details. When this is
-                off, people in your competitions only see totals.
+                When off, only totals will be showed for your activities.
             </Text>
             {errors.length > 0 && (
                 <View className="border-t border-line-2 py-3.5">

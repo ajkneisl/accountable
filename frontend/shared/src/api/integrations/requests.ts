@@ -160,6 +160,7 @@ export type WorkoutType =
     | "SOCCER"
     | "BASKETBALL"
     | "PICKLEBALL"
+    | "VOLLEYBALL"
     | "GOLF"
     | "SNOW_SPORTS"
     | "OTHER"

@@ -250,6 +250,8 @@ function workoutType(hk: HealthKit, activity: number): WorkoutType {
             return "BASKETBALL"
         case t.pickleball:
             return "PICKLEBALL"
+        case t.volleyball:
+            return "VOLLEYBALL"
         case t.golf:
             return "GOLF"
         case t.downhillSkiing:

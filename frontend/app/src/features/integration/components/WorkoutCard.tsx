@@ -39,6 +39,7 @@ export const WORKOUT_LABEL: Record<WorkoutType, string> = {
     SOCCER: "Soccer",
     BASKETBALL: "Basketball",
     PICKLEBALL: "Pickleball",
+    VOLLEYBALL: "Volleyball",
     GOLF: "Golf",
     SNOW_SPORTS: "Snow sports",
     OTHER: "Other"

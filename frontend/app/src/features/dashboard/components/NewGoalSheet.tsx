@@ -156,7 +156,7 @@ export function GoalSheet({
     onClose
 }: {
     title: string
-    description: string
+    description?: string
     submitLabel: string
     submittingLabel: string
     /** Offer a daily goal's required days. Competition goals are due every day. */
@@ -387,7 +387,6 @@ export function NewGoalSheet({
     return (
         <GoalSheet
             title="New goal"
-            description="Track a metric from one of your connected sources."
             submitLabel="Create goal"
             submittingLabel="Creating…"
             pickDays

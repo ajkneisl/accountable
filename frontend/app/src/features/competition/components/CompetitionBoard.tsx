@@ -559,10 +559,7 @@ export function GoalsPage({
                 </Card>
             )}
 
-            {/* With no goals there's no edit mode to enter, so it's just there. */}
-            {onAdd && (editMode || competition.goals.length === 0) && (
-                <AddCard label="New shared goal" onPress={onAdd} />
-            )}
+            {onAdd && <AddCard label="New shared goal" onPress={onAdd} />}
 
             {editing && (
                 <EditGoalSheet
