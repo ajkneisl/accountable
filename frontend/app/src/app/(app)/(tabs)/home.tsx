@@ -46,7 +46,9 @@ function HomeActions() {
                 <CircleButton label="Log a workout" onPress={openLogWorkout}>
                     {(glass) => (
                         // A runner, not a plus: plus means "new item" elsewhere.
-                        <Host matchContents>
+                        // A fixed frame, not matchContents: that size arrives
+                        // after layout and can leave the glyph sitting low.
+                        <Host style={{ width: 22, height: 22 }}>
                             <Image
                                 systemName="figure.run"
                                 size={18}

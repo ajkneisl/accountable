@@ -246,9 +246,11 @@ private fun workoutChip(
     val definition = goal.definition
     val windowStart = currentWindow(definition.period, happenedAt, zone).first
     val inWindow = upToThisOne.filter { it[AppleFitnessWorkouts.happenedAt] >= windowStart }
+    // A workouts goal with a minimum only counts workouts that long, as its progress does.
+    val minMinutes = definition.minWorkoutMin ?: 0L
     val value =
         if (definition.metric == "calories") inWindow.sumOf { it[AppleFitnessWorkouts.calories] }
-        else inWindow.size.toLong()
+        else inWindow.count { it[AppleFitnessWorkouts.durationMin] >= minMinutes }.toLong()
     val met = definition.isMet(value)
     return Chip(goal, value, met, met)
 }

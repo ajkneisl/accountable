@@ -491,6 +491,26 @@ class FeedTest {
     }
 
     @Test
+    fun `a workout shorter than the goal's minimum does not count toward it`() = runBlocking {
+        val user = newUser()
+        upsertGoal(user, "apple_fitness", "workouts", GoalPeriod.WEEKLY, 4, minWorkoutMin = 20)
+        addWorkout(user, WorkoutType.RUN, 30, 100, monday + 8 * hour)
+        addWorkout(user, WorkoutType.WALK, 5, 20, monday + 12 * hour)
+        addWorkout(user, WorkoutType.WEIGHTLIFTING, 45, 200, monday + 18 * hour)
+
+        syncFeedPosts(user, monday + 19 * hour)
+
+        assertEquals(
+            mapOf<WorkoutType?, Long>(
+                WorkoutType.RUN to 1L,
+                WorkoutType.WALK to 1L,
+                WorkoutType.WEIGHTLIFTING to 2L,
+            ),
+            workoutProgress(user),
+        )
+    }
+
+    @Test
     fun `workouts at the same moment still number one by one`() = runBlocking {
         val user = newUser()
         upsertGoal(user, "apple_fitness", "workouts", GoalPeriod.WEEKLY, 5)
