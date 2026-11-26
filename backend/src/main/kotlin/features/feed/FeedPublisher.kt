@@ -165,7 +165,9 @@ private fun githubDetail(row: ResultRow): GitHubDetail {
             ?.let { feedJson.decodeFromString<List<RepoCommits>>(it) }
             .orEmpty()
             .take(NAMED_ITEMS)
-    return GitHubDetail(commits, named, (commits - named.sumOf { it.commits }).coerceAtLeast(0))
+    val private = row[GitHubTable.privateCommits]
+    val other = (commits - private - named.sumOf { it.commits }).coerceAtLeast(0)
+    return GitHubDetail(commits, named, other, private)
 }
 
 private fun chessDetail(row: ResultRow): ChessDetail {

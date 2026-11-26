@@ -4,9 +4,10 @@
 // first screen the user sees is already the right one. Also applies the light or
 // dark theme to everything below it.
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { View } from "react-native"
-import { Stack } from "expo-router"
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router"
+import * as SystemUI from "expo-system-ui"
 import { StatusBar } from "expo-status-bar"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { SafeAreaProvider } from "react-native-safe-area-context"
@@ -16,6 +17,7 @@ import { apiConfig, restoreSession, userAtom } from "../auth"
 import { Spinner } from "../ui/primitives"
 import {
     type Palette,
+    palettes,
     restoreAppearance,
     themeVars,
     useColors,
@@ -26,10 +28,47 @@ import "../../global.css"
 // Re-apply the appearance picked in Settings as early as possible.
 void restoreAppearance()
 
-/** Feeds the scheme's palette to every NativeWind color class below it. */
+/**
+ * Feeds the scheme's palette to every NativeWind color class below it, and
+ * paints the layers behind the screens in its background. Otherwise they stay
+ * white: the native root view (which shows round the screen when a page sheet
+ * shrinks it, and at the corners in transitions) and the navigator's screens,
+ * which default to a light theme.
+ */
 function ThemeRoot({ children }: { children: React.ReactNode }) {
     const scheme = useScheme()
-    return <View style={[{ flex: 1 }, themeVars[scheme]]}>{children}</View>
+    const colors = palettes[scheme]
+
+    useEffect(() => {
+        void SystemUI.setBackgroundColorAsync(colors.bg)
+    }, [colors.bg])
+
+    const navTheme = useMemo(() => {
+        const base = scheme === "dark" ? DarkTheme : DefaultTheme
+        return {
+            ...base,
+            colors: {
+                ...base.colors,
+                background: colors.bg,
+                card: colors.bg,
+                text: colors.ink,
+                border: colors.line
+            }
+        }
+    }, [scheme, colors])
+
+    return (
+        <ThemeProvider value={navTheme}>
+            <View
+                style={[
+                    { flex: 1, backgroundColor: colors.bg },
+                    themeVars[scheme]
+                ]}
+            >
+                {children}
+            </View>
+        </ThemeProvider>
+    )
 }
 
 function Bootstrap({ children }: { children: React.ReactNode }) {

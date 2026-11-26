@@ -46,9 +46,10 @@ import {
 import { FALLBACK_BAR_COLOR, onMemberFill } from "../colors"
 import {
     computeStandings,
-    displayValue,
-    paceTarget,
-    weeklyTarget
+    type DayState,
+    dayStates,
+    memberOnPace,
+    paceTarget
 } from "../standings"
 import { MemberRow } from "./MemberRow"
 
@@ -147,6 +148,89 @@ function dayDate(weekStart: number, day: number): string {
     return DAY_FMT.format(new Date(weekStart + day * DAY_MS + DAY_MS / 2))
 }
 
+/** "Tuesday and Thursday" / "Monday, Tuesday and Friday". */
+function listDays(days: number[]): string {
+    const names = days.map((d) => WEEKDAY_NAME[d])
+    return names.length < 2
+        ? names.join("")
+        : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`
+}
+
+/**
+ * A member's week on a daily goal, one segment per day, Monday first: filled
+ * in their color when the target was hit, coral when it was missed. Today fills
+ * as it goes. Days still to come are faint, and days before the member was in
+ * the competition fainter still.
+ */
+function DayStrip({
+    states,
+    vals,
+    target,
+    color
+}: {
+    states: DayState[]
+    vals: number[]
+    target: number
+    color: string
+}) {
+    const colors = useColors()
+    const counted = states.filter((s) => s !== "excluded").length
+    const hit = states.filter((s) => s === "hit").length
+    const missed = states.flatMap((s, i) => (s === "missed" ? [i] : []))
+    const label =
+        `Hit ${hit} of ${counted} days` +
+        (missed.length ? `, missed ${listDays(missed)}` : "")
+
+    return (
+        <View className="flex-row gap-1" accessible accessibilityLabel={label}>
+            {states.map((s, i) => {
+                const fill =
+                    s === "hit"
+                        ? 100
+                        : s === "pending"
+                          ? Math.min(
+                                100,
+                                ((vals[i] ?? 0) / Math.max(1, target)) * 100
+                            )
+                          : 0
+                return (
+                    <View
+                        key={i}
+                        style={{
+                            flex: 1,
+                            height: 10,
+                            borderRadius: 5,
+                            overflow: "hidden",
+                            backgroundColor:
+                                s === "missed"
+                                    ? colors.coralSoft
+                                    : colors.bgSunken,
+                            borderWidth: s === "missed" ? 1.5 : 0,
+                            borderColor: colors.coral,
+                            opacity:
+                                s === "future"
+                                    ? 0.5
+                                    : s === "excluded"
+                                      ? 0.25
+                                      : 1
+                        }}
+                    >
+                        {fill > 0 && (
+                            <View
+                                style={{
+                                    width: `${fill}%`,
+                                    height: "100%",
+                                    backgroundColor: color
+                                }}
+                            />
+                        )}
+                    </View>
+                )
+            })}
+        </View>
+    )
+}
+
 function GoalProgress({
     board,
     currentWeek,
@@ -169,14 +253,34 @@ function GoalProgress({
 }) {
     const scheme = useScheme()
     const visual = integrationVisual(board.integration)
-    const wt = weeklyTarget(board)
     const pace = paceTarget(board, currentWeek)
-    const pacePct = Math.min(100, (pace / wt) * 100)
-    // Daily goals show per-day amounts against the daily target.
+    const pacePct = Math.min(100, (pace / Math.max(1, board.target)) * 100)
     const daily = board.period === "DAILY"
+    // A daily goal has to be hit every day, so its whole week shows each
+    // member's days. A picked day shows that day's amount against the target.
+    const dayView = daily && day === null
     const shown = (m: CompetitionMemberWeek) =>
-        day !== null ? (m.vals[day] ?? 0) : displayValue(board, m, currentWeek)
-    const members = [...board.members].sort((a, b) => shown(b) - shown(a))
+        day !== null ? (m.vals[day] ?? 0) : m.total
+    const rows = board.members.map((m) => {
+        const states = dayView ? dayStates(board, m, currentWeek) : null
+        return {
+            m,
+            states,
+            onPace: memberOnPace(board, m, currentWeek),
+            daysHit: states?.filter((s) => s === "hit").length ?? 0,
+            counted: states?.filter((s) => s !== "excluded").length ?? 0
+        }
+    })
+    // Days: on pace first, then most days hit, then furthest along today.
+    const today = currentWeek ? localWeekday() : 6
+    if (dayView)
+        rows.sort(
+            (a, b) =>
+                Number(b.onPace) - Number(a.onPace) ||
+                b.daysHit - a.daysHit ||
+                (b.m.vals[today] ?? 0) - (a.m.vals[today] ?? 0)
+        )
+    else rows.sort((a, b) => shown(b.m) - shown(a.m))
     const amount = (v: number) =>
         formatAmount(board.integration, board.metric, v)
     // One day of a weekly goal has no target of its own, so its bars compare
@@ -220,7 +324,7 @@ function GoalProgress({
             </View>
 
             <View className="gap-4">
-                {members.map((m) => {
+                {rows.map(({ m, states, daysHit, counted }) => {
                     const isMe = m.userID === meID
                     const color = colorMap[m.userID] ?? FALLBACK_BAR_COLOR
                     const pct = Math.min(100, (shown(m) / barScale) * 100)
@@ -240,26 +344,47 @@ function GoalProgress({
                                 )}
                                 <View className="flex-1" />
                                 <Mono className="text-[13px] text-ink-3">
-                                    <Text className="font-bold text-ink">
-                                        {amount(shown(m))}
-                                    </Text>
-                                    {showTarget && `/${amount(board.target)}`}
+                                    {states ? (
+                                        <>
+                                            <Text className="font-bold text-ink">
+                                                {daysHit}
+                                            </Text>
+                                            {`/${counted} days`}
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Text className="font-bold text-ink">
+                                                {amount(shown(m))}
+                                            </Text>
+                                            {showTarget &&
+                                                `/${amount(board.target)}`}
+                                        </>
+                                    )}
                                 </Mono>
                             </View>
 
-                            {/* Progress toward the target; weekly goals add a pace marker. */}
-                            <Bar pct={pct} color={color} height={10}>
-                                {!daily && day === null && (
-                                    <PaceTick
-                                        at={pacePct}
-                                        filled={pct >= pacePct}
-                                        onFillColor={onMemberFill(
-                                            color,
-                                            scheme
-                                        )}
-                                    />
-                                )}
-                            </Bar>
+                            {states ? (
+                                <DayStrip
+                                    states={states}
+                                    vals={m.vals}
+                                    target={board.target}
+                                    color={color}
+                                />
+                            ) : (
+                                // Progress toward the target; weekly goals add a pace marker.
+                                <Bar pct={pct} color={color} height={10}>
+                                    {!daily && day === null && (
+                                        <PaceTick
+                                            at={pacePct}
+                                            filled={pct >= pacePct}
+                                            onFillColor={onMemberFill(
+                                                color,
+                                                scheme
+                                            )}
+                                        />
+                                    )}
+                                </Bar>
+                            )}
                         </View>
                     )
                 })}

@@ -10,8 +10,13 @@ export type FeedDetail =
           commits: number
           /** The busiest public repos. Empty if the person has turned details off. */
           repos: { repo: string; commits: number }[]
-          /** Commits not named in `repos`. */
+          /** Commits not named in `repos` or counted in `privateCommits`. */
           otherCommits: number
+          /**
+           * Private work, known only as a count from the person's GitHub
+           * contribution graph. 0 or absent if there's none, or details are off.
+           */
+          privateCommits?: number
       }
     | {
           type: "leetcode"

@@ -3,6 +3,9 @@ package notifications
 import features.competition.Competition
 import features.competition.competitionDetailView
 import features.competition.competitionsFor
+import features.competition.firstCountedDay
+import features.competition.metWeek
+import features.competition.onPace
 import features.competition.goalsForCompetition
 import features.competition.membersOf
 import features.goals.METERS_PER_MILE
@@ -130,7 +133,10 @@ suspend fun competitionRecaps(userID: UUID, now: Long): List<Push> =
         val members = membersOf(competition.id)
         if (goals.isEmpty() || members.size < 2) return@mapNotNull null
 
-        val placing = placingOf(competition, goals, userID, now, weeksAgo = 1, ::metWeek)
+        val placing =
+            placingOf(competition, goals, userID, now, weeksAgo = 1) { goal, vals, firstDay ->
+                goal.metWeek(vals, firstDay)
+            }
         val (me, rank, size, tiedWith, leader) = placing
         val hit = "${me.hits} of ${goals.size} goals hit"
 
@@ -156,8 +162,8 @@ suspend fun competitionStandings(userID: UUID, now: Long): List<Push> {
         if (goals.isEmpty() || membersOf(competition.id).size < 2) return@mapNotNull null
 
         val placing =
-            placingOf(competition, goals, userID, now, weeksAgo = 0) { goal, total ->
-                onPace(goal, total, weekday)
+            placingOf(competition, goals, userID, now, weeksAgo = 0) { goal, vals, firstDay ->
+                goal.onPace(vals, weekday, firstDay)
             }
         val (me, rank, size, tiedWith, leader) = placing
         val pace = "on pace for ${me.hits} of ${goals.size} goals"
@@ -254,8 +260,9 @@ private data class Placing(
 
 /**
  * Where [userID] places in [competition] for the week [weeksAgo] weeks back, each member's own
- * Monday to Sunday. [hit] decides whether a week's total counts for a goal; members are then ranked
- * by goals hit, then streak.
+ * Monday to Sunday. [hit] decides whether a goal counts, from the member's per-day values and the
+ * first day of the week that counts for them ([firstCountedDay]); members are then ranked by goals
+ * hit, then streak.
  */
 private suspend fun placingOf(
     competition: Competition,
@@ -263,7 +270,7 @@ private suspend fun placingOf(
     userID: UUID,
     now: Long,
     weeksAgo: Int,
-    hit: (GoalDefinition, Long) -> Boolean,
+    hit: (GoalDefinition, List<Long>, Int) -> Boolean,
 ): Placing {
     val standings =
         competitionDetailView(competition)
@@ -272,7 +279,9 @@ private suspend fun placingOf(
                 val id = UUID.fromString(member.userID)
                 val zone = zoneOf(id)
                 val (weekStart, _) = weekWindow(now, zone, weeksAgo)
-                val hits = goals.count { hit(it, weekValues(id, it, weekStart, zone).sum()) }
+                val firstDay =
+                    firstCountedDay(weekStart, maxOf(competition.createdAt, member.joinedAt), zone)
+                val hits = goals.count { hit(it, weekValues(id, it, weekStart, zone), firstDay) }
                 Standing(member.username, id == userID, hits, member.streak)
             }
             .sortedWith(compareByDescending<Standing> { it.hits }.thenByDescending { it.streak })
@@ -285,28 +294,6 @@ private suspend fun placingOf(
         tiedWith = standings.filter { !it.isMe && !it.beats(me) && !me.beats(it) }.map { it.username },
         leader = standings.first(),
     )
-}
-
-/**
- * Whether a week's [total] so far has [goal] on pace on [weekday] (0 = Monday), as the board
- * judges it: the weekly target spread over the days already over (for a limit, the days through
- * today). A daily goal is held to its target × 7.
- */
-private fun onPace(goal: GoalDefinition, total: Long, weekday: Int): Boolean {
-    val target = if (goal.period == GoalPeriod.WEEKLY) goal.target else goal.target * 7
-    return when (goal.direction) {
-        GoalDirection.AT_LEAST -> total * 7 >= target * weekday
-        GoalDirection.AT_MOST -> total * 7 <= target * (weekday + 1)
-    }
-}
-
-/** Whether a finished week's [total] met [goal]; a daily goal is held to its target × 7. */
-private fun metWeek(goal: GoalDefinition, total: Long): Boolean {
-    val target = if (goal.period == GoalPeriod.WEEKLY) goal.target else goal.target * 7
-    return when (goal.direction) {
-        GoalDirection.AT_LEAST -> total >= target
-        GoalDirection.AT_MOST -> total <= target
-    }
 }
 
 /**

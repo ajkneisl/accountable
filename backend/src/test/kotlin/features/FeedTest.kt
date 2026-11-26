@@ -179,10 +179,17 @@ class FeedTest {
         }
     }
 
-    private fun commits(userID: UUID, count: Long, date: Long = todayStart, repos: String? = null) =
+    private fun commits(
+        userID: UUID,
+        count: Long,
+        date: Long = todayStart,
+        repos: String? = null,
+        private: Long = 0,
+    ) =
         row(GitHubTable, userID, date) {
             it[GitHubTable.commits] = count
             it[GitHubTable.repos] = repos
+            it[GitHubTable.privateCommits] = private
         }
 
     private fun setCommits(userID: UUID, count: Long) = transaction {
@@ -273,6 +280,17 @@ class FeedTest {
         val detail = posts(actor).single().detail as GitHubDetail
         assertEquals(listOf("a/one", "a/two", "a/three"), detail.repos.map { it.repo })
         assertEquals(141L, detail.otherCommits)
+    }
+
+    @Test
+    fun `github counts private work apart from the rest`() = runBlocking {
+        val (actor) = pair()
+        commits(actor, 10, repos = """[{"repo":"a/one","commits":4}]""", private = 5)
+        syncFeedPosts(actor, now)
+        val detail = posts(actor).single().detail as GitHubDetail
+        assertEquals(10L, detail.commits)
+        assertEquals(5L, detail.privateCommits)
+        assertEquals(1L, detail.otherCommits)
     }
 
     @Test

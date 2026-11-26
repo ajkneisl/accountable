@@ -150,8 +150,16 @@ suspend fun weekValues(
     zone: ZoneId,
 ): List<Long> {
     val monday = localDate(weekStart, zone)
-    val byDay = metricByDay(userID, goal, weekStart, monday.plusWeeks(1).startMs(zone))
-    return (0 until 7).map { byDay[monday.plusDays(it.toLong()).startMs(zone)] ?: 0L }
+    return metricByDay(userID, goal, weekStart, monday.plusWeeks(1).startMs(zone)).weekOf(weekStart, zone)
+}
+
+/**
+ * The seven per-day values in [this] map (keyed by day start, as [metricByDay] returns) for the week
+ * beginning at [weekStart] in [zone], Monday first. Missing days are 0.
+ */
+fun Map<Long, Long>.weekOf(weekStart: Long, zone: ZoneId): List<Long> {
+    val monday = localDate(weekStart, zone)
+    return (0 until 7).map { this[monday.plusDays(it.toLong()).startMs(zone)] ?: 0L }
 }
 
 /**

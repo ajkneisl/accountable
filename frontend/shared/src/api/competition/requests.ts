@@ -48,6 +48,11 @@ export interface CompetitionMemberWeek {
     /** Per-day metric values for the seven days of the week, Monday first. */
     vals: number[]
     total: number
+    /**
+     * The first day (0 = Monday) that counts toward a daily goal: the day the
+     * member joined, or the competition began, if that's this week. 0 if absent.
+     */
+    firstDay?: number
 }
 
 /** A competition goal with every member's week of progress against it. */

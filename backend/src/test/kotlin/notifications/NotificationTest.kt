@@ -315,9 +315,11 @@ class NotificationTest {
         val competition = createCompetition(leader, "Steps")
         joinCompetition(other, competition.id)
         upsertCompetitionGoal(competition.id, "apple_steps", "steps", GoalPeriod.DAILY, 1_000)
-        // Wednesday: on pace means Monday's and Tuesday's share, 2,000 so far.
-        seedSteps(leader, -2, 2_500)
-        seedSteps(other, -1, 1_500)
+        // Wednesday: on pace means the goal was met on Monday and Tuesday. Today is still open, and
+        // a big Monday doesn't make up for a missed Tuesday.
+        seedSteps(leader, -2, 1_000)
+        seedSteps(leader, -1, 1_000)
+        seedSteps(other, -2, 2_500)
 
         assertEquals(
             "You're in 1st of 2, on pace for 1 of 1 goals.",

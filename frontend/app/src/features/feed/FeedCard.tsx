@@ -61,6 +61,10 @@ function describe(
     switch (detail.type) {
         case "github": {
             const lines = detail.repos.map((r) => `${r.commits} in ${r.repo}`)
+            const privateCommits = detail.privateCommits ?? 0
+            // Private work comes as a bare count, so it's never named.
+            if (privateCommits > 0)
+                lines.push(`${privateCommits} in private repos`)
             // With nothing named, "and 5 more" would be saying nothing.
             if (detail.repos.length > 0 && detail.otherCommits > 0)
                 lines.push(`and ${detail.otherCommits} more`)

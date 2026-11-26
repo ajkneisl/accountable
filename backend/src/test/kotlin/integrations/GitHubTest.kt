@@ -7,6 +7,7 @@ import integrations.api.startOfUtcDay
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
+import io.ktor.client.engine.mock.toByteArray
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.HttpRequestData
 import io.ktor.http.HttpHeaders
@@ -41,6 +42,7 @@ class GitHubTest {
     private val testDate = 1747400000000L
 
     private lateinit var originalClient: HttpClient
+    private var originalToken: String? = null
 
     @BeforeTest
     fun setup() {
@@ -72,11 +74,15 @@ class GitHubTest {
             }
         }
         originalClient = GitHub.client
+        originalToken = GitHub.token
+        // No token unless a test sets one, so private counts aren't asked for.
+        GitHub.token = null
     }
 
     @AfterTest
     fun teardown() {
         GitHub.client = originalClient
+        GitHub.token = originalToken
     }
 
     private fun mockGitHubClient(
@@ -157,6 +163,59 @@ class GitHubTest {
 
         assertEquals(2L, record.data.commits)
         assertEquals("""[{"repo":"a/public","commits":1}]""", storedRepos())
+    }
+
+    /** Answers the commit search with [totalCount], and GraphQL with [restricted] private ones. */
+    private fun mockWithPrivate(
+        totalCount: Long,
+        restricted: Long,
+        captureGraphQL: (String) -> Unit = {},
+    ): HttpClient {
+        val engine =
+            MockEngine { request ->
+                val content =
+                    if (request.url.encodedPath == "/graphql") {
+                        captureGraphQL(String(request.body.toByteArray()))
+                        """{"data":{"user":{"contributionsCollection":""" +
+                            """{"restrictedContributionsCount":$restricted}}}}"""
+                    } else """{"total_count": $totalCount, "items": []}"""
+                respond(
+                    content = content,
+                    status = HttpStatusCode.OK,
+                    headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                )
+            }
+        return HttpClient(engine) {
+            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+        }
+    }
+
+    @Test
+    fun `refresh adds private contributions to the day and stores them apart`() = runBlocking {
+        GitHub.token = "test-token"
+        var query = ""
+        GitHub.client = mockWithPrivate(totalCount = 3, restricted = 4) { query = it }
+
+        val record = GitHub.refresh(testUserID, testDate)
+
+        assertEquals(7L, record.data.commits)
+        val row = transaction {
+            GitHubTable.selectAll().where { GitHubTable.userID eq testUserID }.single()
+        }
+        assertEquals(7L, row[GitHubTable.commits])
+        assertEquals(4L, row[GitHubTable.privateCommits])
+        assertTrue(query.contains(testExternalID), "query missing login: $query")
+        assertTrue(query.contains("2025-05-16T00:00Z"), "query missing day start: $query")
+        assertTrue(query.contains("2025-05-16T23:59:59.999Z"), "query missing day end: $query")
+    }
+
+    @Test
+    fun `without a token private contributions aren't asked for`() = runBlocking {
+        var asked = false
+        GitHub.client = mockWithPrivate(totalCount = 3, restricted = 4) { asked = true }
+
+        assertEquals(3L, GitHub.refresh(testUserID, testDate).data.commits)
+        assertTrue(!asked)
     }
 
     @Test

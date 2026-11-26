@@ -131,8 +131,9 @@ sealed class FeedDetail {
 
 /**
  * @param repos The busiest public repos.
- * @param otherCommits Commits not named in [repos]: quieter repos, private ones, and anything past
- *   the search's page size.
+ * @param otherCommits Commits not named in [repos] or counted in [privateCommits]: quieter repos,
+ *   private ones the search could see, and anything past the search's page size.
+ * @param privateCommits Private work known only as a count from the contribution graph.
  */
 @Serializable
 @SerialName("github")
@@ -140,8 +141,9 @@ data class GitHubDetail(
     val commits: Long,
     val repos: List<RepoCommits>,
     val otherCommits: Long,
+    val privateCommits: Long = 0,
 ) : FeedDetail() {
-    override fun totalsOnly() = copy(repos = emptyList(), otherCommits = commits)
+    override fun totalsOnly() = copy(repos = emptyList(), otherCommits = commits, privateCommits = 0)
 
     override fun summary() = plural(commits, "commit")
 }

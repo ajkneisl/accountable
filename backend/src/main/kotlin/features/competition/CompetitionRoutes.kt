@@ -109,6 +109,11 @@ data class CompetitionMemberWeek(
     /** Per-day metric values for the seven days of the week, Monday first. */
     val vals: List<Long>,
     val total: Long,
+    /**
+     * The first day (0 = Monday) that counts toward a daily goal: the day the member joined, or
+     * the competition began, if that's this week. See [firstCountedDay].
+     */
+    val firstDay: Int = 0,
 )
 
 /** A competition goal with every member's week of progress against it. */
@@ -271,11 +276,13 @@ private val COMPETITION_WEEK_ROUTE: suspend RoutingContext.() -> Unit = {
                             val zone = zoneOf(member.userID)
                             val (weekStart, _) = weekWindow(now, zone, offset)
                             val vals = weekValues(member.userID, goal, weekStart, zone)
+                            val since = maxOf(competition.createdAt, member.joinedAt)
                             CompetitionMemberWeek(
                                 userID = member.userID.toString(),
                                 username = usernames.getValue(member),
                                 vals = vals,
                                 total = vals.sum(),
+                                firstDay = firstCountedDay(weekStart, since, zone),
                             )
                         }
                     CompetitionGoalBoard(

@@ -7,8 +7,7 @@
 import type { ReactNode } from "react"
 import type {
     CompetitionGoalBoard,
-    CompetitionLeaderboard,
-    CompetitionMemberWeek
+    CompetitionLeaderboard
 } from "@shared/index"
 import type { CompetitionView } from "../data"
 import {
@@ -17,15 +16,17 @@ import {
     goalKey,
     goalTitle,
     integrationVisual,
-    streakText,
-    weeklyTarget
+    localWeekday,
+    streakText
 } from "../format"
 import {
     FALLBACK_BAR_COLOR,
+    type DayState,
     type MemberStanding,
     buildColorMap,
     computeStandings,
-    displayValue,
+    dayStates,
+    memberOnPace,
     onMemberFill,
     paceTarget
 } from "../standings"
@@ -289,6 +290,67 @@ function Leaderboard({
     )
 }
 
+/**
+ * A member's week on a daily goal, one segment per day, Monday first: filled in
+ * their color when the target was hit, coral when it was missed, today filling
+ * as it goes, days to come faint.
+ */
+function DayStrip({
+    states,
+    vals,
+    target,
+    color
+}: {
+    states: DayState[]
+    vals: number[]
+    target: number
+    color: string
+}) {
+    return (
+        <div className="flex flex-1 gap-[0.25em]">
+            {states.map((s, i) => {
+                const fill =
+                    s === "hit"
+                        ? 100
+                        : s === "pending"
+                          ? Math.min(
+                                100,
+                                ((vals[i] ?? 0) / Math.max(1, target)) * 100
+                            )
+                          : 0
+                return (
+                    <div
+                        key={i}
+                        className="bar h-[0.75em] flex-1"
+                        style={{
+                            background:
+                                s === "missed"
+                                    ? "var(--coral-soft)"
+                                    : undefined,
+                            boxShadow:
+                                s === "missed"
+                                    ? "inset 0 0 0 1.5px var(--coral)"
+                                    : undefined,
+                            opacity:
+                                s === "future"
+                                    ? 0.5
+                                    : s === "excluded"
+                                      ? 0.25
+                                      : 1
+                        }}
+                    >
+                        {fill > 0 && (
+                            <i
+                                style={{ width: `${fill}%`, background: color }}
+                            />
+                        )}
+                    </div>
+                )
+            })}
+        </div>
+    )
+}
+
 function GoalProgress({
     board,
     meID,
@@ -299,12 +361,29 @@ function GoalProgress({
     colorMap: Record<string, string>
 }) {
     const visual = integrationVisual(board.integration)
-    const wt = weeklyTarget(board)
     const pace = paceTarget(board)
-    const pacePct = Math.min(100, (pace / Math.max(1, wt)) * 100)
+    const pacePct = Math.min(100, (pace / Math.max(1, board.target)) * 100)
+    // A daily goal has to be hit every day, so its rows show each member's days.
     const daily = board.period === "DAILY"
-    const shown = (m: CompetitionMemberWeek) => displayValue(board, m)
-    const members = [...board.members].sort((a, b) => shown(b) - shown(a))
+    const rows = board.members.map((m) => {
+        const states = daily ? dayStates(board, m) : null
+        return {
+            m,
+            states,
+            onPace: memberOnPace(board, m),
+            daysHit: states?.filter((s) => s === "hit").length ?? 0,
+            counted: states?.filter((s) => s !== "excluded").length ?? 0
+        }
+    })
+    // Days: on pace first, then most days hit, then furthest along today.
+    const today = localWeekday()
+    rows.sort((a, b) =>
+        daily
+            ? Number(b.onPace) - Number(a.onPace) ||
+              b.daysHit - a.daysHit ||
+              (b.m.vals[today] ?? 0) - (a.m.vals[today] ?? 0)
+            : b.m.total - a.m.total
+    )
     const amount = (v: number) =>
         formatAmount(board.integration, board.metric, v)
 
@@ -322,11 +401,11 @@ function GoalProgress({
                 </div>
             </div>
 
-            {members.map((m) => {
+            {rows.map(({ m, states, daysHit, counted }) => {
                 const color = colorMap[m.userID] ?? FALLBACK_BAR_COLOR
                 const pct = Math.min(
                     100,
-                    (shown(m) / Math.max(1, board.target)) * 100
+                    (m.total / Math.max(1, board.target)) * 100
                 )
                 return (
                     <div
@@ -343,22 +422,43 @@ function GoalProgress({
                                 </span>
                             )}
                         </div>
-                        <div className="bar h-[0.75em] flex-1">
-                            <i
-                                style={{ width: `${pct}%`, background: color }}
+                        {states ? (
+                            <DayStrip
+                                states={states}
+                                vals={m.vals}
+                                target={board.target}
+                                color={color}
                             />
-                            {/* Weekly goals mark where the week should be by now. */}
-                            {!daily && (
+                        ) : (
+                            <div className="bar h-[0.75em] flex-1">
+                                <i
+                                    style={{
+                                        width: `${pct}%`,
+                                        background: color
+                                    }}
+                                />
+                                {/* Weekly goals mark where the week should be by now. */}
                                 <PaceTick
                                     at={pacePct}
                                     filled={pct >= pacePct}
                                     on={onMemberFill(color)}
                                 />
-                            )}
-                        </div>
+                            </div>
+                        )}
                         <span className="mono w-[5.5em] text-right text-[0.85em] text-ink-3">
-                            <b className="text-ink">{amount(shown(m))}</b>/
-                            {amount(board.target)}
+                            {states ? (
+                                <>
+                                    <b className="text-ink">{daysHit}</b>/
+                                    {counted} days
+                                </>
+                            ) : (
+                                <>
+                                    <b className="text-ink">
+                                        {amount(m.total)}
+                                    </b>
+                                    /{amount(board.target)}
+                                </>
+                            )}
                         </span>
                     </div>
                 )

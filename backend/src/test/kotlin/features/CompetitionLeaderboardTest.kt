@@ -112,10 +112,10 @@ class CompetitionLeaderboardTest {
         // Feb 23: the owner alone — the joiner did more, but hadn't joined yet.
         commits(owner, "2026-02-24", 5)
         commits(joiner, "2026-02-24", 9)
-        // Mar 2: both meet the commits goal, but the owner also walked a week's worth of steps.
+        // Mar 2: both meet the commits goal, but the owner also met the steps goal every day.
         commits(owner, "2026-03-03", 5)
         commits(joiner, "2026-03-04", 6)
-        steps(owner, "2026-03-05", 7_000)
+        (2..8).forEach { steps(owner, "2026-03-0$it", 1_000) }
         // Mar 9: level on one goal each, so both take the week.
         commits(owner, "2026-03-10", 5)
         commits(joiner, "2026-03-11", 5)
@@ -147,5 +147,45 @@ class CompetitionLeaderboardTest {
         createdOn(bare, owner, "2026-02-17")
         val bareBoard = leaderboardFor(findCompetitionByID(bare)!!, now)
         assertEquals(listOf(owner to 0), bareBoard.entries.map { it.userID to it.weeksWon })
+    }
+
+    @Test
+    fun `a daily goal has to be met on every day of the week`(): Unit = runBlocking {
+        // Wednesday; the only completed week starts on Mar 9.
+        val now = ms("2026-03-18") + 12 * 60 * 60 * 1000
+        val owner = newUser()
+        val joiner = newUser()
+        val id = createCompetition(owner, "Test").id
+        joinCompetition(joiner, id)
+        createdOn(id, owner, "2026-03-09")
+        joinedOn(id, joiner, "2026-03-09")
+        upsertCompetitionGoal(id, "apple_steps", "steps", GoalPeriod.DAILY, 1_000)
+
+        // The owner walks far more in all, but one big day can't cover the six they missed.
+        steps(owner, "2026-03-10", 50_000)
+        (9..15).forEach { steps(joiner, "2026-03-${"%02d".format(it)}", 1_000) }
+
+        val board = leaderboardFor(findCompetitionByID(id)!!, now)
+
+        assertEquals(listOf(joiner to 1, owner to 0), board.entries.map { it.userID to it.weeksWon })
+    }
+
+    @Test
+    fun `days before a member joined don't count against a daily goal`(): Unit = runBlocking {
+        val now = ms("2026-03-18") + 12 * 60 * 60 * 1000
+        val owner = newUser()
+        val joiner = newUser()
+        val id = createCompetition(owner, "Test").id
+        joinCompetition(joiner, id)
+        createdOn(id, owner, "2026-03-09")
+        // Thursday: only Thursday to Sunday count for the joiner.
+        joinedOn(id, joiner, "2026-03-12")
+        upsertCompetitionGoal(id, "apple_steps", "steps", GoalPeriod.DAILY, 1_000)
+
+        (12..15).forEach { steps(joiner, "2026-03-$it", 1_000) }
+
+        val board = leaderboardFor(findCompetitionByID(id)!!, now)
+
+        assertEquals(listOf(joiner to 1, owner to 0), board.entries.map { it.userID to it.weeksWon })
     }
 }

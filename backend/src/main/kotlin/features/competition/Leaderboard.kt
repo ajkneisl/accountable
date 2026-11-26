@@ -1,11 +1,7 @@
 package features.competition
 
-import features.goals.GoalDefinition
-import features.goals.GoalDirection
-import features.goals.GoalPeriod
-import features.goals.direction
 import features.goals.metricByDay
-import features.goals.sumInRange
+import features.goals.weekOf
 import features.goals.weekWindow
 import java.util.UUID
 import user.zoneOf
@@ -25,21 +21,9 @@ data class LeaderboardEntry(val userID: UUID, val weeksWon: Int)
 data class Leaderboard(val weeks: Int, val entries: List<LeaderboardEntry>)
 
 /**
- * Whether a week's [total] meets [this] goal. A daily goal is held to seven days' worth, the way
- * the standings score a past week.
- */
-private fun GoalDefinition.isMetOverWeek(total: Long): Boolean {
-    val weekly = if (period == GoalPeriod.DAILY) target * 7 else target
-    return when (direction) {
-        GoalDirection.AT_LEAST -> total >= weekly
-        GoalDirection.AT_MOST -> total <= weekly
-    }
-}
-
-/**
  * Count the completed weeks each member of [competition] finished first in its standings: the most
  * shared goals met, and at least one. Members tied at the top each take the week; a week nobody met
- * a goal in has no winner.
+ * a goal in has no winner. Goals are scored by [metWeek]: a daily goal has to be met on every day.
  *
  * Weeks run from the one the competition was created in up to last week, each bucketed in the
  * member's own timezone like the week board, and are scored against the goals as they stand now. A
@@ -67,8 +51,9 @@ suspend fun leaderboardFor(competition: Competition, now: Long): Leaderboard {
         val spanEnd = weeks.first().second
         val values = goals.map { it to metricByDay(member.userID, it, spanStart, spanEnd) }
         goalsMet[member.userID] =
-            weeks.map { (start, end) ->
-                values.count { (goal, byDay) -> goal.isMetOverWeek(byDay.sumInRange(start, end)) }
+            weeks.map { (start, _) ->
+                val firstDay = firstCountedDay(start, since, zone)
+                values.count { (goal, byDay) -> goal.metWeek(byDay.weekOf(start, zone), firstDay) }
             }
     }
 
