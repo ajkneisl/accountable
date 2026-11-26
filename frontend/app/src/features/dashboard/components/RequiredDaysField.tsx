@@ -81,11 +81,6 @@ export function RequiredDaysField({
                     )
                 })}
             </View>
-            <Text className="text-[13px] text-ink-3">
-                {value.length === 7
-                    ? "Required every day."
-                    : `${requiredDaysLabel(value)} only. Other days don't affect your streak.`}
-            </Text>
         </SheetField>
     )
 }

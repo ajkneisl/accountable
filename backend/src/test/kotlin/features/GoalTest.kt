@@ -92,6 +92,16 @@ class GoalTest {
     }
 
     @Test
+    fun `replacing a goal keeps when it was created`() = runBlocking {
+        val user = newUser()
+        val created = upsertGoal(user, "github", "commits", GoalPeriod.WEEKLY, 5)
+        Thread.sleep(5)
+
+        val replaced = upsertGoal(user, "github", "commits", GoalPeriod.WEEKLY, 9)
+        assertEquals(created.createdAt, replaced.createdAt)
+    }
+
+    @Test
     fun `update and delete only touch the owner's goal`() = runBlocking {
         val owner = newUser()
         val other = newUser()

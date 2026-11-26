@@ -30,6 +30,7 @@ bcrypt = { module = "at.favre.lib:bcrypt", version.ref = "bcrypt" }
 jedis = { module = "redis.clients:jedis", version.ref = "jedis" }
 
 aws-sesv2 = { module = "software.amazon.awssdk:sesv2", version.ref = "awssdk" }
+aws-s3 = { module = "software.amazon.awssdk:s3", version.ref = "awssdk" }
 aws-url-connection-client = { module = "software.amazon.awssdk:url-connection-client", version.ref = "awssdk" }
 
 [plugins]

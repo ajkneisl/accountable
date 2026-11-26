@@ -231,7 +231,6 @@ export function ChangeColorSheet({
     return (
         <Sheet
             title="Your color"
-            description="Stands for you in every competition: your rank, your bars and your progress."
             onClose={onClose}
             action={{ label: busy ? "Saving…" : "Save", onPress: submit, busy }}
         >

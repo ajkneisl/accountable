@@ -49,6 +49,9 @@ object Users : Table("users") {
      */
     val displayToken = varchar("display_token", 128).nullable().uniqueIndex()
 
+    /** [User.avatarVersion] */
+    val avatarVersion = long("avatar_version").nullable()
+
     override val primaryKey = PrimaryKey(id)
 }
 
@@ -63,6 +66,8 @@ object Users : Table("users") {
  * @param timezone The user's IANA timezone id, used to bucket their data by local day.
  * @param color The color they picked to stand for them in competitions, or null for [defaultColor].
  * @param feedDetails Whether others see the specifics on their feed cards, or only totals.
+ * @param avatarVersion When their profile picture was last set, or null if they have none. Part of
+ *   the picture's URL, so a new one is never served from an old cache.
  */
 @MappedTable(Users::class)
 @Verifiable(UserVerifier::class)
@@ -75,6 +80,7 @@ data class User(
     val timezone: String = "UTC",
     val color: HabitColor? = null,
     val feedDetails: Boolean = true,
+    val avatarVersion: Long? = null,
 )
 
 /** Colors a user is given before picking one. Ink is left out: it reads as no color at all. */
@@ -140,6 +146,14 @@ fun zoneOf(id: UUID): ZoneId =
 /** Set [id]'s [color]. Returns false if the user does not exist. */
 fun updateColor(id: UUID, color: HabitColor): Boolean = transaction {
     Users.update({ Users.id eq id }) { it[Users.color] = color } > 0
+}
+
+/**
+ * Record a new profile picture for [id] at [version], or with null, that it was removed. Returns
+ * false if the user does not exist.
+ */
+fun setAvatarVersion(id: UUID, version: Long?): Boolean = transaction {
+    Users.update({ Users.id eq id }) { it[avatarVersion] = version } > 0
 }
 
 /** Set whether others see [id]'s feed details. Returns false if the user does not exist. */

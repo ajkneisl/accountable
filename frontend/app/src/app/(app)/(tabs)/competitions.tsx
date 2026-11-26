@@ -11,8 +11,9 @@ import { userAtom } from "../../../auth"
 import { EmptyState } from "../../../ui/EmptyState"
 import { Screen } from "../../../ui/Screen"
 import { SettingsButton } from "../../../ui/SettingsButton"
-import { AddCard, Card, Chip, PageTitle, Mono } from "../../../ui/primitives"
+import { AddCard, Card, Chip, PageTitle } from "../../../ui/primitives"
 import { useAppData } from "../../../features/common/AppData"
+import { CompetitionIcon } from "../../../features/competition/components/CompetitionIcon"
 import { CompetitionSheet } from "../../../features/competition/components/CompetitionSheet"
 import { pendingJoinCodeAtom } from "../../../features/competition/pendingJoin"
 import {
@@ -142,11 +143,7 @@ function CompetitionRow({
             }
         >
             <Card className="flex-row items-center gap-3 p-4">
-                <View className="h-10 w-10 items-center justify-center rounded-[10px] bg-ink">
-                    <Mono className="text-[15px] font-bold text-bg">
-                        {(c.name[0] ?? "?").toUpperCase()}
-                    </Mono>
-                </View>
+                <CompetitionIcon name={c.name} />
                 <View className="flex-1">
                     <View className="flex-row items-center gap-2">
                         <Text

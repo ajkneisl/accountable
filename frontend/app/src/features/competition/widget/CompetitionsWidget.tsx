@@ -171,7 +171,7 @@ const CompetitionsWidget = (
                 <VStack alignment="leading" spacing={2}>
                     {comp.goalCount > 0 ? (
                         <Text modifiers={[mono(12), foregroundStyle(ink)]}>
-                            {`${me?.goalsHit ?? 0} of ${comp.goalCount} on pace`}
+                            {`${me?.goalsHit ?? 0}/${comp.goalCount} ${comp.goalCount === 1 ? "goal" : "goals"} on pace`}
                         </Text>
                     ) : null}
                     <Text modifiers={[mono(12), foregroundStyle(ink3)]}>
@@ -217,7 +217,7 @@ const CompetitionsWidget = (
                     <Spacer />
                     {comp.goalCount > 0 ? (
                         <Text modifiers={[mono(12, "bold"), foregroundStyle(ink)]}>
-                            {`${m.goalsHit}/${comp.goalCount}`}
+                            {`${m.goalsHit}/${comp.goalCount} ${comp.goalCount === 1 ? "goal" : "goals"}`}
                         </Text>
                     ) : null}
                     <Text

@@ -519,7 +519,9 @@ export function StandingsPage({
                             key={s.userID}
                             rank={i + 1}
                             color={s.color}
+                            userID={s.userID}
                             username={s.username}
+                            avatarVersion={s.avatarVersion}
                             isMe={s.userID === meID}
                             divided={i > 0}
                             value={
@@ -527,7 +529,8 @@ export function StandingsPage({
                                     <Text className="font-bold text-ink">
                                         {s.goalsHit}
                                     </Text>
-                                    /{goalCount}
+                                    /{goalCount}{" "}
+                                    {goalCount === 1 ? "goal" : "goals"}
                                 </Mono>
                             }
                         >

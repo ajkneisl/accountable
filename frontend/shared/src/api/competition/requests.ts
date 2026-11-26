@@ -19,6 +19,8 @@ export interface CompetitionMember {
     streak: number
     /** The color the member picked to stand for them (or their default), the same in every competition. */
     color: HabitColor
+    /** For their profile picture's URL ({@link avatarUrl}); absent if they have none. */
+    avatarVersion?: number | null
 }
 
 export interface CompetitionGoal {
@@ -82,6 +84,8 @@ export interface CompetitionLeader {
     username: string
     /** Completed weeks they finished first in the standings; a tie at the top counts for each. */
     weeksWon: number
+    /** For their profile picture's URL ({@link avatarUrl}); absent if they have none. */
+    avatarVersion?: number | null
 }
 
 /** How often each member has finished a week first in the standings. */

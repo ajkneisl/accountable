@@ -68,7 +68,10 @@ data class CompetitionSummary(
     val createdAt: Long,
 )
 
-/** Member entry with their current streak inside the competition, and the color they're shown in. */
+/**
+ * Member entry with their current streak inside the competition, and the color they're shown in.
+ * [avatarVersion] is null if they have no profile picture.
+ */
 @Serializable
 data class CompetitionMemberView(
     val userID: String,
@@ -76,6 +79,7 @@ data class CompetitionMemberView(
     val joinedAt: Long,
     val streak: Int,
     val color: HabitColor,
+    val avatarVersion: Long? = null,
 )
 
 /** Competition goal payload. */
@@ -140,7 +144,12 @@ data class CompetitionWeekResponse(
 
 /** One member's tally on the leaderboard: the completed weeks they finished first. */
 @Serializable
-data class CompetitionLeaderView(val userID: String, val username: String, val weeksWon: Int)
+data class CompetitionLeaderView(
+    val userID: String,
+    val username: String,
+    val weeksWon: Int,
+    val avatarVersion: Long? = null,
+)
 
 /** Leaderboard returned by [COMPETITION_LEADERBOARD_ROUTE]. */
 @Serializable
@@ -224,6 +233,7 @@ suspend fun competitionDetailView(competition: Competition): CompetitionDetailRe
                     joinedAt = member.joinedAt,
                     streak = streak,
                     color = user?.displayColor ?: defaultColor(member.userID),
+                    avatarVersion = user?.avatarVersion,
                 )
             }
 
@@ -326,10 +336,12 @@ private val COMPETITION_LEADERBOARD_ROUTE: suspend RoutingContext.() -> Unit = {
                 weeks = board.weeks,
                 members =
                     board.entries.map {
+                        val user = findUserByID(it.userID)
                         CompetitionLeaderView(
                             userID = it.userID.toString(),
-                            username = findUserByID(it.userID)?.username ?: it.userID.toString(),
+                            username = user?.username ?: it.userID.toString(),
                             weeksWon = it.weeksWon,
+                            avatarVersion = user?.avatarVersion,
                         )
                     },
             )

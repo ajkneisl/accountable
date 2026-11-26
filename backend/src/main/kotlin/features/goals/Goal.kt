@@ -83,7 +83,7 @@ data class Goal(
 
 /**
  * Insert or replace a goal. Idempotent on (userID, integration, metric, period). A replaced goal
- * keeps its color but takes the new [minWorkoutMin] and [requiredDays].
+ * keeps its color and creation time but takes the new [minWorkoutMin] and [requiredDays].
  */
 suspend fun upsertGoal(
     userID: UUID,
@@ -94,14 +94,14 @@ suspend fun upsertGoal(
     minWorkoutMin: Long? = null,
     requiredDays: Int = EVERY_DAY,
 ): Goal = suspendTransaction {
-    val createdAt = System.currentTimeMillis()
-    Goals.upsert {
+    // An existing goal keeps its createdAt: the Goals tab shows nothing from before it.
+    Goals.upsert(onUpdateExclude = listOf(Goals.createdAt)) {
         it[Goals.userID] = userID
         it[Goals.integration] = integration
         it[Goals.metric] = metric
         it[Goals.period] = period
         it[Goals.target] = target
-        it[Goals.createdAt] = createdAt
+        it[Goals.createdAt] = System.currentTimeMillis()
         it[Goals.minWorkoutMin] = minWorkoutMin
         it[Goals.requiredDays] = requiredDays
     }

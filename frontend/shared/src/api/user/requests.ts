@@ -16,6 +16,8 @@ export interface SelfResponse extends User {
     color: HabitColor
     /** Whether others see the specifics on their feed updates, or only totals. */
     feedDetails: boolean
+    /** For their profile picture's URL ({@link avatarUrl}); absent if they have none. */
+    avatarVersion?: number | null
 }
 
 /**
@@ -157,4 +159,41 @@ export function updateColor(
         { color },
         { auth: true, expectJson: false }
     )
+}
+
+/**
+ * The URL of [userID]'s profile picture at [avatarVersion], or null if they
+ * have none. The version changes with every upload, so the image can be cached
+ * for good.
+ */
+export function avatarUrl(
+    config: ApiConfig,
+    userID: string,
+    avatarVersion: number | null | undefined
+): string | null {
+    if (avatarVersion == null) return null
+    const baseUrl = config.baseUrl.replace(/\/$/, "")
+    return `${baseUrl}/avatars/${userID}?v=${avatarVersion}`
+}
+
+/**
+ * PUT /api/user/avatar — set the user's profile picture. [picture] is what a
+ * FormData file takes: a Blob on the web, or `{ uri, name, type }` in React
+ * Native. The server crops it square and shrinks it.
+ */
+export function uploadAvatar(
+    config: ApiConfig,
+    picture: Blob | { uri: string; name: string; type: string }
+): Promise<{ avatarVersion: number }> {
+    const form = new FormData()
+    form.append("picture", picture as Blob)
+    return request(config, "PUT", "/user/avatar", form, { auth: true })
+}
+
+/** DELETE /api/user/avatar — remove the user's profile picture. */
+export function removeAvatar(config: ApiConfig): Promise<void> {
+    return request(config, "DELETE", "/user/avatar", undefined, {
+        auth: true,
+        expectJson: false
+    })
 }

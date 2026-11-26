@@ -29,6 +29,7 @@ import kotlinx.serialization.Serializable
  * @param createdAt When the user created their account.
  * @param color The color that stands for them in competitions; a default until they pick one.
  * @param feedDetails Whether others see the specifics on their feed cards, or only totals.
+ * @param avatarVersion When their profile picture was last set, or null if they have none.
  */
 @Serializable
 data class SelfResponse(
@@ -39,6 +40,7 @@ data class SelfResponse(
     val timezone: String,
     val color: HabitColor,
     val feedDetails: Boolean,
+    val avatarVersion: Long? = null,
 )
 
 /** Request body for [PUT /user/timezone]. */
@@ -87,6 +89,7 @@ fun Route.userRoutes() {
                         timezone = user.timezone,
                         color = user.displayColor,
                         feedDetails = user.feedDetails,
+                        avatarVersion = user.avatarVersion,
                     )
                 )
             }

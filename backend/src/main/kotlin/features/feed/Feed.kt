@@ -226,9 +226,14 @@ private fun duration(minutes: Long) =
 
 internal val feedJson = Json { ignoreUnknownKeys = true }
 
-/** Who a card is by. */
+/** Who a card is by. [avatarVersion] is null if they have no profile picture. */
 @Serializable
-data class FeedActor(val userID: String, val username: String, val color: HabitColor)
+data class FeedActor(
+    val userID: String,
+    val username: String,
+    val color: HabitColor,
+    val avatarVersion: Long? = null,
+)
 
 /** A goal's standing on a card. The competition fields are null for the viewer's own personal goal. */
 @Serializable
@@ -376,7 +381,12 @@ suspend fun feedFor(
                     FeedPostView(
                         id = id.toString(),
                         actor =
-                            FeedActor(actor.id.toString(), actor.username, actor.displayColor),
+                            FeedActor(
+                                actor.id.toString(),
+                                actor.username,
+                                actor.displayColor,
+                                actor.avatarVersion,
+                            ),
                         integration = integration,
                         day = row[FeedPosts.day].toString(),
                         lastActivityAt = row[FeedPosts.lastActivityAt],

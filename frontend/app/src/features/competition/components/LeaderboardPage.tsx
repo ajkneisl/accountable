@@ -11,6 +11,7 @@ import {
     useApi
 } from "@shared/index"
 import { useColors, useScheme } from "../../../theme"
+import { Avatar } from "../../../ui/Avatar"
 import { Bar, Card, Mono } from "../../../ui/primitives"
 import { FALLBACK_BAR_COLOR, onMemberFill } from "../colors"
 import { MemberRow } from "./MemberRow"
@@ -43,25 +44,15 @@ function TopPlace({
     const size = first ? 88 : 64
     return (
         <View className="flex-1 items-center" style={{ maxWidth: 124 }}>
-            <View
-                style={{
-                    width: size,
-                    height: size,
-                    borderRadius: size / 2,
-                    backgroundColor: color
-                }}
-                className="items-center justify-center"
-            >
-                <Text
-                    style={{
-                        color: onMemberFill(color, scheme),
-                        fontSize: first ? 36 : 26
-                    }}
-                    className="font-bold"
-                >
-                    {(entry.username[0] ?? "?").toUpperCase()}
-                </Text>
-            </View>
+            <Avatar
+                userID={entry.userID}
+                username={entry.username}
+                avatarVersion={entry.avatarVersion}
+                fill={color}
+                onFill={onMemberFill(color, scheme)}
+                size={size}
+                ring={first ? 3 : 2}
+            />
             {/* Ringed in the card's color, so it reads against the circle. */}
             <View
                 style={{ marginTop: -12 }}
@@ -178,7 +169,9 @@ export function LeaderboardPage({
                         key={m.userID}
                         rank={rankOf(m)}
                         color={colorOf(m)}
+                        userID={m.userID}
                         username={m.username}
+                        avatarVersion={m.avatarVersion}
                         isMe={isMe}
                         // The first row is ruled off from the top three above it.
                         divided={i > 0 || placed.length > 0}

@@ -91,6 +91,7 @@ export function memberOnPace(
 export type MemberStanding = {
     userID: string
     username: string
+    avatarVersion?: number | null
     streak: number
     color: string
     goalsHit: number
@@ -119,6 +120,7 @@ export function computeStandings(
             return {
                 userID: m.userID,
                 username: m.username,
+                avatarVersion: m.avatarVersion,
                 streak: m.streak,
                 color: colorMap[m.userID] ?? FALLBACK_BAR_COLOR,
                 goalsHit: hits.filter(Boolean).length,

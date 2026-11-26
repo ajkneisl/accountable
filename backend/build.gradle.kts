@@ -42,6 +42,7 @@ dependencies {
     implementation(libs.bcrypt)
     implementation(libs.jedis)
     implementation(libs.aws.sesv2)
+    implementation(libs.aws.s3)
     implementation(libs.aws.url.connection.client)
 
     implementation(kotlin("reflect"))

@@ -6,9 +6,11 @@ import { Pressable, Text, View } from "react-native"
 import { router } from "expo-router"
 import type { FeedDetail, FeedGoalChip, FeedPost } from "@shared/index"
 import { useColors, useScheme } from "../../theme"
+import { Avatar } from "../../ui/Avatar"
 import { ChevronIcon, HeartIcon } from "../../ui/icons"
-import { Card, Chip, IntegrationIcon, Mono } from "../../ui/primitives"
+import { Card, IntegrationIcon, Mono } from "../../ui/primitives"
 import { memberFill, onMemberFill } from "../competition/colors"
+import { CompetitionIcon } from "../competition/components/CompetitionIcon"
 import {
     type DistanceUnit,
     deviceDistanceUnit,
@@ -198,17 +200,14 @@ export function FeedCard({
     return (
         <Card className="gap-3 p-4">
             <View className="flex-row items-center gap-3">
-                <View
-                    className="h-9 w-9 items-center justify-center rounded-full"
-                    style={{ backgroundColor: fill }}
-                >
-                    <Mono
-                        className="text-[14px] font-bold"
-                        style={{ color: onMemberFill(fill, scheme) }}
-                    >
-                        {(post.actor.username[0] ?? "?").toUpperCase()}
-                    </Mono>
-                </View>
+                <Avatar
+                    userID={post.actor.userID}
+                    username={post.actor.username}
+                    avatarVersion={post.actor.avatarVersion}
+                    fill={fill}
+                    onFill={onMemberFill(fill, scheme)}
+                    size={36}
+                />
                 <View className="flex-1">
                     <Text
                         numberOfLines={1}
@@ -258,8 +257,10 @@ export function FeedCard({
             {/* Your own card shows its hearts, but they're not yours to give. */}
             {(competitions.length > 0 || !mine || post.likeCount > 0) && (
                 <View className="flex-row items-center justify-between gap-3">
-                    <View className="flex-1 flex-row flex-wrap gap-1.5">
+                    <View className="flex-1 flex-row flex-wrap gap-2">
                         {competitions.map(([id, name]) => (
+                            // The competition as it looks on the Competitions
+                            // tab: its letter tile, then its name.
                             <Pressable
                                 key={id}
                                 accessibilityRole="link"
@@ -271,16 +272,16 @@ export function FeedCard({
                                         params: { id }
                                     })
                                 }
+                                className="max-w-full flex-row items-center gap-2 rounded-[10px] bg-bg-sunken py-1 pl-1 pr-2 active:opacity-60"
                             >
-                                <Chip>
-                                    <Text className="text-[11px] font-semibold text-ink">
-                                        {name}
-                                    </Text>
-                                    <ChevronIcon
-                                        color={colors.ink3}
-                                        size={11}
-                                    />
-                                </Chip>
+                                <CompetitionIcon name={name} size={22} />
+                                <Text
+                                    numberOfLines={1}
+                                    className="shrink text-[13px] font-semibold text-ink"
+                                >
+                                    {name}
+                                </Text>
+                                <ChevronIcon color={colors.ink3} size={12} />
                             </Pressable>
                         ))}
                     </View>

@@ -27,6 +27,7 @@ import {
     ChangePasswordSheet,
     DeleteAccountSheet
 } from "../../features/account/AccountSheets"
+import { useAvatarActions } from "../../features/account/avatar"
 import { useHabitPalette } from "../../features/habits/grid"
 import { IntegrationsPanel } from "../../features/integration/IntegrationsPanel"
 import {
@@ -41,6 +42,7 @@ import {
     useAppearance,
     useColors
 } from "../../theme"
+import { Avatar } from "../../ui/Avatar"
 import { BackBar } from "../../ui/BackBar"
 import { confirm } from "../../ui/confirm"
 import { CheckIcon } from "../../ui/icons"
@@ -366,9 +368,10 @@ function GeneralTab() {
         "email" | "password" | "color" | "delete" | null
     >(null)
     const close = () => setSheet(null)
-    const initial = (user?.username[0] ?? "?").toUpperCase()
     // A user signed in before colors existed has none until the next refresh.
     const palette = useHabitPalette()[user?.color ?? "LIME"]
+    const avatar = useAvatarActions()
+    const hasPicture = user?.avatarVersion != null
 
     async function onSignOut() {
         const ok = await confirm(
@@ -383,19 +386,25 @@ function GeneralTab() {
     return (
         <>
             <Card className="flex-row items-center gap-4 p-4">
-                <View
-                    style={{ backgroundColor: palette.fill }}
-                    className="h-14 w-14 items-center justify-center rounded-full"
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                        hasPicture
+                            ? "Change profile picture"
+                            : "Add profile picture"
+                    }
+                    onPress={avatar.open}
+                    className="active:opacity-60"
                 >
-                    <Text
-                        style={{
-                            color: palette.dark ? onFill.dark : onFill.light
-                        }}
-                        className="text-[22px] font-bold"
-                    >
-                        {initial}
-                    </Text>
-                </View>
+                    <Avatar
+                        userID={user?.userID ?? ""}
+                        username={user?.username ?? "?"}
+                        avatarVersion={user?.avatarVersion}
+                        fill={palette.fill}
+                        onFill={palette.dark ? onFill.dark : onFill.light}
+                        size={56}
+                    />
+                </Pressable>
                 <View className="flex-1">
                     <Text className="text-[19px] font-bold tracking-tight text-ink">
                         {user?.username ?? "—"}
@@ -421,6 +430,11 @@ function GeneralTab() {
                     label="Email"
                     value={user?.email ?? "—"}
                     onPress={() => setSheet("email")}
+                />
+                <Row
+                    label="Profile picture"
+                    value={hasPicture ? "Change" : "Add"}
+                    onPress={avatar.open}
                 />
                 <Row
                     label="Color"

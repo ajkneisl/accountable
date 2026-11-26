@@ -34,7 +34,7 @@ export interface RequestOptions {
  * @param config The API config.
  * @param method The method (GET, POST, etc)
  * @param path The path of the request NOT including the base URL.
- * @param body The body of the request, likely JSON.
+ * @param body The body of the request: JSON, or a FormData sent as multipart.
  * @param opts Other request options.
  */
 export async function request<T>(
@@ -47,15 +47,24 @@ export async function request<T>(
     const baseUrl = config.baseUrl.replace(/\/$/, "")
     const fetchImpl = config.fetchImpl ?? fetch.bind(globalThis)
 
+    // A FormData goes as is: fetch sets the multipart Content-Type and boundary.
+    const form = typeof FormData !== "undefined" && body instanceof FormData
+
     const send = (token: string | null) => {
         const headers: Record<string, string> = {}
-        if (body !== undefined) headers["Content-Type"] = "application/json"
+        if (body !== undefined && !form)
+            headers["Content-Type"] = "application/json"
         if (token) headers["Authorization"] = `Bearer ${token}`
 
         return fetchImpl(`${baseUrl}${path}`, {
             method,
             headers,
-            body: body === undefined ? undefined : JSON.stringify(body)
+            body:
+                body === undefined
+                    ? undefined
+                    : form
+                      ? (body as FormData)
+                      : JSON.stringify(body)
         })
     }
 

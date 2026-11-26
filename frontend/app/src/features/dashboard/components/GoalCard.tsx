@@ -37,13 +37,20 @@ import {
     isLimit,
     isRestDay,
     localWeekday,
+    localWeekStart,
     meetsTarget,
-    paceBar,
     unitLabel
 } from "../types"
 import { WeekChart } from "./WeekChart"
 
 const DAY_MS = 86_400_000
+
+/** "Nov 3, 2026" for the day a goal was created. */
+const CREATED_FMT = new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+})
 
 /** "Tue, Nov 3" for a day picked on the chart. */
 const DAY_FMT = new Intl.DateTimeFormat(undefined, {
@@ -143,9 +150,20 @@ export function GoalCard({
 
     const week = offset === 0 ? seedWeek : fetchedWeek
 
+    // Only days since the goal was created are its to show. A week before the
+    // one it was created in has nothing; that week counts from the day it was.
+    const shownStart = localWeekStart(offset)
+    const createdStart = localWeekStart(0, goal.createdAt)
+    const notYet = createdStart > shownStart
+    const firstDay =
+        createdStart === shownStart ? localWeekday(goal.createdAt) : 0
+
     // Fall back to the dashboard payload until the week request resolves.
     const vals = week?.vals ?? goal.vals
-    const total = week?.total ?? goal.progress
+    const total =
+        firstDay > 0
+            ? vals.slice(firstDay).reduce((sum, v) => sum + v, 0)
+            : (week?.total ?? goal.progress)
     const weeklyTarget = weeklyTargetFor(goal)
 
     const rangeLabel = week ? formatWeekRange(week.weekStart) : "—"
@@ -156,7 +174,9 @@ export function GoalCard({
     // are scored.
     const daily = goal.period === "DAILY"
     const daysCounted = offset === 0 ? localWeekday() + 1 : 7
-    const dueDays = requiredDaysOf(goal).filter((d) => d < daysCounted)
+    const dueDays = requiredDaysOf(goal).filter(
+        (d) => d >= firstDay && d < daysCounted
+    )
     const dueVals = dueDays.map((d) => vals[d] ?? 0)
     const daysHit = dueVals.filter((v) =>
         meetsTarget(goal, v, goal.target)
@@ -171,15 +191,13 @@ export function GoalCard({
                     Math.max(1, dueVals.length)
               : total
     // Where a weekly total should be by now: the target spread over the days
-    // already over, or for a limit its share through today. A past week is
-    // simply held to the whole target.
+    // already over, or for a limit its share through today. In the week the
+    // goal was created, only over the days since then. A past week is simply
+    // held to the whole target.
     const limit = isLimit(goal.integration, goal.metric)
+    const daysOver = localWeekday() - firstDay + (limit ? 1 : 0)
     const pace =
-        offset !== 0
-            ? weeklyTarget
-            : limit
-              ? (weeklyTarget * (localWeekday() + 1)) / 7
-              : paceBar(weeklyTarget)
+        offset !== 0 ? weeklyTarget : (weeklyTarget * daysOver) / (7 - firstDay)
     const weekPct = Math.round((total / Math.max(1, weeklyTarget)) * 100)
     const onPace = meetsTarget(goal, total, pace)
 
@@ -214,7 +232,7 @@ export function GoalCard({
                         size="sm"
                         onPress={onEdit}
                     />
-                ) : (
+                ) : notYet ? null : (
                     <View className="items-end">
                         <Mono
                             style={{
@@ -261,75 +279,94 @@ export function GoalCard({
                 )}
             </View>
 
-            <WeekChart
-                vals={vals}
-                target={dailyTargetFor(goal)}
-                limit={limit}
-                requiredDays={requiredDaysOf(goal)}
-                color={goalFill(goal, scheme)}
-                selected={day}
-                onSelect={(d) =>
-                    setPicked(d === null ? null : { offset, day: d })
-                }
-                selectableDays={offset === 0 ? localWeekday() + 1 : 7}
-            />
+            {notYet ? (
+                <View className="items-center gap-1 rounded-[12px] bg-bg-sunken px-4 py-6">
+                    <Text className="text-[14px] font-semibold text-ink-2">
+                        Not created yet
+                    </Text>
+                    <Text className="text-[12px] text-ink-3">
+                        {`This goal started on ${CREATED_FMT.format(new Date(goal.createdAt))}.`}
+                    </Text>
+                </View>
+            ) : (
+                <>
+                    <WeekChart
+                        vals={vals}
+                        target={dailyTargetFor(goal)}
+                        limit={limit}
+                        requiredDays={requiredDaysOf(goal)}
+                        color={goalFill(goal, scheme)}
+                        selected={day}
+                        onSelect={(d) =>
+                            setPicked(d === null ? null : { offset, day: d })
+                        }
+                        selectableDays={offset === 0 ? localWeekday() + 1 : 7}
+                        fromDay={firstDay}
+                    />
 
-            {/* The week's total against a weekly target. The tick is the pace:
+                    {/* The week's total against a weekly target. The tick is the pace:
                 the fill reaching it means on track (for a limit, staying short
                 of it). A past week has no tick — its mark is the bar's end. */}
-            {!daily && (
-                <View
-                    accessible
-                    accessibilityLabel={`${weekPct}% of the weekly ${
-                        limit ? "limit" : "target"
-                    }, ${
-                        offset !== 0
-                            ? onPace
-                                ? "met"
-                                : "missed"
-                            : onPace
-                              ? "on pace"
-                              : limit
-                                ? "over pace"
-                                : "behind pace"
-                    }`}
-                >
-                    <Bar
-                        pct={weekPct}
-                        color={goalFill(goal, scheme)}
-                        height={8}
-                    >
-                        {offset === 0 && (
-                            <PaceTick
-                                at={(pace / Math.max(1, weeklyTarget)) * 100}
-                                filled={total >= pace}
-                                onFillColor={goalOnFill(goal, scheme)}
-                            />
-                        )}
-                    </Bar>
-                </View>
-            )}
+                    {!daily && (
+                        <View
+                            accessible
+                            accessibilityLabel={`${weekPct}% of the weekly ${
+                                limit ? "limit" : "target"
+                            }, ${
+                                offset !== 0
+                                    ? onPace
+                                        ? "met"
+                                        : "missed"
+                                    : onPace
+                                      ? "on pace"
+                                      : limit
+                                        ? "over pace"
+                                        : "behind pace"
+                            }`}
+                        >
+                            <Bar
+                                pct={weekPct}
+                                color={goalFill(goal, scheme)}
+                                height={8}
+                            >
+                                {offset === 0 && (
+                                    <PaceTick
+                                        at={
+                                            (pace / Math.max(1, weeklyTarget)) *
+                                            100
+                                        }
+                                        filled={total >= pace}
+                                        onFillColor={goalOnFill(goal, scheme)}
+                                    />
+                                )}
+                            </Bar>
+                        </View>
+                    )}
 
-            {/* What the figure above covers: a picked day on its own, since
+                    {/* What the figure above covers: a picked day on its own, since
                 the week's tally isn't about that day; otherwise the week, in
                 the same ink as its tally so the dim slash between them recedes. */}
-            <Mono className="text-center text-[11px] text-ink-3">
-                {dayLabel ? (
-                    <Text className="font-bold text-ink">{dayLabel}</Text>
-                ) : (
-                    <>
-                        <Text className="text-ink">
-                            {offset === 0 ? "This week" : rangeLabel}
-                        </Text>
-                        {" / "}
-                        <Text className="font-bold text-ink">
-                            {daily
-                                ? `${daysHit} of ${dueDays.length} days`
-                                : `${weekPct}%`}
-                        </Text>
-                    </>
-                )}
-            </Mono>
+                    <Mono className="text-center text-[11px] text-ink-3">
+                        {dayLabel ? (
+                            <Text className="font-bold text-ink">
+                                {dayLabel}
+                            </Text>
+                        ) : (
+                            <>
+                                <Text className="text-ink">
+                                    {offset === 0 ? "This week" : rangeLabel}
+                                </Text>
+                                {" / "}
+                                <Text className="font-bold text-ink">
+                                    {daily
+                                        ? `${daysHit} of ${dueDays.length} days`
+                                        : `${weekPct}%`}
+                                </Text>
+                            </>
+                        )}
+                    </Mono>
+                </>
+            )}
         </Card>
     )
 }

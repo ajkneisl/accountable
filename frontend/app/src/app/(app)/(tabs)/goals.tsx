@@ -8,12 +8,12 @@
 
 import { useState } from "react"
 import { Pressable, Text, View } from "react-native"
-import { Host, Image } from "@expo/ui/swift-ui"
 import { router } from "expo-router"
 import { useAtomValue } from "jotai"
 import type { Goal, GoalCompetition } from "@shared/index"
 import { userAtom } from "../../../auth"
 import { useAppData } from "../../../features/common/AppData"
+import { CompetitionIcon } from "../../../features/competition/components/CompetitionIcon"
 import { GoalCard } from "../../../features/dashboard/components/GoalCard"
 import { StreakSection } from "../../../features/dashboard/components/StreaksCard"
 import {
@@ -52,9 +52,9 @@ function byCompetition(
 }
 
 /**
- * Heading over a competition's goals: the Competitions tab's trophy and the
- * competition's name, and the whole row opens it. With [edit] — edit mode, on
- * a competition the user owns — it opens the competition's goals ready to edit.
+ * Heading over a competition's goals: the competition's icon and name, and
+ * the whole row opens it. With [edit] — edit mode, on a competition the user
+ * owns — it opens the competition's goals ready to edit.
  */
 function CompetitionHeading({
     competition,
@@ -84,9 +84,7 @@ function CompetitionHeading({
             hitSlop={8}
             className="flex-row items-center gap-2 px-1 active:opacity-60"
         >
-            <Host matchContents>
-                <Image systemName="trophy.fill" size={15} color={colors.ink3} />
-            </Host>
+            <CompetitionIcon name={competition.name} size={24} />
             <Text
                 numberOfLines={1}
                 className="flex-1 text-[17px] font-semibold tracking-tight text-ink"

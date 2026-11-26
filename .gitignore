@@ -5,6 +5,8 @@
 
 backend/.gradle
 backend/build
+# profile pictures saved locally (AVATAR_DIR)
+backend/data
 
 # frontend
 frontend/**/node_modules

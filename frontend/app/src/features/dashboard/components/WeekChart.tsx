@@ -1,5 +1,6 @@
 // Seven-day column chart with a target reference line. With [onSelect], each
 // day's column is tappable: the picked day is highlighted and the rest dim.
+// Days before [fromDay] (before the goal existed) are left empty.
 
 import { Pressable, View } from "react-native"
 import { useColors } from "../../../theme"
@@ -27,7 +28,8 @@ export function WeekChart({
     color: colorProp,
     selected = null,
     onSelect,
-    selectableDays = 7
+    selectableDays = 7,
+    fromDay = 0
 }: {
     vals: number[]
     target: number
@@ -43,11 +45,13 @@ export function WeekChart({
     onSelect?: (day: number | null) => void
     /** Days from Monday that can be picked; later ones (still to come) can't. */
     selectableDays?: number
+    /** The first day (0 = Monday) the goal existed on; earlier days are blank. */
+    fromDay?: number
 }) {
     const colors = useColors()
     const color = colorProp ?? colors.ink
     // Headroom above the tallest bar so a maxed-out day doesn't touch the top.
-    const max = Math.max(target, ...vals, 1) * 1.2
+    const max = Math.max(target, ...vals.slice(fromDay), 1) * 1.2
 
     return (
         <View>
@@ -72,6 +76,7 @@ export function WeekChart({
                 {vals.map((v, i) => {
                     const picked = selected === i
                     const dimmed = selected !== null && !picked
+                    if (i < fromDay) return <View key={i} className="flex-1" />
                     return (
                         // The whole column is the tap target, not just the bar,
                         // so short and empty days are as easy to pick.
@@ -119,7 +124,12 @@ export function WeekChart({
                         key={i}
                         className={`flex-1 text-center text-[10px] ${
                             selected === i ? "font-bold text-ink" : "text-ink-3"
-                        } ${requiredDays && !requiredDays.includes(i) ? "opacity-40" : ""}`}
+                        } ${
+                            i < fromDay ||
+                            (requiredDays && !requiredDays.includes(i))
+                                ? "opacity-40"
+                                : ""
+                        }`}
                     >
                         {d}
                     </Mono>

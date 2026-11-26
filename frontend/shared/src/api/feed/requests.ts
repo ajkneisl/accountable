@@ -78,7 +78,13 @@ export interface FeedGoalChip {
 /** One card, as the requesting user is allowed to see it. */
 export interface FeedPost {
     id: string
-    actor: { userID: string; username: string; color: HabitColor }
+    actor: {
+        userID: string
+        username: string
+        color: HabitColor
+        /** For their profile picture's URL ({@link avatarUrl}); absent if they have none. */
+        avatarVersion?: number | null
+    }
     integration: string
     /** The person's local date, `YYYY-MM-DD`. */
     day: string

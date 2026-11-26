@@ -9,7 +9,7 @@
         "ios": {
             "supportsTablet": true,
             "bundleIdentifier": "app.umn.acc",
-            "buildNumber": "43",
+            "buildNumber": "45",
             "appleTeamId": "CBL6R6SP6A",
             "associatedDomains": ["applinks:beacc.app"],
             "config": {
@@ -44,6 +44,14 @@
                 }
             ],
             "expo-secure-store",
+            [
+                "expo-image-picker",
+                {
+                    "photosPermission": "Beacc uses your photos so you can choose a profile picture.",
+                    "cameraPermission": false,
+                    "microphonePermission": false
+                }
+            ],
             "expo-status-bar",
             [
                 "expo-splash-screen",

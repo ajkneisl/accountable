@@ -2,8 +2,8 @@
 // anything itself, so this loads every competition's members and current week,
 // ranks them the same way the competition board does, and hands it over as a
 // timeline: the standings now, plus the same totals re-scored at each coming
-// midnight (the on-pace bar rises through the week) and an all-reset entry at
-// the next Monday. That way the widget stays honest when the app isn't opened,
+// midnight (the on-pace bar rises through the week, and a daily goal not hit
+// by then counts as missed) and an all-reset entry at the next Monday. That way the widget stays honest when the app isn't opened,
 // until the next sync replaces the timeline.
 
 import { isRunningInExpoGo } from "expo"
@@ -97,7 +97,10 @@ function propsFor(
     }
 }
 
-/** [week] as it starts out: nobody has logged anything yet. */
+/**
+ * [week] as it starts out: nobody has logged anything yet, and every member
+ * counts from Monday, however late they joined the week before.
+ */
 function emptied(week: CompetitionWeek): CompetitionWeek {
     return {
         ...week,
@@ -106,7 +109,8 @@ function emptied(week: CompetitionWeek): CompetitionWeek {
             members: g.members.map((m) => ({
                 ...m,
                 vals: m.vals.map(() => 0),
-                total: 0
+                total: 0,
+                firstDay: 0
             }))
         }))
     }

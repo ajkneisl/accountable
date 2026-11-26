@@ -3,6 +3,8 @@ package auth
 import api.Error
 import api.MultiError
 import at.favre.lib.crypto.bcrypt.BCrypt
+import org.slf4j.LoggerFactory
+import user.Avatars
 import user.User
 import user.createToken
 import user.createUser
@@ -57,6 +59,7 @@ data class DisplayAccessResponse(val accessToken: String, val accessTokenExpires
 
 /** Handle authorization! */
 object Auth {
+    private val log = LoggerFactory.getLogger(Auth::class.java)
     private val random = SecureRandom()
 
     /**
@@ -128,6 +131,9 @@ object Auth {
     fun deleteAccount(userID: UUID, currentPassword: String) {
         requirePassword(userID, currentPassword)
         deleteUser(userID)
+        // The account is gone either way; a picture left behind is only orphaned.
+        runCatching { Avatars.storage.delete(userID) }
+            .onFailure { log.warn("couldn't delete the picture of deleted user {}", userID, it) }
     }
 
     /**

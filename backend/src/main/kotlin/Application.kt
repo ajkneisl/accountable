@@ -43,6 +43,7 @@ import kotlinx.serialization.json.Json
 import features.feed.feedRoutes
 import notifications.NotificationWorker
 import notifications.notificationRoutes
+import user.avatarRoutes
 import user.userRoutes
 
 private const val APP_VERSION = "1.0.0-SNAPSHOT"
@@ -160,6 +161,7 @@ fun Application.configureModule() {
 
             authRoutes()
             userRoutes()
+            avatarRoutes()
             integrationRoutes()
             goalRoutes()
             habitRoutes()
