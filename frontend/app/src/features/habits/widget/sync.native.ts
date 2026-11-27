@@ -5,10 +5,10 @@
 // days). That way the widget moves on to a new day by itself, even if the app
 // isn't opened, until the next sync replaces the timeline.
 
-import { isRunningInExpoGo } from "expo"
 import type { HabitsResponse } from "@shared/index"
 import { buildGrid, HABIT_PALETTE } from "../grid"
 import type { HabitsWidgetProps } from "./HabitsWidget"
+import { updateWidget as update } from "./output"
 
 /** Week columns the widget draws at most (one medium/large card). */
 const WIDGET_WEEKS = 9
@@ -17,37 +17,6 @@ const WIDGET_WEEKS = 9
 const ROLLOVER_DAYS = 7
 
 const DAY_MS = 86_400_000
-
-type Widget = typeof import("./HabitsWidget").default
-
-let widget: Widget | null | undefined
-
-/**
- * The widget handle, or null where the native module doesn't exist. Expo Go
- * doesn't ship expo-widgets, and creating the widget there throws, so the module
- * is only loaded on demand in a development or release build.
- */
-function getWidget(): Widget | null {
-    if (widget === undefined) {
-        try {
-            widget = isRunningInExpoGo()
-                ? null
-                : (require("./HabitsWidget") as typeof import("./HabitsWidget"))
-                      .default
-        } catch {
-            widget = null
-        }
-    }
-    return widget
-}
-
-function update(entries: { date: Date; props: HabitsWidgetProps }[]) {
-    try {
-        getWidget()?.updateTimeline(entries)
-    } catch {
-        // A widget refresh is best effort and must never break the app.
-    }
-}
 
 /** `yyyy-MM-dd` [days] after [date]. */
 function addDays(date: string, days: number): string {

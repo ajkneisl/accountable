@@ -152,6 +152,46 @@
             "expo-notifications",
             "react-native-health-connect",
             [
+                "react-native-android-widget",
+                {
+                    "widgets": [
+                        {
+                            "name": "HabitsHeatmap",
+                            "label": "Habits",
+                            "description": "Your habits and their streaks at a glance.",
+                            "minWidth": "110dp",
+                            "minHeight": "110dp",
+                            "targetCellWidth": 2,
+                            "targetCellHeight": 2,
+                            "resizeMode": "horizontal|vertical",
+                            "updatePeriodMillis": 1800000
+                        },
+                        {
+                            "name": "CompetitionStandings",
+                            "label": "Competitions",
+                            "description": "Where you stand in a competition this week.",
+                            "minWidth": "110dp",
+                            "minHeight": "110dp",
+                            "targetCellWidth": 2,
+                            "targetCellHeight": 2,
+                            "resizeMode": "horizontal|vertical",
+                            "updatePeriodMillis": 1800000
+                        },
+                        {
+                            "name": "GoalsProgress",
+                            "label": "Goals",
+                            "description": "This week's progress on your goals.",
+                            "minWidth": "110dp",
+                            "minHeight": "110dp",
+                            "targetCellWidth": 2,
+                            "targetCellHeight": 2,
+                            "resizeMode": "horizontal|vertical",
+                            "updatePeriodMillis": 1800000
+                        }
+                    ]
+                }
+            ],
+            [
                 "expo-build-properties",
                 {
                     "android": {

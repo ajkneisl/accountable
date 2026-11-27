@@ -4,3 +4,5 @@
 
 import "expo-router/entry"
 import "./src/features/integration/backgroundSync"
+// Android draws home screen widgets through a headless JS task.
+import "./src/features/widgets/register"

@@ -6,7 +6,6 @@
 // honest when the app isn't opened, until the next sync replaces the timeline.
 
 import { requiredDaysOf } from "@shared/index"
-import { isRunningInExpoGo } from "expo"
 import type { Goal } from "@shared/index"
 import {
     goalFill,
@@ -19,39 +18,9 @@ import {
     unitScale
 } from "../types"
 import type { GoalsWidgetProps } from "./GoalsWidget"
+import { updateWidget as update, widgetAvailable } from "./output"
 
 const DAY_MS = 86_400_000
-
-type Widget = typeof import("./GoalsWidget").default
-
-let widget: Widget | null | undefined
-
-/**
- * The widget handle, or null where the native module doesn't exist. Expo Go
- * doesn't ship expo-widgets, and creating the widget there throws, so the module
- * is only loaded on demand in a development or release build.
- */
-function getWidget(): Widget | null {
-    if (widget === undefined) {
-        try {
-            widget = isRunningInExpoGo()
-                ? null
-                : (require("./GoalsWidget") as typeof import("./GoalsWidget"))
-                      .default
-        } catch {
-            widget = null
-        }
-    }
-    return widget
-}
-
-function update(entries: { date: Date; props: GoalsWidgetProps }[]) {
-    try {
-        getWidget()?.updateTimeline(entries)
-    } catch {
-        // A widget refresh is best effort and must never break the app.
-    }
-}
 
 /**
  * Widget props for [goals] on weekday [day] (0 = Monday) of the week they were
@@ -119,7 +88,7 @@ function propsFor(
 }
 
 export function syncGoalsWidget(goals: Goal[]): void {
-    if (!getWidget()) return
+    if (!widgetAvailable()) return
 
     const now = new Date()
     const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate())
