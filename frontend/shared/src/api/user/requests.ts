@@ -177,13 +177,23 @@ export function avatarUrl(
 }
 
 /**
- * PUT /api/user/avatar — set the user's profile picture. [picture] is what a
- * FormData file takes: a Blob on the web, or `{ uri, name, type }` in React
- * Native. The server crops it square and shrinks it.
+ * A file part for {@link uploadAvatar} in the app. Expo's fetch reads a
+ * FormData file through `bytes()`; React Native's `{ uri, name, type }` isn't
+ * supported there and fails before anything is sent.
+ */
+export interface UploadFile {
+    name: string
+    type: string
+    bytes(): Promise<Uint8Array>
+}
+
+/**
+ * PUT /api/user/avatar — set the user's profile picture: a Blob on the web,
+ * an {@link UploadFile} in the app. The server crops it square and shrinks it.
  */
 export function uploadAvatar(
     config: ApiConfig,
-    picture: Blob | { uri: string; name: string; type: string }
+    picture: Blob | UploadFile
 ): Promise<{ avatarVersion: number }> {
     const form = new FormData()
     form.append("picture", picture as Blob)
