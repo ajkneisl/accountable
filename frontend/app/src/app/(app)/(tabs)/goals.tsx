@@ -84,7 +84,13 @@ function CompetitionHeading({
             hitSlop={8}
             className="flex-row items-center gap-2 px-1 active:opacity-60"
         >
-            <CompetitionIcon name={competition.name} size={24} />
+            <CompetitionIcon
+                id={competition.id}
+                name={competition.name}
+                icon={competition.icon}
+                pictureVersion={competition.pictureVersion}
+                size={24}
+            />
             <Text
                 numberOfLines={1}
                 className="flex-1 text-[17px] font-semibold tracking-tight text-ink"

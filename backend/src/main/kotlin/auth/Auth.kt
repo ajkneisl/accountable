@@ -4,7 +4,8 @@ import api.Error
 import api.MultiError
 import at.favre.lib.crypto.bcrypt.BCrypt
 import org.slf4j.LoggerFactory
-import user.Avatars
+import user.ImageKind
+import user.Images
 import user.User
 import user.createToken
 import user.createUser
@@ -132,7 +133,7 @@ object Auth {
         requirePassword(userID, currentPassword)
         deleteUser(userID)
         // The account is gone either way; a picture left behind is only orphaned.
-        runCatching { Avatars.storage.delete(userID) }
+        runCatching { Images.storage.delete(ImageKind.AVATAR, userID) }
             .onFailure { log.warn("couldn't delete the picture of deleted user {}", userID, it) }
     }
 

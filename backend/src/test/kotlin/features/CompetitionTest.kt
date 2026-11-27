@@ -11,11 +11,14 @@ import features.competition.joinCompetition
 import features.competition.leaveCompetition
 import features.competition.renameCompetition
 import features.competition.resetJoinCode
+import features.competition.setCompetitionIcon
 import features.competition.transferCompetition
+import features.competition.validIcon
 import java.util.UUID
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
@@ -66,6 +69,29 @@ class CompetitionTest {
         assertTrue(isMember(owner, competition))
         assertEquals("Other", findCompetitionByID(other)!!.name)
         assertEquals(owner, findCompetitionByID(other)!!.ownerID)
+    }
+
+    @Test
+    fun `an icon is set and cleared`() = runBlocking {
+        val competition = createCompetition(newUser(), "Steps").id
+        assertNull(findCompetitionByID(competition)!!.icon)
+
+        setCompetitionIcon(competition, "🏃")
+        assertEquals("🏃", findCompetitionByID(competition)!!.icon)
+
+        setCompetitionIcon(competition, null)
+        assertNull(findCompetitionByID(competition)!!.icon)
+    }
+
+    @Test
+    fun `an icon must be one emoji`() {
+        // Pictographs, flags, skin tones, joined sequences and keycaps all count as one.
+        for (ok in listOf("🏃", "🇺🇸", "👍🏽", "👨‍👩‍👧", "❤️", "♥", "1️⃣", " 🔥 ")) {
+            assertEquals(ok.trim(), validIcon(ok))
+        }
+        for (bad in listOf("A", "1", "ab", "🔥🔥", "#", "→", "")) {
+            assertFailsWith<api.Error>("accepted '$bad'") { validIcon(bad) }
+        }
     }
 
     @Test

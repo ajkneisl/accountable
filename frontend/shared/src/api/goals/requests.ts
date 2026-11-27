@@ -38,6 +38,10 @@ export interface Goal {
 export interface GoalCompetition {
     id: string
     name: string
+    /** An emoji standing for it; absent or null for its first letter. */
+    icon?: string | null
+    /** For its picture's URL ({@link competitionPictureUrl}), shown in place of `icon`. */
+    pictureVersion?: number | null
 }
 
 export interface CreateGoalRequest {

@@ -245,6 +245,10 @@ data class FeedGoalChip(
     val target: Long,
     val value: Long,
     val met: Boolean,
+    /** The competition's emoji, or null for its first letter (or for a personal goal). */
+    val competitionIcon: String? = null,
+    /** For the competition's picture's URL, shown in place of its emoji; null if there's none. */
+    val competitionPictureVersion: Long? = null,
 )
 
 /** A card as one viewer sees it. */
@@ -272,6 +276,8 @@ data class FeedPostView(
 private class SharedCompetition(
     val id: UUID,
     val name: String,
+    val icon: String?,
+    val pictureVersion: Long?,
     val joinedAt: Map<UUID, Long>,
     val goalKeys: Set<Triple<String, String, GoalPeriod>>,
 ) {
@@ -283,6 +289,8 @@ private suspend fun sharedCompetitions(viewer: UUID): List<SharedCompetition> =
         SharedCompetition(
             id = competition.id,
             name = competition.name,
+            icon = competition.icon,
+            pictureVersion = competition.pictureVersion,
             joinedAt = membersOf(competition.id).associate { it.userID to it.joinedAt },
             goalKeys =
                 goalsForCompetition(competition.id)
@@ -413,6 +421,8 @@ suspend fun feedFor(
                                     target = chip[FeedPostGoals.target],
                                     value = chip[FeedPostGoals.value],
                                     met = chip[FeedPostGoals.met],
+                                    competitionIcon = competition?.icon,
+                                    competitionPictureVersion = competition?.pictureVersion,
                                 )
                             },
                         likeCount = likes[id].orEmpty().size.toLong(),

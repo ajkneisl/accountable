@@ -123,6 +123,13 @@ private fun draw(image: BufferedImage, size: Int): BufferedImage {
     return out
 }
 
+/**
+ * The picture in this multipart upload as it's stored: its first file, at most [MAX_UPLOAD_BYTES],
+ * through [avatarJpeg]. A 400 if it's too big, absent or not an image.
+ */
+internal suspend fun RoutingCall.receivePictureJpeg(): ByteArray =
+    withContext(Dispatchers.IO) { avatarJpeg(receivePicture()) }
+
 /** The first file in the multipart upload, up to [MAX_UPLOAD_BYTES]; a 400 if too big or absent. */
 private suspend fun RoutingCall.receivePicture(): ByteArray {
     var picture: ByteArray? = null
@@ -153,9 +160,9 @@ fun Route.avatarRoutes() {
             val userID = call.principal<JWTPrincipal>()!!.subject?.let(UUID::fromString)
                 ?: Error.text("invalid token")
 
-            val jpeg = withContext(Dispatchers.IO) { avatarJpeg(call.receivePicture()) }
+            val jpeg = call.receivePictureJpeg()
             val version = System.currentTimeMillis()
-            withContext(Dispatchers.IO) { Avatars.storage.put(userID, jpeg) }
+            withContext(Dispatchers.IO) { Images.storage.put(ImageKind.AVATAR, userID, jpeg) }
             if (!setAvatarVersion(userID, version)) Error.notFound("user")
             invalidateViewsOf(userID)
             call.respond(AvatarResponse(version))
@@ -166,30 +173,34 @@ fun Route.avatarRoutes() {
                 ?: Error.text("invalid token")
 
             if (!setAvatarVersion(userID, null)) Error.notFound("user")
-            withContext(Dispatchers.IO) { Avatars.storage.delete(userID) }
+            withContext(Dispatchers.IO) { Images.storage.delete(ImageKind.AVATAR, userID) }
             invalidateViewsOf(userID)
             call.respond(HttpStatusCode.NoContent)
         }
     }
 
-    // GET /api/avatars/{userID}?v={avatarVersion}. Open, so an <Image> can load it without a
-    // token; a user ID is only known to those who share a competition with them. With the version
-    // the URL changes on every upload, so it's cached for good.
-    // A plain 404 for a missing picture, rather than the JSON API's 400: it's an image URL.
-    get("/avatars/{userID}") {
-        val userID =
-            call.parameters["userID"]?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-        val jpeg = userID?.let { withContext(Dispatchers.IO) { Avatars.storage.get(it) } }
-        if (jpeg == null) {
-            call.respond(HttpStatusCode.NotFound)
-            return@get
-        }
+    // GET /api/avatars/{userID}?v={avatarVersion} and /api/images/competitions/{id}?v={version}.
+    // Open, so an <Image> can load them without a token; the IDs are only known to those who share
+    // a competition. With the version the URL changes on every upload, so it's cached for good.
+    get("/avatars/{id}") { call.respondImage(ImageKind.AVATAR) }
+    get("/images/competitions/{id}") { call.respondImage(ImageKind.COMPETITION) }
+}
 
-        val versioned = call.request.queryParameters["v"] != null
-        call.response.header(
-            HttpHeaders.CacheControl,
-            if (versioned) "public, max-age=31536000, immutable" else "no-cache",
-        )
-        call.respondBytes(jpeg, ContentType.Image.JPEG)
+/**
+ * The stored picture of [kind] for the `id` in the path. A plain 404 if there isn't one, rather
+ * than the JSON API's 400: it's an image URL.
+ */
+private suspend fun RoutingCall.respondImage(kind: ImageKind) {
+    val id = parameters["id"]?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+    val jpeg = id?.let { withContext(Dispatchers.IO) { Images.storage.get(kind, it) } }
+    if (jpeg == null) {
+        respond(HttpStatusCode.NotFound)
+        return
     }
+    val versioned = request.queryParameters["v"] != null
+    response.header(
+        HttpHeaders.CacheControl,
+        if (versioned) "public, max-age=31536000, immutable" else "no-cache",
+    )
+    respondBytes(jpeg, ContentType.Image.JPEG)
 }

@@ -1,10 +1,11 @@
 // Competition settings — pushed from the competition screen. The owner renames
-// it, shares or resets the join code, removes members or hands the competition
-// to one of them (from a member's row), and deletes it. Members see the same
-// details read-only, can share the code, and can leave.
+// it, sets its icon (a picture or an emoji), shares or resets the join code,
+// removes members or hands the competition to one of them (from a member's
+// row), and deletes it. Members see the same details read-only, can share the
+// code, and can leave.
 
 import { useCallback, useEffect, useState } from "react"
-import { Pressable, Share, Text } from "react-native"
+import { Pressable, Share, Text, View } from "react-native"
 import { router, useLocalSearchParams } from "expo-router"
 import { useAtomValue } from "jotai"
 import {
@@ -15,13 +16,21 @@ import {
     getCompetition,
     leaveCompetition,
     removeCompetitionMember,
+    removeCompetitionPicture,
     resetCompetitionJoinCode,
     updateCompetition,
+    uploadCompetitionPicture,
     useApi
 } from "@shared/index"
 import { userAtom } from "../../../../auth"
 import { useAppData } from "../../../../features/common/AppData"
+import {
+    jpegUpload,
+    showUploadError,
+    usePickSquarePhoto
+} from "../../../../features/common/photo"
 import { buildColorMap } from "../../../../features/competition/colors"
+import { CompetitionIcon } from "../../../../features/competition/components/CompetitionIcon"
 import { useScheme } from "../../../../theme"
 import { BackBar } from "../../../../ui/BackBar"
 import { Screen } from "../../../../ui/Screen"
@@ -98,6 +107,87 @@ function RenameSheet({
     )
 }
 
+/** A few to tap instead of switching to the emoji keyboard. */
+const SUGGESTED_EMOJI = [
+    "🏃",
+    "💪",
+    "🔥",
+    "🏆",
+    "🚴",
+    "🧘",
+    "📚",
+    "💻",
+    "💧",
+    "😴"
+]
+
+function EmojiSheet({
+    current,
+    onClose,
+    onSave
+}: {
+    current: string
+    onClose: () => void
+    onSave: (icon: string) => Promise<void>
+}) {
+    const [icon, setIcon] = useState(current)
+    const [busy, setBusy] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+
+    async function submit() {
+        const trimmed = icon.trim()
+        if (!trimmed) {
+            setError("Pick an emoji.")
+            return
+        }
+        setError(null)
+        setBusy(true)
+        try {
+            await onSave(trimmed)
+            onClose()
+        } catch (err) {
+            setError(messageFor(err))
+            setBusy(false)
+        }
+    }
+
+    return (
+        <Sheet
+            title="Competition emoji"
+            description="Shown wherever the competition is, unless it has a picture."
+            onClose={onClose}
+            action={{ label: busy ? "Saving…" : "Save", onPress: submit, busy }}
+        >
+            <SheetField label="Emoji">
+                <Input
+                    value={icon}
+                    onChangeText={setIcon}
+                    autoFocus
+                    returnKeyType="done"
+                    onSubmitEditing={submit}
+                    placeholder="Type or pick one"
+                />
+            </SheetField>
+            <View className="flex-row flex-wrap gap-2">
+                {SUGGESTED_EMOJI.map((e) => (
+                    <Pressable
+                        key={e}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Use ${e}`}
+                        onPress={() => setIcon(e)}
+                        className={`h-11 w-11 items-center justify-center rounded-[11px] active:opacity-60 ${
+                            icon.trim() === e ? "bg-ink" : "bg-bg-sunken"
+                        }`}
+                    >
+                        <Text className="text-[22px]">{e}</Text>
+                    </Pressable>
+                ))}
+            </View>
+            {error !== null && <ErrorList errors={[error]} />}
+        </Sheet>
+    )
+}
+
 export default function CompetitionSettings() {
     const api = useApi()
     const scheme = useScheme()
@@ -108,7 +198,9 @@ export default function CompetitionSettings() {
     const [detail, setDetail] = useState<CompetitionDetail | null>(null)
     const [loading, setLoading] = useState(true)
     const [renaming, setRenaming] = useState(false)
+    const [choosingEmoji, setChoosingEmoji] = useState(false)
     const [busy, setBusy] = useState(false)
+    const photo = usePickSquarePhoto()
     const [error, setError] = useState<string | null>(null)
 
     const load = useCallback(async () => {
@@ -177,6 +269,57 @@ export default function CompetitionSettings() {
     }
 
     /** The owner's choices for another member. */
+    /** The icon menu: a picture, an emoji, or back to the first letter. */
+    function manageIcon() {
+        if (!detail) return
+        const competition = detail
+        const hasPicture = competition.pictureVersion != null
+        showMenu("Competition icon", [
+            {
+                label: "Choose photo",
+                run: async () => {
+                    const uri = await photo.pick()
+                    if (!uri) return
+                    setBusy(true)
+                    try {
+                        await uploadCompetitionPicture(
+                            api,
+                            competition.id,
+                            jpegUpload(uri)
+                        )
+                        await load()
+                        reload()
+                    } catch (err) {
+                        showUploadError("Couldn't save the picture", err)
+                    } finally {
+                        setBusy(false)
+                    }
+                }
+            },
+            { label: "Choose emoji", run: () => setChoosingEmoji(true) },
+            ...(hasPicture || competition.icon
+                ? [
+                      {
+                          // A picture goes first, leaving any emoji behind it.
+                          label: hasPicture ? "Remove photo" : "Remove emoji",
+                          destructive: true,
+                          run: () =>
+                              run(() =>
+                                  hasPicture
+                                      ? removeCompetitionPicture(
+                                            api,
+                                            competition.id
+                                        )
+                                      : updateCompetition(api, competition.id, {
+                                            icon: ""
+                                        })
+                              )
+                      }
+                  ]
+                : [])
+        ])
+    }
+
     function manageMember(member: CompetitionMember) {
         if (!detail) return
         const competition = detail
@@ -261,7 +404,7 @@ export default function CompetitionSettings() {
                 footer={
                     isOwner
                         ? created
-                        : `${created} Only ${owner?.username ?? "the owner"} can rename it or reset the code.`
+                        : `${created} Only ${owner?.username ?? "the owner"} can rename it, change its icon or reset the code.`
                 }
             >
                 <Row
@@ -271,6 +414,26 @@ export default function CompetitionSettings() {
                     onPress={
                         isOwner && !busy ? () => setRenaming(true) : undefined
                     }
+                />
+                <Row
+                    label="Icon"
+                    icon={
+                        <CompetitionIcon
+                            id={detail.id}
+                            name={detail.name}
+                            icon={detail.icon}
+                            pictureVersion={detail.pictureVersion}
+                            size={28}
+                        />
+                    }
+                    value={
+                        detail.pictureVersion != null
+                            ? "Photo"
+                            : detail.icon
+                              ? "Emoji"
+                              : "Letter"
+                    }
+                    onPress={isOwner && !busy ? manageIcon : undefined}
                 />
                 <Row
                     label="Join code"
@@ -327,6 +490,18 @@ export default function CompetitionSettings() {
                 </Pressable>
             </Section>
 
+            {choosingEmoji && (
+                <EmojiSheet
+                    current={detail.icon ?? ""}
+                    onClose={() => setChoosingEmoji(false)}
+                    onSave={async (icon) => {
+                        await updateCompetition(api, detail.id, { icon })
+                        await load()
+                        reload()
+                    }}
+                />
+            )}
+            {photo.element}
             {renaming && (
                 <RenameSheet
                     current={detail.name}

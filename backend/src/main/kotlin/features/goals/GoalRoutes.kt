@@ -104,8 +104,17 @@ data class GoalResponse(
     val requiredDays: List<Int> = daysIn(EVERY_DAY),
 )
 
-/** The competition a [GoalResponse] comes from. */
-@Serializable data class GoalCompetition(val id: String, val name: String)
+/**
+ * The competition a [GoalResponse] comes from. [pictureVersion] is for its picture's URL, shown in
+ * place of [icon], its emoji; with neither, it's shown by its first letter.
+ */
+@Serializable
+data class GoalCompetition(
+    val id: String,
+    val name: String,
+    val icon: String? = null,
+    val pictureVersion: Long? = null,
+)
 
 /**
  * One Monday-anchored week of a goal's metric, returned by [GOAL_WEEK_ROUTE].
@@ -195,7 +204,13 @@ suspend fun competitionGoalsView(userID: UUID): List<GoalResponse> {
     val now = System.currentTimeMillis()
     val zone = zoneOf(userID)
     return competitionsFor(userID).flatMap { competition ->
-        val source = GoalCompetition(competition.id.toString(), competition.name)
+        val source =
+            GoalCompetition(
+                competition.id.toString(),
+                competition.name,
+                competition.icon,
+                competition.pictureVersion,
+            )
         goalsForCompetition(competition.id).map {
             buildGoalResponse(userID, it, it.createdAt, null, now, zone, source)
         }

@@ -48,7 +48,13 @@ function HomeActions() {
                         // A runner, not a plus: plus means "new item" elsewhere.
                         // A fixed frame, not matchContents: that size arrives
                         // after layout and can leave the glyph sitting low.
-                        <Host style={{ width: 22, height: 22 }}>
+                        // And no safe area: up by the status bar, SwiftUI
+                        // would inset the glyph by it, pushing it below the
+                        // button whenever layout ran while under the bar.
+                        <Host
+                            style={{ width: 22, height: 22 }}
+                            ignoreSafeArea="all"
+                        >
                             <Image
                                 systemName="figure.run"
                                 size={18}

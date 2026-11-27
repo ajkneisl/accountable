@@ -24,13 +24,19 @@ import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.patch
 import io.ktor.server.routing.post
+import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 import java.util.UUID
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import user.defaultColor
 import user.displayColor
+import user.ImageKind
+import user.Images
 import user.findUserByID
+import user.receivePictureJpeg
 import user.zoneOf
 
 /** Request body for creating a competition. */
@@ -41,8 +47,14 @@ import user.zoneOf
  *
  * @param name A new name.
  * @param ownerID A member to hand ownership to. The caller stays a member.
+ * @param icon A single emoji to stand for it, or `""` to go back to its first letter.
  */
-@Serializable data class UpdateCompetitionRequest(val name: String? = null, val ownerID: String? = null)
+@Serializable
+data class UpdateCompetitionRequest(
+    val name: String? = null,
+    val ownerID: String? = null,
+    val icon: String? = null,
+)
 
 /** Request body for joining via a [Competition.joinCode]. */
 @Serializable data class JoinCompetitionRequest(val joinCode: String)
@@ -66,6 +78,10 @@ data class CompetitionSummary(
     val ownerID: String,
     val joinCode: String,
     val createdAt: Long,
+    /** An emoji standing for it, or null for the first letter of [name]. */
+    val icon: String? = null,
+    /** For its picture's URL, shown in place of [icon]; null if there's none. */
+    val pictureVersion: Long? = null,
 )
 
 /**
@@ -103,6 +119,10 @@ data class CompetitionDetailResponse(
     val createdAt: Long,
     val members: List<CompetitionMemberView>,
     val goals: List<CompetitionGoalView>,
+    /** An emoji standing for it, or null for the first letter of [name]. */
+    val icon: String? = null,
+    /** For its picture's URL, shown in place of [icon]; null if there's none. */
+    val pictureVersion: Long? = null,
 )
 
 /** One member's Monday-first daily values for a single competition goal over a week. */
@@ -162,6 +182,26 @@ data class CompetitionLeaderboardResponse(
 
 /** Longest name the `competitions.name` column holds. */
 private const val NAME_MAX_LENGTH = 64
+
+/**
+ * [raw] if it's a single emoji (one grapheme, a pictograph or emoji-style character, flags and
+ * skin tones included), otherwise a 400. Plain letters, digits and symbols are turned away.
+ */
+internal fun validIcon(raw: String): String {
+    val icon = raw.trim()
+    val graphemes = java.text.BreakIterator.getCharacterInstance()
+    graphemes.setText(icon)
+    graphemes.first()
+    val oneGrapheme = icon.isNotEmpty() && graphemes.next() == icon.length
+    val first = if (icon.isEmpty()) 0 else icon.codePointAt(0)
+    val emoji =
+        Character.isExtendedPictographic(first) ||
+            Character.isEmojiPresentation(first) ||
+            // A keycap or text-style symbol made emoji with VS16, such as 1️⃣ or ❤️.
+            (Character.isEmoji(first) && icon.contains('\uFE0F'))
+    if (!oneGrapheme || !emoji || icon.length > 32) Error.text("icon must be a single emoji")
+    return icon
+}
 
 /** [name] trimmed, or a 400 if it's blank or too long. */
 private fun validName(name: String): String {
@@ -245,6 +285,8 @@ suspend fun competitionDetailView(competition: Competition): CompetitionDetailRe
             createdAt = competition.createdAt,
             members = memberViews,
             goals = goals.map { it.toView() },
+            icon = competition.icon,
+            pictureVersion = competition.pictureVersion,
         )
     }
 
@@ -358,7 +400,42 @@ private val COMPETITION_DELETE_ROUTE: suspend RoutingContext.() -> Unit = {
     deleteCompetition(competition.id)
     members.forEach { Cache.invalidateUser(it.userID) }
     Cache.invalidateCompetition(competition.id)
+    // The competition is gone either way; a picture left behind is only orphaned.
+    if (competition.pictureVersion != null) {
+        runCatching {
+            withContext(Dispatchers.IO) { Images.storage.delete(ImageKind.COMPETITION, competition.id) }
+        }
+    }
     call.respond(HttpStatusCode.NoContent)
+}
+
+/** Response to a competition picture upload: the new version, for the picture's URL. */
+@Serializable data class CompetitionPictureResponse(val pictureVersion: Long)
+
+/** PUT /api/competitions/{id}/picture — owner sets its picture: multipart with the image as its file. */
+private val COMPETITION_PICTURE_PUT_ROUTE: suspend RoutingContext.() -> Unit = {
+    val competition = call.competitionForOwner(call.userID())
+    val jpeg = call.receivePictureJpeg()
+    val version = System.currentTimeMillis()
+    withContext(Dispatchers.IO) { Images.storage.put(ImageKind.COMPETITION, competition.id, jpeg) }
+    setCompetitionPictureVersion(competition.id, version)
+    invalidateCompetitionViews(competition.id)
+    call.respond(CompetitionPictureResponse(version))
+}
+
+/** DELETE /api/competitions/{id}/picture — owner removes its picture, back to its icon or letter. */
+private val COMPETITION_PICTURE_DELETE_ROUTE: suspend RoutingContext.() -> Unit = {
+    val competition = call.competitionForOwner(call.userID())
+    setCompetitionPictureVersion(competition.id, null)
+    withContext(Dispatchers.IO) { Images.storage.delete(ImageKind.COMPETITION, competition.id) }
+    invalidateCompetitionViews(competition.id)
+    call.respond(HttpStatusCode.NoContent)
+}
+
+/** Every cached view with [competitionID]'s look in it: its own, and each member's lists. */
+private suspend fun invalidateCompetitionViews(competitionID: UUID) {
+    membersOf(competitionID).forEach { Cache.invalidateUser(it.userID) }
+    Cache.invalidateCompetition(competitionID)
 }
 
 /** PATCH /api/competitions/{id} — owner renames the competition or hands it to another member. */
@@ -368,6 +445,8 @@ private val COMPETITION_UPDATE_ROUTE: suspend RoutingContext.() -> Unit = {
     val req = call.receive<UpdateCompetitionRequest>()
 
     val name = req.name?.let(::validName)
+    // "" clears it; anything else must be one emoji.
+    val icon = req.icon?.let { if (it.isEmpty()) "" else validIcon(it) }
     val owner =
         req.ownerID?.let { raw ->
             val id = runCatching { UUID.fromString(raw) }.getOrNull() ?: Error.text("invalid owner id")
@@ -377,11 +456,18 @@ private val COMPETITION_UPDATE_ROUTE: suspend RoutingContext.() -> Unit = {
 
     name?.let { renameCompetition(competition.id, it) }
     owner?.let { transferCompetition(competition.id, it) }
-    // The name and owner are in every member's competitions list.
+    icon?.let { setCompetitionIcon(competition.id, it.ifEmpty { null }) }
+    // The name, owner and icon are in every member's competitions list.
     membersOf(competition.id).forEach { Cache.invalidateUser(it.userID) }
     Cache.invalidateCompetition(competition.id)
     call.respond(
-        competition.copy(name = name ?: competition.name, ownerID = owner ?: competition.ownerID).toSummary()
+        competition
+            .copy(
+                name = name ?: competition.name,
+                ownerID = owner ?: competition.ownerID,
+                icon = if (icon == null) competition.icon else icon.ifEmpty { null },
+            )
+            .toSummary()
     )
 }
 
@@ -512,6 +598,8 @@ private fun Competition.toSummary() =
         ownerID = ownerID.toString(),
         joinCode = joinCode,
         createdAt = createdAt,
+        icon = icon,
+        pictureVersion = pictureVersion,
     )
 
 private fun CompetitionGoal.toView() =
@@ -535,6 +623,8 @@ fun Route.competitionRoutes() {
             get("/{id}", COMPETITION_DETAIL_ROUTE)
             patch("/{id}", COMPETITION_UPDATE_ROUTE)
             delete("/{id}", COMPETITION_DELETE_ROUTE)
+            put("/{id}/picture", COMPETITION_PICTURE_PUT_ROUTE)
+            delete("/{id}/picture", COMPETITION_PICTURE_DELETE_ROUTE)
             post("/{id}/join-code", COMPETITION_JOIN_CODE_ROUTE)
             delete("/{id}/members/{userID}", COMPETITION_MEMBER_DELETE_ROUTE)
             post("/{id}/leave", COMPETITION_LEAVE_ROUTE)

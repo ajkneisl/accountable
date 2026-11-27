@@ -1,6 +1,7 @@
 import type { GoalPeriod } from "../goals/requests"
 import type { HabitColor } from "../habits/requests"
 import { request, type ApiConfig } from "../http"
+import type { UploadFile } from "../user/requests"
 
 /** Summary returned by list/create/join. */
 export interface CompetitionSummary {
@@ -9,6 +10,10 @@ export interface CompetitionSummary {
     ownerID: string
     joinCode: string
     createdAt: number
+    /** An emoji standing for it; absent or null for its first letter. */
+    icon?: string | null
+    /** For its picture's URL ({@link competitionPictureUrl}), shown in place of `icon`. */
+    pictureVersion?: number | null
 }
 
 export interface CompetitionMember {
@@ -41,6 +46,10 @@ export interface CompetitionDetail {
     createdAt: number
     members: CompetitionMember[]
     goals: CompetitionGoal[]
+    /** An emoji standing for it; absent or null for its first letter. */
+    icon?: string | null
+    /** For its picture's URL ({@link competitionPictureUrl}), shown in place of `icon`. */
+    pictureVersion?: number | null
 }
 
 /** One member's Monday-first daily values for a single competition goal over a week. */
@@ -222,6 +231,8 @@ export interface UpdateCompetitionRequest {
     name?: string
     /** A member to hand ownership to. The current owner stays a member. */
     ownerID?: string
+    /** A single emoji to stand for it, or `""` to go back to its first letter. */
+    icon?: string
 }
 
 /** PATCH /api/competitions/{id} — owner renames the competition or hands it to another member. */
@@ -258,4 +269,45 @@ export function removeCompetitionMember(
         undefined,
         { auth: true, expectJson: false }
     )
+}
+
+/**
+ * The URL of competition [id]'s picture at [pictureVersion], or null if it has
+ * none. The version changes with every upload, so it's cached for good.
+ */
+export function competitionPictureUrl(
+    config: ApiConfig,
+    id: string,
+    pictureVersion: number | null | undefined
+): string | null {
+    if (pictureVersion == null) return null
+    const baseUrl = config.baseUrl.replace(/\/$/, "")
+    return `${baseUrl}/images/competitions/${id}?v=${pictureVersion}`
+}
+
+/**
+ * PUT /api/competitions/{id}/picture — owner sets the competition's picture.
+ * Takes the same file as {@link uploadAvatar}; the server crops and shrinks it.
+ */
+export function uploadCompetitionPicture(
+    config: ApiConfig,
+    id: string,
+    picture: Blob | UploadFile
+): Promise<{ pictureVersion: number }> {
+    const form = new FormData()
+    form.append("picture", picture as Blob)
+    return request(config, "PUT", `/competitions/${id}/picture`, form, {
+        auth: true
+    })
+}
+
+/** DELETE /api/competitions/{id}/picture — owner removes the competition's picture. */
+export function removeCompetitionPicture(
+    config: ApiConfig,
+    id: string
+): Promise<void> {
+    return request(config, "DELETE", `/competitions/${id}/picture`, undefined, {
+        auth: true,
+        expectJson: false
+    })
 }

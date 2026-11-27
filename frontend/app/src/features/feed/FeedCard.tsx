@@ -187,14 +187,25 @@ export function FeedCard({
     )
     const goals = sortGoals(post.goals).filter((g) => hasResult(post, g))
     const headline = goals[0]
+    // Each competition once, with how it looks.
     const competitions = [
         ...new Map(
             post.goals.flatMap((g) =>
                 g.competitionID && g.competitionName
-                    ? [[g.competitionID, g.competitionName] as const]
+                    ? [
+                          [
+                              g.competitionID,
+                              {
+                                  id: g.competitionID,
+                                  name: g.competitionName,
+                                  icon: g.competitionIcon,
+                                  pictureVersion: g.competitionPictureVersion
+                              }
+                          ] as const
+                      ]
                     : []
             )
-        )
+        ).values()
     ]
 
     return (
@@ -258,32 +269,43 @@ export function FeedCard({
             {(competitions.length > 0 || !mine || post.likeCount > 0) && (
                 <View className="flex-row items-center justify-between gap-3">
                     <View className="flex-1 flex-row flex-wrap gap-2">
-                        {competitions.map(([id, name]) => (
-                            // The competition as it looks on the Competitions
-                            // tab: its letter tile, then its name.
-                            <Pressable
-                                key={id}
-                                accessibilityRole="link"
-                                accessibilityLabel={`Open ${name}`}
-                                hitSlop={6}
-                                onPress={() =>
-                                    router.push({
-                                        pathname: "/competition/[id]",
-                                        params: { id }
-                                    })
-                                }
-                                className="max-w-full flex-row items-center gap-2 rounded-[10px] bg-bg-sunken py-1 pl-1 pr-2 active:opacity-60"
-                            >
-                                <CompetitionIcon name={name} size={22} />
-                                <Text
-                                    numberOfLines={1}
-                                    className="shrink text-[13px] font-semibold text-ink"
+                        {competitions.map(
+                            ({ id, name, icon, pictureVersion }) => (
+                                // The competition as it looks on the Competitions
+                                // tab: its letter tile, then its name.
+                                <Pressable
+                                    key={id}
+                                    accessibilityRole="link"
+                                    accessibilityLabel={`Open ${name}`}
+                                    hitSlop={6}
+                                    onPress={() =>
+                                        router.push({
+                                            pathname: "/competition/[id]",
+                                            params: { id }
+                                        })
+                                    }
+                                    className="max-w-full flex-row items-center gap-2 rounded-[10px] bg-bg-sunken py-1 pl-1 pr-2 active:opacity-60"
                                 >
-                                    {name}
-                                </Text>
-                                <ChevronIcon color={colors.ink3} size={12} />
-                            </Pressable>
-                        ))}
+                                    <CompetitionIcon
+                                        id={id}
+                                        name={name}
+                                        icon={icon}
+                                        pictureVersion={pictureVersion}
+                                        size={22}
+                                    />
+                                    <Text
+                                        numberOfLines={1}
+                                        className="shrink text-[13px] font-semibold text-ink"
+                                    >
+                                        {name}
+                                    </Text>
+                                    <ChevronIcon
+                                        color={colors.ink3}
+                                        size={12}
+                                    />
+                                </Pressable>
+                            )
+                        )}
                     </View>
                     <Likes
                         count={post.likeCount}

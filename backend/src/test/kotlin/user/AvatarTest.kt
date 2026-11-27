@@ -49,9 +49,15 @@ import org.jetbrains.exposed.sql.deleteAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import user.AVATAR_SIZE
 import user.AvatarResponse
-import user.AvatarStorage
-import user.Avatars
-import user.LocalAvatarStorage
+import features.competition.CompetitionGoals
+import features.competition.CompetitionPictureResponse
+import features.competition.CompetitionSummary
+import features.competition.CreateCompetitionRequest
+import features.competition.joinCompetition
+import user.ImageKind
+import user.ImageStorage
+import user.Images
+import user.LocalImageStorage
 import user.RefreshTokens
 import user.SelfResponse
 import user.Users
@@ -59,7 +65,7 @@ import user.avatarJpeg
 
 class AvatarTest {
     private lateinit var dir: File
-    private lateinit var original: AvatarStorage
+    private lateinit var original: ImageStorage
 
     @BeforeTest
     fun setup() {
@@ -70,20 +76,21 @@ class AvatarTest {
             password = "",
         )
         transaction {
-            SchemaUtils.create(Users, RefreshTokens, Competitions, CompetitionMembers)
+            SchemaUtils.create(Users, RefreshTokens, Competitions, CompetitionMembers, CompetitionGoals)
+            CompetitionGoals.deleteAll()
             CompetitionMembers.deleteAll()
             Competitions.deleteAll()
             RefreshTokens.deleteAll()
             Users.deleteAll()
         }
         dir = Files.createTempDirectory("avatars").toFile()
-        original = Avatars.storage
-        Avatars.storage = LocalAvatarStorage(dir)
+        original = Images.storage
+        Images.storage = LocalImageStorage(dir)
     }
 
     @AfterTest
     fun teardown() {
-        Avatars.storage = original
+        Images.storage = original
         dir.deleteRecursively()
     }
 
@@ -138,9 +145,13 @@ class AvatarTest {
             setBody(RegisterRequest(username, "$username@example.com", "hunter2pass"))
         }.body()
 
-    private suspend fun HttpClient.upload(token: String, bytes: ByteArray): HttpResponse =
+    private suspend fun HttpClient.upload(
+        token: String,
+        bytes: ByteArray,
+        url: String = "/api/user/avatar",
+    ): HttpResponse =
         submitFormWithBinaryData(
-            url = "/api/user/avatar",
+            url = url,
             formData =
                 formData {
                     append(
@@ -200,13 +211,46 @@ class AvatarTest {
     }
 
     @Test
-    fun `the local store saves, reads and deletes`() {
-        val store = LocalAvatarStorage(dir)
+    fun `the owner sets and removes a competition's picture`() = avatarTest { client ->
+        val owner = client.register("olive")
+        val member = client.register("milo")
+        val competition: CompetitionSummary =
+            client.post("/api/competitions") {
+                bearerAuth(owner.accessToken)
+                contentType(ContentType.Application.Json)
+                setBody(CreateCompetitionRequest("Steps"))
+            }.body()
+        val memberID = client.get("/api/user") { bearerAuth(member.accessToken) }.body<SelfResponse>().userID
+        joinCompetition(UUID.fromString(memberID), UUID.fromString(competition.id))
+        val url = "/api/competitions/${competition.id}/picture"
+
+        // Only the owner may change it.
+        assertEquals(HttpStatusCode.Unauthorized, client.upload(member.accessToken, image(50, 50), url).status)
+
+        val uploaded = client.upload(owner.accessToken, image(500, 300), url)
+        assertEquals(HttpStatusCode.OK, uploaded.status)
+        val version = uploaded.body<CompetitionPictureResponse>().pictureVersion
+        val listed: List<CompetitionSummary> =
+            client.get("/api/competitions") { bearerAuth(member.accessToken) }.body()
+        assertEquals(version, listed.single().pictureVersion)
+
+        val served = client.get("/api/images/competitions/${competition.id}?v=$version")
+        assertEquals(HttpStatusCode.OK, served.status)
+        assertEquals(AVATAR_SIZE, read(served.readRawBytes()).width)
+
+        assertEquals(HttpStatusCode.NoContent, client.delete(url) { bearerAuth(owner.accessToken) }.status)
+        assertEquals(HttpStatusCode.NotFound, client.get("/api/images/competitions/${competition.id}").status)
+    }
+
+    @Test
+    fun `the local store keeps each kind apart`() {
+        val store = LocalImageStorage(dir)
         val id = UUID.randomUUID()
-        assertNull(store.get(id))
-        store.put(id, byteArrayOf(1, 2, 3))
-        assertNotNull(store.get(id))
-        store.delete(id)
-        assertNull(store.get(id))
+        assertNull(store.get(ImageKind.AVATAR, id))
+        store.put(ImageKind.AVATAR, id, byteArrayOf(1, 2, 3))
+        assertNotNull(store.get(ImageKind.AVATAR, id))
+        assertNull(store.get(ImageKind.COMPETITION, id))
+        store.delete(ImageKind.AVATAR, id)
+        assertNull(store.get(ImageKind.AVATAR, id))
     }
 }

@@ -73,6 +73,10 @@ export interface FeedGoalChip {
     target: number
     value: number
     met: boolean
+    /** The competition's emoji; absent or null for its first letter. */
+    competitionIcon?: string | null
+    /** For the competition's picture's URL, shown in place of its emoji. */
+    competitionPictureVersion?: number | null
 }
 
 /** One card, as the requesting user is allowed to see it. */

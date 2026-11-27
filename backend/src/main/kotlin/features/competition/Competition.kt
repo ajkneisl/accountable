@@ -28,6 +28,12 @@ object Competitions : Table("competitions") {
     val joinCode = varchar("join_code", 8).uniqueIndex()
     val createdAt = long("created_at").clientDefault { System.currentTimeMillis() }
 
+    /** [Competition.icon] */
+    val icon = varchar("icon", 32).nullable()
+
+    /** [Competition.pictureVersion] */
+    val pictureVersion = long("picture_version").nullable()
+
     override val primaryKey = PrimaryKey(id)
 }
 
@@ -39,6 +45,9 @@ object Competitions : Table("competitions") {
  * @param ownerID The user who created the competition; they alone can edit goals and delete it.
  * @param joinCode Short alphanumeric code anyone can present to join.
  * @param createdAt Ms epoch when the competition was created.
+ * @param icon An emoji the owner picked to stand for it, or null for the first letter of [name].
+ * @param pictureVersion When the owner last uploaded a picture for it, or null if there's none.
+ *   Shown in place of [icon], and part of the picture's URL so a new one isn't served from cache.
  */
 @MappedTable(Competitions::class)
 data class Competition(
@@ -47,6 +56,8 @@ data class Competition(
     val ownerID: UUID,
     val joinCode: String,
     val createdAt: Long,
+    val icon: String? = null,
+    val pictureVersion: Long? = null,
 )
 
 /** Membership join table. One row per (competition, user) with the user's join timestamp. */
@@ -189,6 +200,16 @@ suspend fun leaveCompetition(userID: UUID, competitionID: UUID): Boolean = suspe
 /** Rename [competitionID]. */
 suspend fun renameCompetition(competitionID: UUID, name: String) = suspendTransaction {
     Competitions.update({ Competitions.id eq competitionID }) { it[Competitions.name] = name }
+}
+
+/** Record a new picture for [competitionID] at [version], or with null, that it was removed. */
+suspend fun setCompetitionPictureVersion(competitionID: UUID, version: Long?) = suspendTransaction {
+    Competitions.update({ Competitions.id eq competitionID }) { it[pictureVersion] = version }
+}
+
+/** Set [competitionID]'s [icon], or with null, go back to its first letter. */
+suspend fun setCompetitionIcon(competitionID: UUID, icon: String?) = suspendTransaction {
+    Competitions.update({ Competitions.id eq competitionID }) { it[Competitions.icon] = icon }
 }
 
 /** Make [userID], who must already be a member, the owner of [competitionID]. */

@@ -143,7 +143,12 @@ function CompetitionRow({
             }
         >
             <Card className="flex-row items-center gap-3 p-4">
-                <CompetitionIcon name={c.name} />
+                <CompetitionIcon
+                    id={c.id}
+                    name={c.name}
+                    icon={c.icon}
+                    pictureVersion={c.pictureVersion}
+                />
                 <View className="flex-1">
                     <View className="flex-row items-center gap-2">
                         <Text

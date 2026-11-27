@@ -45,7 +45,7 @@ import {
 import { Avatar } from "../../ui/Avatar"
 import { BackBar } from "../../ui/BackBar"
 import { confirm } from "../../ui/confirm"
-import { CheckIcon } from "../../ui/icons"
+import { CameraIcon, CheckIcon } from "../../ui/icons"
 import { Screen } from "../../ui/Screen"
 import { Button, Card, Display, ErrorList } from "../../ui/primitives"
 import { Row, Section } from "../../ui/SettingsList"
@@ -372,6 +372,7 @@ function GeneralTab() {
     const palette = useHabitPalette()[user?.color ?? "LIME"]
     const avatar = useAvatarActions()
     const hasPicture = user?.avatarVersion != null
+    const colors = useColors()
 
     async function onSignOut() {
         const ok = await confirm(
@@ -404,6 +405,15 @@ function GeneralTab() {
                         onFill={palette.dark ? onFill.dark : onFill.light}
                         size={56}
                     />
+                    {/* A camera on the corner says the picture can be
+                        changed. Ringed in the card's color to sit apart. */}
+                    <View
+                        pointerEvents="none"
+                        style={{ position: "absolute", right: -3, bottom: -3 }}
+                        className="h-6 w-6 items-center justify-center rounded-full border-2 border-bg-card bg-ink"
+                    >
+                        <CameraIcon color={colors.bg} size={13} />
+                    </View>
                 </Pressable>
                 <View className="flex-1">
                     <Text className="text-[19px] font-bold tracking-tight text-ink">
@@ -484,6 +494,7 @@ function GeneralTab() {
                 />
             )}
             {sheet === "delete" && <DeleteAccountSheet onClose={close} />}
+            {avatar.element}
         </>
     )
 }
