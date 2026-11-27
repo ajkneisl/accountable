@@ -6,7 +6,6 @@
 // by then counts as missed) and an all-reset entry at the next Monday. That way the widget stays honest when the app isn't opened,
 // until the next sync replaces the timeline.
 
-import { isRunningInExpoGo } from "expo"
 import {
     type ApiConfig,
     type CompetitionDetail,
@@ -21,41 +20,10 @@ import type {
     CompetitionsWidgetCompetition,
     CompetitionsWidgetProps
 } from "./CompetitionsWidget"
+import { updateWidget as update, widgetAvailable } from "./output"
 
 /** Competitions loaded per sync; each costs two requests. */
 const MAX_COMPETITIONS = 10
-
-type Widget = typeof import("./CompetitionsWidget").default
-
-let widget: Widget | null | undefined
-
-/**
- * The widget handle, or null where the native module doesn't exist. Expo Go
- * doesn't ship expo-widgets, and creating the widget there throws, so the module
- * is only loaded on demand in a development or release build.
- */
-function getWidget(): Widget | null {
-    if (widget === undefined) {
-        try {
-            widget = isRunningInExpoGo()
-                ? null
-                : (
-                      require("./CompetitionsWidget") as typeof import("./CompetitionsWidget")
-                  ).default
-        } catch {
-            widget = null
-        }
-    }
-    return widget
-}
-
-function update(entries: { date: Date; props: CompetitionsWidgetProps }[]) {
-    try {
-        getWidget()?.updateTimeline(entries)
-    } catch {
-        // A widget refresh is best effort and must never break the app.
-    }
-}
 
 type Loaded = {
     detail: CompetitionDetail
@@ -125,7 +93,7 @@ export async function syncCompetitionsWidget(
     competitions: CompetitionSummary[],
     meID: string | undefined
 ): Promise<void> {
-    if (!getWidget()) return
+    if (!widgetAvailable()) return
     const gen = ++generation
 
     const results = await Promise.all(
@@ -156,9 +124,11 @@ export async function syncCompetitionsWidget(
             midnight.getDate() + ahead
         )
     // Days until next Monday (1–7); getDay() is 0 for Sunday.
-    const toMonday = ((8 - now.getDay()) % 7) || 7
+    const toMonday = (8 - now.getDay()) % 7 || 7
 
-    const entries = [{ date: now, props: propsFor(loaded, meID, now.getTime()) }]
+    const entries = [
+        { date: now, props: propsFor(loaded, meID, now.getTime()) }
+    ]
     for (let ahead = 1; ahead < toMonday; ahead++) {
         // Score at midday: the board reads the weekday in UTC.
         const noon = day(ahead).getTime() + 12 * 3_600_000
@@ -182,7 +152,5 @@ export async function syncCompetitionsWidget(
 
 export function clearCompetitionsWidget(): void {
     generation++
-    update([
-        { date: new Date(), props: { competitions: [], signedOut: true } }
-    ])
+    update([{ date: new Date(), props: { competitions: [], signedOut: true } }])
 }
