@@ -207,3 +207,26 @@ export function removeAvatar(config: ApiConfig): Promise<void> {
         expectJson: false
     })
 }
+
+/** What about a person is being reported. */
+export type ReportReason = "AVATAR" | "USERNAME"
+
+/**
+ * POST /api/users/{userID}/report — report someone you share a competition
+ * with for their profile picture or username. Reporting the same thing twice
+ * is accepted but only filed once.
+ */
+export function reportUser(
+    config: ApiConfig,
+    userID: string,
+    reason: ReportReason,
+    details?: string
+): Promise<void> {
+    return request(
+        config,
+        "POST",
+        `/users/${encodeURIComponent(userID)}/report`,
+        { reason, details },
+        { auth: true, expectJson: false }
+    )
+}

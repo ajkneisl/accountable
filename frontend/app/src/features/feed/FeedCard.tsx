@@ -4,13 +4,19 @@
 
 import { Pressable, Text, View } from "react-native"
 import { router } from "expo-router"
-import type { FeedDetail, FeedGoalChip, FeedPost } from "@shared/index"
+import {
+    type FeedDetail,
+    type FeedGoalChip,
+    type FeedPost,
+    useApi
+} from "@shared/index"
 import { useColors, useScheme } from "../../theme"
 import { Avatar } from "../../ui/Avatar"
 import { ChevronIcon, HeartIcon } from "../../ui/icons"
 import { Card, IntegrationIcon, Mono } from "../../ui/primitives"
 import { memberFill, onMemberFill } from "../competition/colors"
 import { CompetitionIcon } from "../competition/components/CompetitionIcon"
+import { showReportMenu } from "../moderation/report"
 import {
     type DistanceUnit,
     deviceDistanceUnit,
@@ -174,6 +180,7 @@ export function FeedCard({
     mine: boolean
     onToggleLike: () => void
 }) {
+    const api = useApi()
     const colors = useColors()
     const scheme = useScheme()
     const fill = memberFill(post.actor.color, scheme)
@@ -208,9 +215,21 @@ export function FeedCard({
         ).values()
     ]
 
+    // Holding someone else's name offers to report their picture or name.
+    const report = mine ? undefined : () => showReportMenu(api, post.actor)
+
     return (
         <Card className="gap-3 p-4">
-            <View className="flex-row items-center gap-3">
+            <Pressable
+                onLongPress={report}
+                accessibilityActions={
+                    report
+                        ? [{ name: "longpress", label: "Report" }]
+                        : undefined
+                }
+                onAccessibilityAction={report}
+                className="flex-row items-center gap-3"
+            >
                 <Avatar
                     userID={post.actor.userID}
                     username={post.actor.username}
@@ -248,7 +267,7 @@ export function FeedCard({
                     </View>
                 )}
                 <IntegrationIcon name={post.integration} size={20} />
-            </View>
+            </Pressable>
 
             <View className="gap-1">
                 <Text className="text-[20px] font-semibold tracking-tight text-ink">

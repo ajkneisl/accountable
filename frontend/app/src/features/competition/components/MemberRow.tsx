@@ -1,13 +1,16 @@
 // One member's row on a ranked competition page (standings, leaderboard): their
 // rank in their own color (with a profile picture, the picture ringed in it and
 // the rank on a badge at its corner), their name with a value at the right, and
-// a second line underneath for whatever the page measures them by.
+// a second line underneath for whatever the page measures them by. Holding
+// someone else's row offers to report their picture or name.
 
 import type { ReactNode } from "react"
-import { Text, View } from "react-native"
+import { Pressable, Text, View } from "react-native"
+import { useApi } from "@shared/index"
 import { useColors, useScheme } from "../../../theme"
 import { Avatar } from "../../../ui/Avatar"
 import { onMemberFill } from "../colors"
+import { showReportMenu } from "../../moderation/report"
 
 const BADGE = 32
 /** The rank's badge on a picture's corner. */
@@ -39,11 +42,20 @@ export function MemberRow({
     /** The line under the name. */
     children: ReactNode
 }) {
+    const api = useApi()
     const scheme = useScheme()
     const colors = useColors()
     const onColor = onMemberFill(color, scheme)
+    const report = isMe
+        ? undefined
+        : () => showReportMenu(api, { userID, username, avatarVersion })
     return (
-        <View
+        <Pressable
+            onLongPress={report}
+            accessibilityActions={
+                report ? [{ name: "longpress", label: "Report" }] : undefined
+            }
+            onAccessibilityAction={report}
             className={`flex-row items-center gap-3.5 px-5 py-4 ${
                 divided ? "border-t border-line-2" : ""
             } ${isMe ? "bg-bg-sunken" : ""}`}
@@ -117,6 +129,6 @@ export function MemberRow({
                 </View>
                 {children}
             </View>
-        </View>
+        </Pressable>
     )
 }

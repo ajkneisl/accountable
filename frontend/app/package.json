@@ -7,7 +7,8 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "testflight": "scripts/testflight.sh"
+    "testflight": "scripts/testflight.sh",
+    "playstore": "scripts/playstore.sh"
   },
   "dependencies": {
     "@expo/metro-runtime": "~57.0.16",

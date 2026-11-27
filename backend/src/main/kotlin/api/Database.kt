@@ -13,6 +13,7 @@ import integrations.api.UserIntegrations
 import features.feed.FeedLikes
 import features.feed.FeedPostGoals
 import features.feed.FeedPosts
+import features.moderation.UserReports
 import notifications.NotificationOptOuts
 import notifications.NotificationSends
 import notifications.PushDevices
@@ -86,6 +87,7 @@ fun initDb() {
             FeedPosts,
             FeedPostGoals,
             FeedLikes,
+            UserReports,
         )
         // create() skips tables that already exist, so columns added later need adding by hand.
         exec("ALTER TABLE goals ADD COLUMN IF NOT EXISTS color VARCHAR(16)")

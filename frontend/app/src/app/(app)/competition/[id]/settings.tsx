@@ -38,6 +38,7 @@ import { Sheet, SheetField } from "../../../../ui/Sheet"
 import { Row, Section } from "../../../../ui/SettingsList"
 import { confirm } from "../../../../ui/confirm"
 import { showMenu } from "../../../../ui/menu"
+import { reportActions } from "../../../../features/moderation/report"
 import { Card, Display, Dot, ErrorList, Input } from "../../../../ui/primitives"
 
 /** Longest name the server accepts. */
@@ -267,7 +268,6 @@ export default function CompetitionSettings() {
         if (ok) await run(() => resetCompetitionJoinCode(api, detail.id))
     }
 
-    /** The owner's choices for another member. */
     /** The icon menu: a picture, an emoji, or back to the first letter. */
     function manageIcon() {
         if (!detail) return
@@ -319,9 +319,18 @@ export default function CompetitionSettings() {
         ])
     }
 
+    /**
+     * Another member's choices: anyone can report them, and the owner can also
+     * hand them the competition or remove them.
+     */
     function manageMember(member: CompetitionMember) {
         if (!detail) return
         const competition = detail
+        const report = reportActions(api, member)
+        if (!isOwner) {
+            showMenu(member.username, report)
+            return
+        }
         showMenu(member.username, [
             {
                 label: "Make owner",
@@ -358,7 +367,8 @@ export default function CompetitionSettings() {
                             )
                         )
                 }
-            }
+            },
+            ...report
         ])
     }
 
@@ -450,8 +460,7 @@ export default function CompetitionSettings() {
             <Section title={`Members · ${detail.members.length}`}>
                 {detail.members.map((m, i) => {
                     const isMe = m.userID === user?.userID
-                    const tappable =
-                        isOwner && m.userID !== detail.ownerID && !busy
+                    const tappable = !isMe && !busy
                     return (
                         <Row
                             key={m.userID}

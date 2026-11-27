@@ -42,6 +42,7 @@ import io.ktor.server.routing.routing
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import features.feed.feedRoutes
+import features.moderation.reportRoutes
 import notifications.NotificationWorker
 import notifications.notificationRoutes
 import user.avatarRoutes
@@ -177,6 +178,7 @@ fun Application.configureModule() {
             competitionRoutes()
             dashboardRoutes()
             feedRoutes()
+            reportRoutes()
             notificationRoutes()
         }
     }

@@ -4,7 +4,7 @@ import { ContactLink, LegalPage } from "./LegalPage"
 /** Privacy policy, served at /privacy. */
 export default function Privacy() {
     return (
-        <LegalPage title="Privacy Policy" updated="November 5, 2026">
+        <LegalPage title="Privacy Policy" updated="November 27, 2026">
             <p>
                 Beacc tracks your goals from the apps you already use and lets
                 you compete with friends. This policy explains what we collect
@@ -21,24 +21,40 @@ export default function Privacy() {
             </p>
             <p>
                 <strong>Health and fitness data.</strong> If you connect Apple
-                Health, the app reads only what your goals need and sends us
-                daily summaries: your step count, minutes asleep, and workouts
-                (when each happened, how long it lasted, and calories burned).
-                You choose which categories to allow, and you can revoke access
-                at any time in the Health app.
+                Health on iPhone or Health Connect on Android, the app reads
+                only what your goals need and sends us summaries: your steps and
+                distance for each day, how long you slept each night (the time
+                actually asleep), and your workouts (their type, when each
+                happened, how long it lasted, and the active calories burned).
+                We don't read routes, locations, heart rate or any other health
+                data. You choose which categories to allow, and you can revoke
+                access at any time in the Health app or in Health Connect.
             </p>
             <p>
-                <strong>Screen Time.</strong> If you set a Screen Time goal, the
-                app sends us your total screen time for each day. We don't
-                receive which apps or websites you used.
+                On Android, Health Connect can't tell the app when new data
+                arrives, so if you allow reading in the background the app
+                checks for new data periodically (at most every 15 minutes, when
+                Android allows it) to keep your goals and competitions up to
+                date while the app is closed.
             </p>
             <p>
-                <strong>GitHub and LeetCode.</strong> If you link these, you
-                give us your public username. We use it to look up your public
-                activity from GitHub and LeetCode: how many commits you made and
-                in which public repositories, and which problems you solved. We
-                don't read commit messages or code, and we don't ask for access
-                to your accounts or any private data.
+                <strong>Screen time.</strong> If you set a screen time goal, the
+                app sends us your total screen time for each day, from Screen
+                Time on iPhone or Android's usage access. We don't receive which
+                apps or websites you used.
+            </p>
+            <p>
+                <strong>GitHub, LeetCode and Chess.com.</strong> If you link
+                these, you give us your public username. We use it to look up
+                your public activity: how many commits you made on GitHub and in
+                which public repositories, which LeetCode problems you solved,
+                and how many Chess.com games you finished, won or drew. We don't
+                read commit messages, code or game moves, and we don't ask for
+                access to your accounts or any private data.
+            </p>
+            <p>
+                <strong>Your profile picture.</strong> If you add one, we store
+                a resized copy. Anyone in a competition with you can see it.
             </p>
             <p>
                 <strong>What you create.</strong> Your goals, habits and the
@@ -67,35 +83,52 @@ export default function Privacy() {
                 <li>To keep your account secure and the service running.</li>
             </ul>
             <p>
-                Health and Screen Time data is used only to provide these
-                features. It is never used for advertising, never sold, and
-                never shared with data brokers.
+                Health and screen time data is used only to provide these
+                features. It is never used for advertising, never sold, never
+                shared with data brokers or other third parties, and never used
+                to train AI models or to decide anyone's eligibility for credit,
+                insurance or employment.
+            </p>
+            <p>
+                Beacc's use of information received from Health Connect adheres
+                to the{" "}
+                <a href="https://support.google.com/googleplay/android-developer/answer/12991134">
+                    Health Connect Permissions policy
+                </a>
+                , including the Limited Use requirements.
             </p>
 
             <h2>Who can see it</h2>
             <p>
                 <strong>Members of your competitions.</strong> When you join a
-                competition, the other members can see your username, color,
-                streak, and your progress on that competition's shared goals.
-                They don't see your other goals or your habits. Leaving a
-                competition stops sharing with it.
+                competition, the other members can see your username, profile
+                picture, color, streak, and your progress on that competition's
+                shared goals. They don't see your other goals or your habits.
+                Leaving a competition stops sharing with it.
             </p>
             <p>
                 <strong>Your feed.</strong> Members of a competition also see
                 updates for each source that competition has a goal on, from
                 after you've both joined. Depending on the source, an update can
                 show your commit count and public repository names, the LeetCode
-                problems you solved, a workout's type, length, calories and
-                whether you logged it yourself, or your total steps, sleep or
-                screen time when you meet a goal. They can like your updates,
-                and you'll see how many likes you got. To show them only totals,
-                turn off "Show details in the feed" in Settings.
+                problems you solved, your Chess.com games, a workout's type,
+                length, calories and whether you logged it yourself, or your
+                total steps, distance, sleep or screen time when you meet a
+                goal. They can like your updates, and you'll see how many likes
+                you got. To show them only totals, turn off "Show details in the
+                feed" in Settings.
+            </p>
+            <p>
+                <strong>Reports.</strong> If you report someone's profile
+                picture or username, we keep the report, what was reported and
+                who sent it, so we can review it. The person you report isn't
+                told who reported them.
             </p>
             <p>
                 <strong>Service providers.</strong> We host Beacc on Amazon Web
                 Services and send notifications through Apple's Push
-                Notification service. They process data only to run those
-                services for us.
+                Notification service on iPhone and Firebase Cloud Messaging on
+                Android. They process data only to run those services for us.
             </p>
             <p>
                 <strong>When required.</strong> We may disclose information if
@@ -124,8 +157,14 @@ export default function Privacy() {
                     <strong>Change your email or password</strong> in Settings.
                 </li>
                 <li>
-                    <strong>Revoke Health access</strong> in the Health app, and
-                    turn off notifications in Settings or iOS Settings.
+                    <strong>Revoke health access</strong> in the Health app on
+                    iPhone, or in Health Connect on Android (Settings → Apps →
+                    Health Connect → App permissions → Beacc), or disconnect it
+                    in Beacc's Settings.
+                </li>
+                <li>
+                    <strong>Turn off notifications</strong> in Beacc's Settings
+                    or your phone's settings.
                 </li>
                 <li>
                     <strong>Ask for a copy</strong> of your data, or for a

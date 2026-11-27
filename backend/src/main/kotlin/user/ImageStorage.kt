@@ -16,6 +16,9 @@ enum class ImageKind(val folder: String) {
 
     /** A competition's picture, by competition ID. */
     COMPETITION("competitions"),
+
+    /** A copy of a reported profile picture, by report ID; never served. */
+    REPORT("reports"),
 }
 
 /** Where pictures are kept: one JPEG per user or competition, replaced on each upload. */

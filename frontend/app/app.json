@@ -9,7 +9,7 @@
         "ios": {
             "supportsTablet": true,
             "bundleIdentifier": "app.umn.acc",
-            "buildNumber": "48",
+            "buildNumber": "49",
             "appleTeamId": "CBL6R6SP6A",
             "associatedDomains": ["applinks:beacc.app"],
             "config": {
@@ -45,6 +45,7 @@
             "./plugins/withCompetitionsWidgetPicker",
             "./plugins/withGoalsWidgetPicker",
             "./plugins/withScreenTimeMonitor",
+            "./plugins/withReleaseSigning",
             "expo-router",
             [
                 "@kingstinct/react-native-healthkit",
