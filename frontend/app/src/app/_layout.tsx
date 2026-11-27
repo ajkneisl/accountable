@@ -14,6 +14,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context"
 import { useSetAtom } from "jotai"
 import { ApiProvider, syncTimezone, useApi } from "@shared/index"
 import { apiConfig, restoreSession, userAtom } from "../auth"
+import { MenuHost } from "../ui/MenuHost"
 import { Spinner } from "../ui/primitives"
 import {
     type Palette,
@@ -147,6 +148,7 @@ export default function RootLayout() {
                                 <Stack.Screen name="(app)" />
                             </Stack>
                         </Bootstrap>
+                        <MenuHost />
                     </ThemeRoot>
                 </ApiProvider>
             </SafeAreaProvider>

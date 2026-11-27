@@ -19,6 +19,16 @@ import {
     importSteps,
     importWorkouts
 } from "@shared/index"
+import {
+    DAY_IMPORT_PAGE as SLEEP_IMPORT_PAGE,
+    DAY_MS,
+    IMPORT_PAGE,
+    MAX_METERS_PER_DAY,
+    MAX_STEPS_PER_DAY,
+    type Span,
+    localDayStart,
+    sleepDays
+} from "./days"
 
 type HealthKit = typeof import("@kingstinct/react-native-healthkit")
 
@@ -34,20 +44,6 @@ const READ_TYPES = [
     STEPS,
     DISTANCE
 ] as const
-
-/** Most workouts the backend accepts per import call. */
-const IMPORT_PAGE = 500
-
-/** Most sleep (or step) days the backend accepts per import call. */
-const SLEEP_IMPORT_PAGE = 400
-
-/** The backend's per-day step cap; anything above is junk data. */
-const MAX_STEPS_PER_DAY = 250_000
-
-/** The backend's per-day distance cap, in metres. */
-const MAX_METERS_PER_DAY = 300_000
-
-const DAY_MS = 86_400_000
 
 let healthKit: HealthKit | null | undefined
 
@@ -321,68 +317,6 @@ export async function syncAppleHealthWorkouts(
     return imported
 }
 
-type Span = [start: number, end: number]
-
-/** Merge overlapping spans, so sleep recorded by both a watch and a phone counts once. */
-function mergeSpans(spans: Span[]): Span[] {
-    const merged: Span[] = []
-    for (const [start, end] of [...spans].sort((a, b) => a[0] - b[0])) {
-        const last = merged[merged.length - 1]
-        if (last && start <= last[1]) last[1] = Math.max(last[1], end)
-        else merged.push([start, end])
-    }
-    return merged
-}
-
-/** Local midnight of the day containing [ms]. */
-function localDayStart(ms: number): number {
-    const d = new Date(ms)
-    return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
-}
-
-/** Local midnight of the day after [day]; calendar-based, so DST-safe. */
-function nextDay(day: number): number {
-    const d = new Date(day)
-    return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime()
-}
-
-/**
- * Sleep separated by a longer wake than this is a separate sleep (an evening
- * nap, then the night); anything shorter is waking up during the night.
- */
-const SLEEP_GAP_MS = 3 * 60 * 60_000
-
-/**
- * Minutes per local day across [spans], keyed by local midnight. Spans are
- * grouped into sleeps first, and each sleep counts toward the day it ended on,
- * so a night belongs to the morning after — including the part before a brief
- * wake-up before midnight, which on its own would land on the day before.
- */
-function minutesByDay(spans: Span[]): Map<number, ImportedSleepDay> {
-    const days = new Map<number, ImportedSleepDay>()
-    const addSleep = (end: number, minutes: number) => {
-        const day = localDayStart(end)
-        const total = days.get(day) ?? { endedAt: end, minutes: 0 }
-        total.minutes += minutes
-        total.endedAt = Math.max(total.endedAt, end)
-        days.set(day, total)
-    }
-
-    // The sleep being built: when its latest span ended, and its minutes so far.
-    let sleepEnd: number | null = null
-    let sleepMinutes = 0
-    for (const [start, end] of mergeSpans(spans)) {
-        if (sleepEnd !== null && start - sleepEnd > SLEEP_GAP_MS) {
-            addSleep(sleepEnd, sleepMinutes)
-            sleepMinutes = 0
-        }
-        sleepEnd = end
-        sleepMinutes += (end - start) / 60_000
-    }
-    if (sleepEnd !== null) addSleep(sleepEnd, sleepMinutes)
-    return days
-}
-
 /**
  * Import per-day sleep totals for every day from [since] (ms epoch) on. Resolves
  * to how many days were written. Counts time asleep (any stage); a day with no
@@ -415,20 +349,8 @@ export async function syncAppleHealthSleep(
         else if (s.value !== stage.awake) asleep.push(span)
     }
 
-    // Asleep totals win over in-bed ones for any day that has both.
-    const totals = new Map([...minutesByDay(inBed), ...minutesByDay(asleep)])
-    // Every day in the window is sent, 0 where Health has no sleep, so a day
-    // whose sleep was deleted (or moved to another day) is corrected too.
-    const days: ImportedSleepDay[] = []
-    const today = localDayStart(Date.now())
-    for (let day = localDayStart(since); day <= today; day = nextDay(day)) {
-        const t = totals.get(day)
-        days.push({
-            // Local noon for an empty day, which files it under the same date.
-            endedAt: t?.endedAt ?? day + DAY_MS / 2,
-            minutes: Math.min(24 * 60, Math.round(t?.minutes ?? 0))
-        })
-    }
+    // Asleep wins over in bed; every day in the window is sent (see sleepDays).
+    const days: ImportedSleepDay[] = sleepDays(asleep, inBed, since)
 
     let imported = 0
     for (let i = 0; i < days.length; i += SLEEP_IMPORT_PAGE) {
