@@ -103,6 +103,9 @@ fun initDb() {
         exec("ALTER TABLE integrations_github ADD COLUMN IF NOT EXISTS repos TEXT")
         exec("ALTER TABLE integrations_github ADD COLUMN IF NOT EXISTS private_commits BIGINT NOT NULL DEFAULT 0")
         exec("ALTER TABLE integrations_leetcode ADD COLUMN IF NOT EXISTS solves TEXT")
+        // Android: FCM tokens are longer than APNs', and each device names its push service.
+        exec("ALTER TABLE push_devices ALTER COLUMN token TYPE VARCHAR(512)")
+        exec("ALTER TABLE push_devices ADD COLUMN IF NOT EXISTS platform VARCHAR(16) NOT NULL DEFAULT 'IOS'")
     }
 }
 

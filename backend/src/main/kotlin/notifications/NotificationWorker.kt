@@ -34,7 +34,7 @@ const val COMPETITION_STANDINGS_HOUR = 13
 object NotificationWorker {
     /** Launch the worker on [scope] (the Ktor [io.ktor.server.application.Application] scope). */
     fun start(scope: CoroutineScope) {
-        if (!Apns.enabled) return
+        if (!PushSender.enabled) return
         scope.launch {
             log.info("notification worker started")
             while (isActive) {
@@ -47,7 +47,7 @@ object NotificationWorker {
     /** Send what's due at [now] to every user with a device. One user failing doesn't stop the rest. */
     suspend fun sendDue(now: Long = System.currentTimeMillis()) {
         for ((userID, devices) in allDevices()) {
-            runCatching { pushesDue(userID, now).forEach { Apns.send(devices, it) } }
+            runCatching { pushesDue(userID, now).forEach { PushSender.send(devices, it) } }
                 .onFailure { log.warn("notifications failed: user=$userID", it) }
         }
     }

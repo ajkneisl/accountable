@@ -4,7 +4,6 @@
 
 import { useEffect, useRef } from "react"
 import { Text, View } from "react-native"
-import { Host, Image } from "@expo/ui/swift-ui"
 import { router } from "expo-router"
 import { useAtomValue } from "jotai"
 import { userAtom } from "../../../auth"
@@ -18,6 +17,7 @@ import { useFeed } from "../../../features/feed/useFeed"
 import { useHabits } from "../../../features/habits/HabitsData"
 import { EmptyState } from "../../../ui/EmptyState"
 import { CircleButton } from "../../../ui/CircleButton"
+import { SymbolIcon } from "../../../ui/SymbolIcon"
 import { Screen } from "../../../ui/Screen"
 import { SettingsButton } from "../../../ui/SettingsButton"
 import {
@@ -46,21 +46,12 @@ function HomeActions() {
                 <CircleButton label="Log a workout" onPress={openLogWorkout}>
                     {(glass) => (
                         // A runner, not a plus: plus means "new item" elsewhere.
-                        // A fixed frame, not matchContents: that size arrives
-                        // after layout and can leave the glyph sitting low.
-                        // And no safe area: up by the status bar, SwiftUI
-                        // would inset the glyph by it, pushing it below the
-                        // button whenever layout ran while under the bar.
-                        <Host
-                            style={{ width: 22, height: 22 }}
-                            ignoreSafeArea="all"
-                        >
-                            <Image
-                                systemName="figure.run"
-                                size={18}
-                                color={glass ? colors.ink : colors.ink2}
-                            />
-                        </Host>
+                        <SymbolIcon
+                            name="figure.run"
+                            size={18}
+                            frame={22}
+                            color={glass ? colors.ink : colors.ink2}
+                        />
                     )}
                 </CircleButton>
             )}

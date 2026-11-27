@@ -14,7 +14,7 @@ import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 import io.ktor.util.logging.KtorSimpleLogger
 import java.util.UUID
-import notifications.Apns
+import notifications.PushSender
 import notifications.NotificationKind
 import notifications.Push
 import notifications.devicesFor
@@ -61,7 +61,7 @@ private suspend fun notifyLiked(likerID: UUID, like: LikeResult) {
     runCatching {
             if (NotificationKind.FEED_LIKES in optOutsFor(like.actorID)) return
             val liker = findUserByID(likerID)?.username ?: return
-            Apns.send(
+            PushSender.send(
                 devicesFor(like.actorID),
                 Push(
                     title = "$liker liked your update",

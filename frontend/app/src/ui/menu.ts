@@ -10,8 +10,22 @@ export type MenuAction = {
     run: () => void
 }
 
+type Presenter = (title: string, actions: MenuAction[]) => void
+
+/** MenuHost's way to open, once it's mounted. */
+let presenter: Presenter | null = null
+
+export function setMenuPresenter(present: Presenter | null) {
+    presenter = present
+}
+
 /** Show [actions] under [title], with a Cancel after them. */
 export function showMenu(title: string, actions: MenuAction[]) {
+    // Off iOS, an alert holds three buttons at most: longer menus use MenuHost.
+    if (Platform.OS !== "ios" && presenter && actions.length > 2) {
+        presenter(title, actions)
+        return
+    }
     if (Platform.OS === "ios") {
         ActionSheetIOS.showActionSheetWithOptions(
             {

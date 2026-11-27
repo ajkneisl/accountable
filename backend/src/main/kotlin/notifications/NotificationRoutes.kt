@@ -18,16 +18,38 @@ import java.util.UUID
 import kotlinx.serialization.Serializable
 
 /** APNs device tokens are 32 bytes, hex-encoded; allow for Apple lengthening them. */
-private val TOKEN_PATTERN = Regex("^[0-9a-fA-F]{32,200}$")
+private val APNS_TOKEN_PATTERN = Regex("^[0-9a-fA-F]{32,200}$")
+
+/**
+ * FCM registration tokens are opaque: today about 160 characters of letters, digits, `:`, `-` and
+ * `_`. Google doesn't promise a length, so allow up to the column's width.
+ */
+private val FCM_TOKEN_PATTERN = Regex("^[A-Za-z0-9:_-]{32,512}$")
+
+/**
+ * [token] as stored, or null if it can't be a token of [platform]. APNs tokens are hex, so they're
+ * stored lowercase whatever case the app sent; FCM tokens are case-sensitive and kept as issued.
+ */
+internal fun normalizeToken(token: String, platform: PushPlatform): String? =
+    when (platform) {
+        PushPlatform.IOS -> token.takeIf { APNS_TOKEN_PATTERN.matches(it) }?.lowercase()
+        PushPlatform.ANDROID -> token.takeIf { FCM_TOKEN_PATTERN.matches(it) }
+    }
 
 /**
  * Request body for registering a device.
  *
- * @param token The hex APNs device token.
+ * @param token The device's push token: hex for APNs, as issued for FCM.
  * @param sandbox Whether the app is a development build. Only a hint: a token sent to the wrong
- *   environment is retried in the other and remembered.
+ *   environment is retried in the other and remembered. iOS only.
+ * @param platform The service [token] belongs to. Builds from before Android don't send it.
  */
-@Serializable data class RegisterDeviceRequest(val token: String, val sandbox: Boolean = false)
+@Serializable
+data class RegisterDeviceRequest(
+    val token: String,
+    val sandbox: Boolean = false,
+    val platform: PushPlatform = PushPlatform.IOS,
+)
 
 /** Whether each [NotificationKind] is on. Every kind is present in a response. */
 @Serializable data class NotificationSettings(val enabled: Map<NotificationKind, Boolean>)
@@ -36,8 +58,8 @@ private val TOKEN_PATTERN = Regex("^[0-9a-fA-F]{32,200}$")
 private val DEVICE_REGISTER_ROUTE: suspend RoutingContext.() -> Unit = {
     val userID = call.userID()
     val req = call.receive<RegisterDeviceRequest>()
-    if (!TOKEN_PATTERN.matches(req.token)) Error.text("invalid device token")
-    registerDevice(userID, req.token.lowercase(), req.sandbox)
+    val token = normalizeToken(req.token, req.platform) ?: Error.text("invalid device token")
+    registerDevice(userID, token, req.sandbox, req.platform)
     call.respond(HttpStatusCode.NoContent)
 }
 
@@ -48,7 +70,8 @@ private val DEVICE_REGISTER_ROUTE: suspend RoutingContext.() -> Unit = {
  */
 private val DEVICE_UNREGISTER_ROUTE: suspend RoutingContext.() -> Unit = {
     val token = call.parameters["token"] ?: Error.text("missing token")
-    deleteDevice(token.lowercase())
+    // Hex is an APNs token, stored lowercase; anything else is an FCM token, stored as issued.
+    deleteDevice(normalizeToken(token, PushPlatform.IOS) ?: token)
     call.respond(HttpStatusCode.NoContent)
 }
 

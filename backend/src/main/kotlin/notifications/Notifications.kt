@@ -3,8 +3,10 @@ package notifications
 import api.suspendTransaction
 import io.ktor.util.logging.KtorSimpleLogger
 import java.util.UUID
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.sql.ReferenceOption
+import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
@@ -41,18 +43,31 @@ enum class NotificationKind {
     STEPS_CLOSE,
 }
 
+/** Which push service a device's token belongs to. */
+@Serializable
+enum class PushPlatform {
+    /** Apple Push Notification service; the token is hex. */
+    @SerialName("ios") IOS,
+
+    /** Firebase Cloud Messaging; the token is case-sensitive and not hex. */
+    @SerialName("android") ANDROID,
+}
+
 /**
- * Table of APNs device tokens. A token identifies one install of the app, so it's the key: signing
+ * Table of push device tokens. A token identifies one install of the app, so it's the key: signing
  * in as someone else on the same phone moves the token to them.
  */
 object PushDevices : Table("push_devices") {
-    /** Hex APNs device token. */
-    val token = varchar("token", 200)
+    /** Hex APNs device token, or an FCM registration token as issued (case matters). */
+    val token = varchar("token", 512)
 
     val userID = uuid("user_id").references(Users.id, onDelete = ReferenceOption.CASCADE).index()
 
-    /** Whether [token] belongs to APNs' sandbox (development builds) rather than production. */
+    /** Whether [token] belongs to APNs' sandbox (development builds) rather than production. iOS only. */
     val sandbox = bool("sandbox").default(false)
+
+    /** The service [token] belongs to. Rows from before Android are iOS. */
+    val platform = enumerationByName("platform", 16, PushPlatform::class).default(PushPlatform.IOS)
 
     val updatedAt = long("updated_at").clientDefault { System.currentTimeMillis() }
 
@@ -80,31 +95,54 @@ object NotificationSends : Table("notification_sends") {
 }
 
 /** One install that can receive pushes. */
-data class PushDevice(val token: String, val sandbox: Boolean)
+data class PushDevice(
+    val token: String,
+    val sandbox: Boolean,
+    val platform: PushPlatform = PushPlatform.IOS,
+)
 
 /** Point [token] at [userID], replacing whoever had it. */
-suspend fun registerDevice(userID: UUID, token: String, sandbox: Boolean) = suspendTransaction {
+suspend fun registerDevice(
+    userID: UUID,
+    token: String,
+    sandbox: Boolean,
+    platform: PushPlatform = PushPlatform.IOS,
+) = suspendTransaction {
     PushDevices.upsert {
         it[PushDevices.token] = token
         it[PushDevices.userID] = userID
         it[PushDevices.sandbox] = sandbox
+        it[PushDevices.platform] = platform
         it[PushDevices.updatedAt] = System.currentTimeMillis()
     }
 }
 
+private fun ResultRow.toPushDevice() =
+    PushDevice(this[PushDevices.token], this[PushDevices.sandbox], this[PushDevices.platform])
+
 /** Every device of every user that has one, keyed by user. Backs the notification worker. */
 suspend fun allDevices(): Map<UUID, List<PushDevice>> = suspendTransaction {
-    PushDevices.selectAll().groupBy(
-        { it[PushDevices.userID] },
-        { PushDevice(it[PushDevices.token], it[PushDevices.sandbox]) },
-    )
+    PushDevices.selectAll().groupBy({ it[PushDevices.userID] }, { it.toPushDevice() })
 }
 
 /** Every device of [userID]. */
 suspend fun devicesFor(userID: UUID): List<PushDevice> = suspendTransaction {
-    PushDevices.selectAll()
-        .where { PushDevices.userID eq userID }
-        .map { PushDevice(it[PushDevices.token], it[PushDevices.sandbox]) }
+    PushDevices.selectAll().where { PushDevices.userID eq userID }.map { it.toPushDevice() }
+}
+
+/**
+ * Sends a push to each device through its platform's service: APNs for iOS, FCM for Android. A
+ * service that isn't configured is skipped, so either can be set up without the other.
+ */
+object PushSender {
+    val enabled: Boolean
+        get() = Apns.enabled || Fcm.enabled
+
+    suspend fun send(devices: List<PushDevice>, push: Push) {
+        val (android, ios) = devices.partition { it.platform == PushPlatform.ANDROID }
+        if (ios.isNotEmpty()) Apns.send(ios, push)
+        if (android.isNotEmpty()) Fcm.send(android, push)
+    }
 }
 
 /** Record which APNs environment [token] turned out to belong to. */
@@ -168,12 +206,12 @@ suspend fun claimSend(userID: UUID, topic: String, periodStart: Long): Boolean =
  * Failures are logged, never thrown, so whatever set it off still succeeds.
  */
 suspend fun sendNow(userID: UUID, kind: NotificationKind, push: suspend () -> Push?) {
-    if (!Apns.enabled) return
+    if (!PushSender.enabled) return
     runCatching {
             if (kind in optOutsFor(userID)) return
             val devices = devicesFor(userID)
             if (devices.isEmpty()) return
-            Apns.send(devices, push() ?: return)
+            PushSender.send(devices, push() ?: return)
         }
         .onFailure { log.warn("$kind notification failed: user=$userID", it) }
 }

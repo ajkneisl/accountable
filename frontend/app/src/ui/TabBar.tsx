@@ -4,18 +4,17 @@
 
 import { useState } from "react"
 import { Pressable, Text, useWindowDimensions, View } from "react-native"
-import { Host, Image } from "@expo/ui/swift-ui"
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect"
 import Animated, {
     type SharedValue,
     useAnimatedReaction,
     useAnimatedStyle
 } from "react-native-reanimated"
-import type { SFSymbol } from "sf-symbols-typescript"
 import { scheduleOnRN } from "react-native-worklets"
 import { useColors } from "../theme"
+import { type AppSymbol, SymbolIcon } from "./SymbolIcon"
 
-export type TabBarItem = { label: string; sf: SFSymbol }
+export type TabBarItem = { label: string; sf: AppSymbol }
 
 export const TAB_BAR_HEIGHT = 62
 
@@ -103,9 +102,7 @@ export function TabBar({
                             gap: 2
                         }}
                     >
-                        <Host matchContents>
-                            <Image systemName={tab.sf} size={20} color={tint} />
-                        </Host>
+                        <SymbolIcon name={tab.sf} size={20} color={tint} />
                         <Text
                             numberOfLines={1}
                             style={{ color: tint }}

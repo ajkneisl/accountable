@@ -36,6 +36,13 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# Firebase config for Android (FCM). Not a real secret, but per-project: each
+# machine downloads it from the Firebase console (see the Android setup notes).
+google-services.json
+
 # generated native folders
 /ios
 /android
+
+# Gradle output of local native modules
+/modules/*/android/build

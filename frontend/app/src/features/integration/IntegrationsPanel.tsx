@@ -9,7 +9,7 @@
 // view its data, disconnect.
 
 import { type ReactNode, useState } from "react"
-import { Pressable, Text, View } from "react-native"
+import { Platform, Pressable, Text, View } from "react-native"
 import { router } from "expo-router"
 import {
     type IntegrationStatus,
@@ -19,6 +19,7 @@ import {
 import { useAppData } from "../common/AppData"
 import { formatRefreshed, integrationVisual } from "../dashboard/types"
 import { useAppleHealth } from "../health/AppleHealthData"
+import { HEALTH_SOURCE, THIS_PHONE } from "../health/healthName"
 import { useScreenTime } from "../screenTime/ScreenTimeData"
 import { showMenu } from "../../ui/menu"
 import { Button, Card, IntegrationIcon, SourceTile } from "../../ui/primitives"
@@ -220,7 +221,7 @@ function AppleHealthRow({ first }: { first: boolean }) {
                     icon={<IntegrationIcon name={APPLE_FITNESS} />}
                 />
             }
-            name="Apple Health"
+            name={HEALTH_SOURCE}
             status={
                 !health.supported
                     ? "Unavailable on this device"
@@ -239,7 +240,7 @@ function AppleHealthRow({ first }: { first: boolean }) {
                         connected={health.connected}
                         onConnect={() => void health.connect()}
                         onManage={() =>
-                            showMenu("Apple Health", [
+                            showMenu(HEALTH_SOURCE, [
                                 {
                                     label: "Sync now",
                                     run: () => void health.syncNow()
@@ -300,10 +301,16 @@ function ScreenTimeRow({ first }: { first: boolean }) {
                                     label: "Sync now",
                                     run: () => void screenTime.syncNow()
                                 },
-                                {
-                                    label: "Choose apps",
-                                    run: () => void screenTime.chooseApps()
-                                },
+                                // Android counts every app, so there's nothing to choose.
+                                ...(Platform.OS === "ios"
+                                    ? [
+                                          {
+                                              label: "Choose apps",
+                                              run: () =>
+                                                  void screenTime.chooseApps()
+                                          }
+                                      ]
+                                    : []),
                                 {
                                     label: "View data",
                                     run: () => openIntegration(SCREEN_TIME)
@@ -382,13 +389,13 @@ export function IntegrationsPanel() {
             </Group>
 
             <Group
-                title="This iPhone"
+                title={THIS_PHONE}
                 action={
                     (health.connected || screenTime.connected) && (
                         <RefreshButton
                             label="Sync"
                             busyLabel="Syncing…"
-                            hint="Sync Apple Health and Screen Time"
+                            hint={`Sync ${HEALTH_SOURCE}${screenTime.supported ? " and Screen Time" : ""}`}
                             busy={health.syncing || screenTime.syncing}
                             onPress={syncPhone}
                         />

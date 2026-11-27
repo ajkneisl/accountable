@@ -24,20 +24,25 @@ export interface NotificationSettings {
     enabled: Record<NotificationKind, boolean>
 }
 
+/** The push service a device token belongs to: APNs or FCM. */
+export type PushPlatform = "ios" | "android"
+
 /**
  * PUT /api/notifications/devices — start pushing to this device. [sandbox]
- * hints that it's a development build; the server corrects a wrong guess.
+ * hints that it's a development build; the server corrects a wrong guess
+ * (iOS only). [platform] says whose token it is.
  */
 export function registerPushDevice(
     config: ApiConfig,
     token: string,
-    sandbox: boolean
+    sandbox: boolean,
+    platform: PushPlatform = "ios"
 ): Promise<void> {
     return request(
         config,
         "PUT",
         "/notifications/devices",
-        { token, sandbox },
+        { token, sandbox, platform },
         { auth: true, expectJson: false }
     )
 }

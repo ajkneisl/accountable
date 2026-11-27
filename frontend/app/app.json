@@ -17,11 +17,22 @@
             }
         },
         "android": {
+            "package": "app.umn.acc",
+            "versionCode": 1,
+            "googleServicesFile": "./google-services.json",
             "adaptiveIcon": {
                 "foregroundImage": "./assets/adaptive-icon.png",
                 "backgroundColor": "#16100c"
             },
-            "predictiveBackGestureEnabled": false
+            "predictiveBackGestureEnabled": false,
+            "permissions": [
+                "android.permission.health.READ_STEPS",
+                "android.permission.health.READ_DISTANCE",
+                "android.permission.health.READ_SLEEP",
+                "android.permission.health.READ_EXERCISE",
+                "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
+                "android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND"
+            ]
         },
         "web": {
             "favicon": "./assets/favicon.png",
@@ -138,7 +149,56 @@
                 }
             ],
             "expo-background-task",
-            "expo-notifications"
+            "expo-notifications",
+            "react-native-health-connect",
+            [
+                "react-native-android-widget",
+                {
+                    "widgets": [
+                        {
+                            "name": "HabitsHeatmap",
+                            "label": "Habits",
+                            "description": "Your habits and their streaks at a glance.",
+                            "minWidth": "110dp",
+                            "minHeight": "110dp",
+                            "targetCellWidth": 2,
+                            "targetCellHeight": 2,
+                            "resizeMode": "horizontal|vertical",
+                            "updatePeriodMillis": 1800000
+                        },
+                        {
+                            "name": "CompetitionStandings",
+                            "label": "Competitions",
+                            "description": "Where you stand in a competition this week.",
+                            "minWidth": "110dp",
+                            "minHeight": "110dp",
+                            "targetCellWidth": 2,
+                            "targetCellHeight": 2,
+                            "resizeMode": "horizontal|vertical",
+                            "updatePeriodMillis": 1800000
+                        },
+                        {
+                            "name": "GoalsProgress",
+                            "label": "Goals",
+                            "description": "This week's progress on your goals.",
+                            "minWidth": "110dp",
+                            "minHeight": "110dp",
+                            "targetCellWidth": 2,
+                            "targetCellHeight": 2,
+                            "resizeMode": "horizontal|vertical",
+                            "updatePeriodMillis": 1800000
+                        }
+                    ]
+                }
+            ],
+            [
+                "expo-build-properties",
+                {
+                    "android": {
+                        "minSdkVersion": 26
+                    }
+                }
+            ]
         ],
         "scheme": "accountable",
         "experiments": {

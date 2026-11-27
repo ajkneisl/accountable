@@ -29,7 +29,10 @@ export default function AppLayout() {
         if (!authed) return
         void registerBackgroundSync()
         // Asks the first time someone signs in; settings can turn them on later.
-        void enablePushes(api, true).catch(() => {})
+        void enablePushes(api, true).catch((err) => {
+            // Best-effort, but a dev build should say why it didn't work.
+            if (__DEV__) console.warn("Couldn't turn on push notifications", err)
+        })
     }, [api, authed])
 
     useNotificationRouting()
