@@ -9,7 +9,7 @@
 // view its data, disconnect.
 
 import { type ReactNode, useState } from "react"
-import { Pressable, Text, View } from "react-native"
+import { Platform, Pressable, Text, View } from "react-native"
 import { router } from "expo-router"
 import {
     type IntegrationStatus,
@@ -301,10 +301,16 @@ function ScreenTimeRow({ first }: { first: boolean }) {
                                     label: "Sync now",
                                     run: () => void screenTime.syncNow()
                                 },
-                                {
-                                    label: "Choose apps",
-                                    run: () => void screenTime.chooseApps()
-                                },
+                                // Android counts every app, so there's nothing to choose.
+                                ...(Platform.OS === "ios"
+                                    ? [
+                                          {
+                                              label: "Choose apps",
+                                              run: () =>
+                                                  void screenTime.chooseApps()
+                                          }
+                                      ]
+                                    : []),
                                 {
                                     label: "View data",
                                     run: () => openIntegration(SCREEN_TIME)

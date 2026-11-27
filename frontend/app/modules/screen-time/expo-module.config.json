@@ -1,6 +1,9 @@
 {
-  "platforms": ["apple"],
-  "apple": {
-    "modules": ["BeaccScreenTimeModule"]
-  }
+    "platforms": ["apple", "android"],
+    "apple": {
+        "modules": ["BeaccScreenTimeModule"]
+    },
+    "android": {
+        "modules": ["expo.modules.beaccscreentime.BeaccScreenTimeModule"]
+    }
 }
