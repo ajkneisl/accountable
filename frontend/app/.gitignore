@@ -43,3 +43,6 @@ google-services.json
 # generated native folders
 /ios
 /android
+
+# Gradle output of local native modules
+/modules/*/android/build
