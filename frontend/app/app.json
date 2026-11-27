@@ -24,7 +24,15 @@
                 "foregroundImage": "./assets/adaptive-icon.png",
                 "backgroundColor": "#16100c"
             },
-            "predictiveBackGestureEnabled": false
+            "predictiveBackGestureEnabled": false,
+            "permissions": [
+                "android.permission.health.READ_STEPS",
+                "android.permission.health.READ_DISTANCE",
+                "android.permission.health.READ_SLEEP",
+                "android.permission.health.READ_EXERCISE",
+                "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
+                "android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND"
+            ]
         },
         "web": {
             "favicon": "./assets/favicon.png",
@@ -141,7 +149,16 @@
                 }
             ],
             "expo-background-task",
-            "expo-notifications"
+            "expo-notifications",
+            "react-native-health-connect",
+            [
+                "expo-build-properties",
+                {
+                    "android": {
+                        "minSdkVersion": 26
+                    }
+                }
+            ]
         ],
         "scheme": "accountable",
         "experiments": {

@@ -9,6 +9,7 @@ import {
     type WorkoutType
 } from "@shared/index"
 import { confirm } from "../../../ui/confirm"
+import { HEALTH_SOURCE } from "../../health/healthName"
 import {
     Button,
     Card,
@@ -112,7 +113,7 @@ export function WorkoutCard({
             <View className="mb-4 flex-row items-center gap-3">
                 <Button label="+ Add workout" size="sm" onPress={onAdd} />
                 <Text className="flex-1 text-[11px] leading-[15px] text-ink-3">
-                    Workouts sync from Apple Health. Add any it missed.
+                    Workouts sync from {HEALTH_SOURCE}. Add any it missed.
                 </Text>
             </View>
 

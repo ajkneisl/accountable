@@ -11,7 +11,7 @@
 // Both have to be set up when the JS bundle loads, before iOS hands over the
 // work, so the app entry (index.ts) imports this module.
 
-import { AppState } from "react-native"
+import { AppState, Platform } from "react-native"
 import * as BackgroundTask from "expo-background-task"
 import * as TaskManager from "expo-task-manager"
 import { apiConfig, hydrateSession, tokenStore } from "../../auth"
@@ -24,8 +24,12 @@ import { isSyncRunning } from "./syncGuard"
 
 const TASK = "beacc-integrations-sync"
 
-/** iOS treats this as a floor and usually waits much longer. */
-const MINIMUM_INTERVAL_MIN = 60
+/**
+ * iOS treats this as a floor and usually waits much longer. On Android it's the
+ * only way Health Connect data stays fresh with the app closed (Health Connect
+ * can't wake the app), so it asks for WorkManager's shortest period.
+ */
+const MINIMUM_INTERVAL_MIN = Platform.OS === "android" ? 15 : 60
 
 /** A steps wake within this long of the last sync is skipped. */
 const STEPS_STALE_MS = 5 * 60_000
