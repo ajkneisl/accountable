@@ -34,6 +34,7 @@ import io.ktor.server.plugins.requestvalidation.RequestValidationException
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.request.httpMethod
 import io.ktor.server.request.path
+import io.ktor.server.request.uri
 import io.ktor.server.response.respond
 import io.ktor.server.routing.get
 import io.ktor.server.routing.route
@@ -141,6 +142,13 @@ fun Application.configureModule() {
         }
 
         exception<Throwable> { call, cause ->
+            // Unexpected, so it's logged: the response alone leaves no trace to debug from.
+            call.application.environment.log.error(
+                "Unhandled error on {} {}",
+                call.request.httpMethod.value,
+                call.request.uri,
+                cause,
+            )
             call.respond(
                 HttpStatusCode.InternalServerError,
                 Error.ErrorBody(cause.message ?: "Internal Server Error"),

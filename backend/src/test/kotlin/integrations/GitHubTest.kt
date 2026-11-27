@@ -205,8 +205,39 @@ class GitHubTest {
         assertEquals(7L, row[GitHubTable.commits])
         assertEquals(4L, row[GitHubTable.privateCommits])
         assertTrue(query.contains(testExternalID), "query missing login: $query")
-        assertTrue(query.contains("2025-05-16T00:00Z"), "query missing day start: $query")
+        // With seconds: GitHub can't read "2025-05-16T00:00Z" as a DateTime.
+        assertTrue(query.contains("2025-05-16T00:00:00Z"), "query missing day start: $query")
         assertTrue(query.contains("2025-05-16T23:59:59.999Z"), "query missing day end: $query")
+    }
+
+    @Test
+    fun `a failed private count keeps the day's last one and the public commits`() = runBlocking {
+        GitHub.token = "test-token"
+        GitHub.client = mockWithPrivate(totalCount = 3, restricted = 4)
+        GitHub.refresh(testUserID, testDate)
+
+        // GitHub answers the GraphQL query with an error this time.
+        val engine =
+            MockEngine { request ->
+                val content =
+                    if (request.url.encodedPath == "/graphql") """{"errors":[{"message":"nope"}]}"""
+                    else """{"total_count": 5, "items": []}"""
+                respond(
+                    content = content,
+                    status = HttpStatusCode.OK,
+                    headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                )
+            }
+        GitHub.client =
+            HttpClient(engine) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
+
+        val record = GitHub.refresh(testUserID, testDate)
+
+        assertEquals(9L, record.data.commits)
+        val row = transaction {
+            GitHubTable.selectAll().where { GitHubTable.userID eq testUserID }.single()
+        }
+        assertEquals(4L, row[GitHubTable.privateCommits])
     }
 
     @Test

@@ -21,7 +21,6 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import java.time.Instant
-import java.time.ZoneOffset
 import java.util.UUID
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -35,6 +34,7 @@ import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.upsert
+import org.slf4j.LoggerFactory
 import user.zoneOf
 
 /** Per-day commit counts pulled from GitHub. */
@@ -56,6 +56,8 @@ object GitHubTable : IntegrationTable("integrations_github") {
 private const val SEARCH_PAGE_SIZE = 100
 
 object GitHub : Integration<GitHub.GitHubData> {
+    private val log = LoggerFactory.getLogger(GitHub::class.java)
+
     override val name = "github"
     override val table = GitHubTable
 
@@ -104,7 +106,12 @@ object GitHub : Integration<GitHub.GitHubData> {
                 .map { (repo, commits) -> RepoCommits(repo, commits.toLong()) }
                 .sortedWith(compareByDescending<RepoCommits> { it.commits }.thenBy { it.repo })
         val dayEnd = day.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
-        val private = privateContributions(externalID, dayStart, dayEnd)
+        // The private count is extra: if it can't be had, the day keeps the one it had, and the
+        // public commits still come in.
+        val private =
+            runCatching { privateContributions(externalID, dayStart, dayEnd) }
+                .onFailure { log.warn("private contributions failed for {} on {}", userID, day, it) }
+                .getOrNull() ?: storedPrivateCommits(userID, dayStart)
         return DayCommits(
             data = GitHubData(date = dayStart, commits = response.totalCount + private),
             repos = repos,
@@ -124,8 +131,9 @@ object GitHub : Integration<GitHub.GitHubData> {
             put("query", PRIVATE_CONTRIBUTIONS_QUERY)
             putJsonObject("variables") {
                 put("login", login)
-                put("from", Instant.ofEpochMilli(start).atOffset(ZoneOffset.UTC).toString())
-                put("to", Instant.ofEpochMilli(end - 1).atOffset(ZoneOffset.UTC).toString())
+                // Instant's ISO form always has seconds; GitHub turns "06:00Z" away.
+                put("from", Instant.ofEpochMilli(start).toString())
+                put("to", Instant.ofEpochMilli(end - 1).toString())
             }
         }
         val response: GraphQLResponse =
@@ -138,6 +146,14 @@ object GitHub : Integration<GitHub.GitHubData> {
                 .body()
         response.errors?.let { error("GitHub GraphQL: $it") }
         return response.data?.user?.contributionsCollection?.restrictedContributionsCount ?: 0
+    }
+
+    /** The private count stored for [userID]'s day starting [dayStart], or 0 if there's no row. */
+    private suspend fun storedPrivateCommits(userID: UUID, dayStart: Long): Long = suspendTransaction {
+        GitHubTable.select(GitHubTable.privateCommits)
+            .where { (GitHubTable.userID eq userID) and (GitHubTable.date eq dayStart) }
+            .firstOrNull()
+            ?.get(GitHubTable.privateCommits) ?: 0
     }
 
     override suspend fun refresh(userID: UUID, date: Long): IntegrationRecord<GitHubData> {
