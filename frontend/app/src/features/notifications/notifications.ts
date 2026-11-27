@@ -1,7 +1,7 @@
 // Push notifications. The backend decides what to send and when (see the
-// backend's notifications package) and sends it straight through APNs, so the
-// app only hands it this device's token and opens the right screen when one is
-// tapped. iOS only: the server doesn't speak FCM.
+// backend's notifications package) and sends it straight through APNs (iOS) or
+// FCM (Android), so the app only hands it this device's token and opens the
+// right screen when one is tapped.
 
 import { useEffect } from "react"
 import { Platform } from "react-native"
@@ -19,7 +19,20 @@ const TOKEN_KEY = "accountable_push_token"
 
 export type PushPermission = "granted" | "denied" | "undetermined"
 
-export const pushSupported = Platform.OS === "ios"
+export const pushSupported = Platform.OS === "ios" || Platform.OS === "android"
+
+/**
+ * The Android channel pushes are posted to; the backend names it in every FCM
+ * message (FCM_CHANNEL_ID in Fcm.kt). Android 8+ needs a channel before it'll
+ * show anything, and it's where people turn Beacc's notifications up or down.
+ */
+const ANDROID_CHANNEL_ID = "default"
+
+if (Platform.OS === "android")
+    void Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
+        name: "Beacc",
+        importance: Notifications.AndroidImportance.HIGH
+    }).catch(() => {})
 
 // Show a push that arrives while the app is open, too.
 Notifications.setNotificationHandler({
@@ -52,9 +65,23 @@ export async function enablePushes(
         status = (await Notifications.requestPermissionsAsync()).status
     if (status !== "granted") return false
 
-    const { data: token } = await Notifications.getDevicePushTokenAsync()
-    // A development build's token belongs to APNs' sandbox.
-    await registerPushDevice(api, token, __DEV__)
+    let token: string
+    try {
+        token = (await Notifications.getDevicePushTokenAsync()).data
+    } catch (err) {
+        // On Android this fails when the build has no google-services.json, so
+        // Firebase was never set up. Pushes stay off rather than erroring.
+        if (Platform.OS !== "android") throw err
+        console.warn("No FCM token; push notifications are off", err)
+        return false
+    }
+    // A development build's token belongs to APNs' sandbox. Ignored for FCM.
+    await registerPushDevice(
+        api,
+        token,
+        __DEV__,
+        Platform.OS === "android" ? "android" : "ios"
+    )
     try {
         await SecureStore.setItemAsync(TOKEN_KEY, token)
     } catch {
