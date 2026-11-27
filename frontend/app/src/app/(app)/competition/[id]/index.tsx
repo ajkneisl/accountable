@@ -39,6 +39,7 @@ import { EditModeButton } from "../../../../ui/EditModeButton"
 import { SwipePages } from "../../../../ui/SwipePages"
 import { GearIcon } from "../../../../ui/icons"
 import { Card, Display, ErrorList, Mono } from "../../../../ui/primitives"
+import { CompetitionIcon } from "../../../../features/competition/components/CompetitionIcon"
 import { useColors, useScheme } from "../../../../theme"
 
 function messageFor(err: unknown): string {
@@ -125,7 +126,20 @@ export default function Competition() {
 
                 {error !== null && <ErrorList errors={[error]} />}
 
-                {detail && <Display size={32}>{detail.name}</Display>}
+                {detail && (
+                    <View className="flex-row items-center gap-3">
+                        <CompetitionIcon
+                            id={detail.id}
+                            name={detail.name}
+                            icon={detail.icon}
+                            pictureVersion={detail.pictureVersion}
+                            size={36}
+                        />
+                        <View className="flex-1">
+                            <Display size={32}>{detail.name}</Display>
+                        </View>
+                    </View>
+                )}
 
                 {detail && (
                     <View className="absolute right-5 top-3 flex-row gap-2.5">

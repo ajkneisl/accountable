@@ -154,7 +154,6 @@ function EmojiSheet({
     return (
         <Sheet
             title="Competition emoji"
-            description="Shown wherever the competition is, unless it has a picture."
             onClose={onClose}
             action={{ label: busy ? "Saving…" : "Save", onPress: submit, busy }}
         >
