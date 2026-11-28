@@ -61,11 +61,13 @@ function Sources() {
         <section className="border-y border-line-2 bg-bg-sunken px-6 py-14 md:px-16 md:py-24">
             <div className="mx-auto max-w-[1040px]">
                 <h2 className="display m-0 mb-4 text-center text-[34px] leading-[1.08] md:text-[44px]">
-                    Nothing to log. Just do the thing.
+                    Nothing to log.
                 </h2>
                 <p className="mx-auto mb-10 mt-0 max-w-[560px] text-center text-[17px] leading-[1.55] text-ink-2">
-                    Connect the apps you already use, and your progress fills
-                    itself in. Set goals by the day or by the week.
+                    Connect the apps you already use, from Apple Health on
+                    iPhone or Health Connect on Android to GitHub, and your
+                    progress fills itself in. Set goals by the day or by the
+                    week.
                 </p>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {SOURCES.map((s) => (
@@ -109,7 +111,7 @@ export function Features() {
 
             <Showcase
                 flip
-                title="Share a code. Start a rivalry."
+                title="Start a rivalry."
                 picture={<StandingsPreview />}
             >
                 Everyone's measured against the same goals. Standings rank you

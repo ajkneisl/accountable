@@ -1,8 +1,14 @@
 import { IntegrationIcon } from "../../billboard/components/IntegrationIcon"
+import {
+    Avatar,
+    COMPETITION,
+    CompetitionTile,
+    MEMBERS,
+    type SampleMember
+} from "./samples"
 
 interface SampleCard {
-    name: string
-    color: string
+    member: SampleMember
     source: string
     day: string
     title: string
@@ -16,8 +22,7 @@ interface SampleCard {
 // Sample people, matching the competition in the screenshots.
 const CARDS: SampleCard[] = [
     {
-        name: "sam",
-        color: "#4aa8f0",
+        member: MEMBERS.yordfor3,
         source: "apple_fitness",
         day: "Today",
         title: "Run",
@@ -28,20 +33,18 @@ const CARDS: SampleCard[] = [
         liked: true
     },
     {
-        name: "jordan",
-        color: "var(--coral)",
+        member: MEMBERS.ismail,
         source: "github",
         day: "Today",
         title: "5 commits",
-        lines: ["3 in jordan/tracker", "2 in jordan/dotfiles"],
+        lines: ["3 in ismail/tracker", "2 in ismail/dotfiles"],
         progress: "5/5",
         met: true,
         likes: 2,
         liked: false
     },
     {
-        name: "riley",
-        color: "#8e44ad",
+        member: MEMBERS.riley,
         source: "apple_sleep",
         day: "Yesterday",
         title: "7h 40m of sleep",
@@ -74,14 +77,11 @@ function Card({ card }: { card: SampleCard }) {
     return (
         <div className="rounded-2xl border border-line-2 bg-bg-card p-4 text-left shadow-sm">
             <div className="flex items-center gap-3">
-                <span
-                    className="mono grid h-9 w-9 shrink-0 place-items-center rounded-full text-[14px] font-bold text-white"
-                    style={{ background: card.color }}
-                >
-                    {card.name[0].toUpperCase()}
-                </span>
+                <Avatar member={card.member} size={36} />
                 <div className="min-w-0 flex-1">
-                    <div className="text-[15px] font-semibold">{card.name}</div>
+                    <div className="text-[15px] font-semibold">
+                        {card.member.name}
+                    </div>
                     <div className="text-[12px] text-ink-3">{card.day}</div>
                 </div>
                 <span
@@ -101,8 +101,16 @@ function Card({ card }: { card: SampleCard }) {
                     {line}
                 </div>
             ))}
-            <div className="mt-3 flex items-center justify-between">
-                <span className="chip">Fall Fitness Challenge ›</span>
+            <div className="mt-3 flex items-center justify-between gap-3">
+                {/* The competition as it looks on the Competitions tab: its
+                    icon, then its name. */}
+                <span className="flex min-w-0 items-center gap-2 rounded-[10px] bg-bg-sunken py-1 pl-1 pr-2">
+                    <CompetitionTile size={22} />
+                    <span className="truncate text-[13px] font-semibold">
+                        {COMPETITION.name}
+                    </span>
+                    <span className="text-[13px] text-ink-3">›</span>
+                </span>
                 <span
                     className={`flex items-center gap-1.5 text-[13px] font-semibold ${card.liked ? "text-coral" : "text-ink-3"}`}
                 >
@@ -126,7 +134,7 @@ export function FeedPreview() {
             className="mx-auto flex w-full max-w-[400px] flex-col gap-3"
         >
             {CARDS.map((card) => (
-                <Card key={card.name} card={card} />
+                <Card key={card.member.name} card={card} />
             ))}
         </div>
     )

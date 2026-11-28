@@ -1,7 +1,6 @@
 import { Link, useParams } from "react-router-dom"
+import { APP_STORE_URL, PLAY_STORE_URL } from "../landing/appStore"
 import { LegalPage } from "../legal/LegalPage"
-
-const APP_STORE_URL = "https://apps.apple.com/us/app/beacc/id6825988118"
 
 /**
  * Join link landing page, served at /join/:code. With the app installed iOS opens
@@ -12,7 +11,9 @@ export default function Join() {
 
     return (
         <LegalPage title="Join a competition">
-            <p>You've been invited to a competition on Beacc. Your join code:</p>
+            <p>
+                You've been invited to a competition on Beacc. Your join code:
+            </p>
 
             <p className="display my-6 text-[40px] tracking-[0.12em] text-ink">
                 {code}
@@ -25,9 +26,10 @@ export default function Join() {
             </p>
 
             <p>
-                Don't have the app yet?{" "}
-                <a href={APP_STORE_URL}>Get Beacc on the App Store</a>, then
-                open the Competitions tab and join with the code above. See{" "}
+                Don't have the app yet? Get Beacc on the{" "}
+                <a href={APP_STORE_URL}>App Store</a> or{" "}
+                <a href={PLAY_STORE_URL}>Google Play</a>, then open the
+                Competitions tab and join with the code above. See{" "}
                 <Link to="/support">Support</Link> if you get stuck.
             </p>
         </LegalPage>

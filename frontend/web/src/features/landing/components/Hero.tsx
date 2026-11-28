@@ -1,4 +1,4 @@
-import { APP_STORE_URL } from "../appStore"
+import { APP_STORE_URL, PLAY_STORE_URL } from "../appStore"
 
 /**
  * Hero section of Beacc: the promise, the download, and the app itself. The phones
@@ -20,11 +20,16 @@ export function Hero() {
             </p>
 
             <div className="mt-7 flex flex-col items-center gap-3">
-                <a href={APP_STORE_URL} className="btn btn-primary btn-lg">
-                    Download on the App Store
-                </a>
+                <div className="flex flex-wrap justify-center gap-3">
+                    <a href={APP_STORE_URL} className="btn btn-primary btn-lg">
+                        Download on the App Store
+                    </a>
+                    <a href={PLAY_STORE_URL} className="btn btn-line btn-lg">
+                        Get it on Google Play
+                    </a>
+                </div>
                 <span className="text-[13px] text-ink-3">
-                    Available for iPhone
+                    Available for iPhone and Android
                 </span>
             </div>
 
@@ -32,22 +37,22 @@ export function Hero() {
                 <img
                     src="/screenshots/goals.png"
                     alt="The Goals tab, showing a 19 day streak and this week's workouts"
-                    width={501}
-                    height={900}
+                    width={759}
+                    height={1575}
                     className="relative z-0 -mr-14 mt-28 hidden h-auto w-[300px] -rotate-3 md:block"
                 />
                 <img
                     src="/screenshots/competition.png"
-                    alt="A competition's standings, with four friends ranked by goals on pace"
-                    width={501}
-                    height={900}
+                    alt="A competition's weekly standings, with six friends ranked by goals met"
+                    width={759}
+                    height={1575}
                     className="relative z-10 h-auto w-[300px] md:w-[360px]"
                 />
                 <img
                     src="/screenshots/habits.png"
                     alt="The Habits tab, with a heatmap of every day each habit was done"
-                    width={501}
-                    height={900}
+                    width={759}
+                    height={1575}
                     className="relative z-0 -ml-14 mt-28 hidden h-auto w-[300px] rotate-3 md:block"
                 />
             </div>

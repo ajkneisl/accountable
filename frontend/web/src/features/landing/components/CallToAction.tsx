@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom"
-import { APP_STORE_URL } from "../appStore"
+import { APP_STORE_URL, PLAY_STORE_URL } from "../appStore"
 
 /**
  * The last word: one more way to download, and the privacy promise.
@@ -14,12 +14,21 @@ export function CallToAction() {
                 <p className="mx-auto mb-7 mt-0 max-w-[460px] text-[17px] leading-[1.5] text-bg opacity-75">
                     Download Beacc, set a goal, and send your friends the code.
                 </p>
-                <a
-                    href={APP_STORE_URL}
-                    className="btn btn-lg border-0 bg-lime text-ink"
-                >
-                    Download on the App Store
-                </a>
+                <div className="flex flex-wrap justify-center gap-3">
+                    <a
+                        href={APP_STORE_URL}
+                        className="btn btn-lg border-0 bg-lime text-ink"
+                    >
+                        Download on the App Store
+                    </a>
+                    {/* Outlined in the box's text color, so it reads in either theme. */}
+                    <a
+                        href={PLAY_STORE_URL}
+                        className="btn btn-lg bg-transparent text-bg shadow-[inset_0_0_0_1px_currentColor]"
+                    >
+                        Get it on Google Play
+                    </a>
+                </div>
                 <p className="mb-0 mt-6 text-[13px] text-bg opacity-60">
                     We never sell your data or use it for advertising.{" "}
                     <Link to="/privacy" className="text-inherit underline">
